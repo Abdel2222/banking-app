@@ -1,18 +1,27 @@
+import { Component, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  FormGroup,
+  FormControl,
+  ReactiveFormsModule,
+  FormsModule,
+} from '@angular/forms';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
-  imports: [FormsModule]
+  standalone: true,
+  imports: [ReactiveFormsModule, FormsModule],
 })
 export class LoginComponent {
   isRegisterMode = signal<boolean>(false);
-  http = inject(HttpClient);
 
-  customerObj: any = {
+  // ✅ Injection via le constructeur au lieu de `inject(HttpClient)`
+  constructor(private http: HttpClient, private router: Router) {}
+
+  customerObj = {
     userId: 0,
     userName: '',
     emailId: '',
@@ -20,72 +29,60 @@ export class LoginComponent {
     password: '',
   };
 
-  // Permet de basculer entre Login et Register
+  loginForm = new FormGroup({
+    userName: new FormControl(''),
+    password: new FormControl(''),
+  });
+
   toggleMode() {
     this.isRegisterMode.set(!this.isRegisterMode());
   }
 
-  // Fonction d'inscription avec requête HTTP POST
   onRegister() {
-    this.http.post("https://projectapi.gerasim.in/Bankloan/RegisterCustomer", this.customerObj)
+    console.log("Tentative d'inscription...");
+
+    this.http
+      .post<any>(
+        'https://projectapi.gerasim.in/Bankloan/RegisterCustomer',
+        this.customerObj
+      )
+      .subscribe({
+        next: (res: any) => {
+          console.log('Réponse API:', res);
+          if (res.result) {
+            alert('Inscription réussie ✅');
+          } else {
+            alert(res.message);
+          }
+        },
+        error: (err: any) => {
+          alert('Erreur réseau ❌');
+          console.error("Détails de l'erreur:", err);
+        },
+      });
+  }
+
+  onLogin() {
+    console.log('Tentative de connexion...');
+
+    this.http
+      .post<any>(
+        'https://projectapi.gerasim.in/api/BankLoan/login',
+        this.loginForm.value
+      )
       .subscribe({
         next: (res: any) => {
           if (res.result) {
-            alert("Customer Registered Successfully! ✅");
+            sessionStorage.setItem('bankerUser', JSON.stringify(res.data));
+            this.router.navigateByUrl('application-list');
+          } else {
+            alert(res.message);
           }
         },
-        error: (err) => {
-          alert("Network error ❌: " + err.message);
-          console.error("Error details:", err);
-        }
+        error: (err: any) => {
+          alert('Erreur réseau ❌');
+          console.error("Détails de l'erreur:", err);
+        },
       });
   }
 }
-
-
-
-/* Que fait cette ligne ?
-
-this.http.post(...) → Utilise HttpClient d'Angular pour envoyer une requête HTTP POST.
-"https://projectapi.gerasim.in/Bankloan/RegisterCustomer" → L'URL du serveur où on envoie les données.
-this.customerObj → Les données de l'utilisateur qu'on envoie au serveur (nom, email, mot de passe…).
- subscribe() :
-
-Attend la réponse du serveur (réussi ou échec).
-next: gère la réponse en cas de succès.
-res: any contient la réponse du serveur.
-🔹 Que se passe-t-il si l'inscription réussit ?
-
-if (res.result) { alert("Customer Registered Successfully! ✅"); }
-Si res.result (réponse du serveur)
- indique un succès, on affiche une alerte.
-4️⃣ Gestion des erreurs
-(ex: problème réseau, serveur en panne, etc.)
-typescript
-Copier
-Modifier
-  error: (err) => {
-    alert("Network error ❌: " + err.message);
-    console.error("Error details:", err);
-  }
-});
-🔹 Si la requête échoue (ex: problème de connexion,
-serveur indisponible) :
-
-error: capture l'erreur.
-alert("Network error ❌: " + err.message); → Affiche une alerte avec un message d'erreur.
-console.error("Error details:", err); → Affiche les détails dans la console du navigateur (utile pour le débogage).
-
-
-
-
-
-
-/*🔹 @Component → Déclare un composant Angular.
-🔹 selector: 'app-login' → Permet d'utiliser <app-login></app-login> dans un autre fichier HTML.
-🔹 templateUrl → Lien vers le fichier HTML (login.component.html).
-🔹 s
-/*🔹 @Component → Déclare un composant Angular.
-🔹 selector: 'app-login' → Permet d'utiliser <app-login></app-login> dans un autre fichier HTML.
-🔹 templateUrl → Lien vers le fichier HTML (login.component.html).
-🔹 styleUrls → Lien vers le fichier CSS (login.component.css).*/`´

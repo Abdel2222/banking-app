@@ -1,1 +1,114 @@
-<p>new-loan-form works!</p>
+<div class="container my-4 p-4 shadow rounded bg-light">
+  <h2 class="mb-3 fw-bold text-center heading">
+    <span> <i class="bi bi-bank2"></i></span>
+    Bank Application
+    <span> <i class="bi bi-bank2"></i></span>
+  </h2>
+  <form [formGroup]="loanForm" (ngSubmit)="saveLoan()">
+    <div class="mb-4">
+      <div class="row">
+        <div class="col-lg-12">
+          <h3 class="mb-3 text-primary fw-bold heading">Personal Details</h3>
+          <div class="row g-1 mt-1">
+            <div class="col-md-6">
+              <label for="fullName" class="form-label">Full Name :</label>
+              <div class="input-group shadow-sm">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-person-lines-fill"></i>
+                </span>
+                <input
+                  id="fullName"
+                  class="form-control border-2 shadow-sm"
+                  formControlName="fullName"
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-1 mt-1">
+            <div class="col-md-3">
+              <label for="email" class="form-label">Email :</label>
+              <div class="input-group shadow-sm">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-envelope-fill"></i>
+                </span>
+                <input
+                  id="email"
+                  class="form-control border-2"
+                  formControlName="email"
+                  placeholder="Enter your email address"
+                  type="email"
+                  required
+                />
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label for="phone" class="form-label">Phone Number :</label>
+              <div class="input-group shadow-sm">
+                <span class="input-group-text bg-light">
+                  <i class="bi bi-telephone-fill"></i>
+                </span>
+                <input
+                  id="phone"
+                  class="form-control border-2"
+                  formControlName="phone"
+                  placeholder="Enter your phone number"
+                  type="tel"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr />
+    <div class="mb-4">
+      <h4 class="mt-4 text-primary fw-bold heading">Loan Details</h4>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label for="bankName" class="form-label">Bank Name:</label>
+          <input
+            id="bankName"
+            class="form-control border-2 shadow-sm"
+            formControlName="bankName"
+            placeholder="Enter bank name"
+          />
+        </div>
+        <div class="col-md-4">
+          <label for="loanAmount" class="form-label">Loan Amount:</label>
+          <input
+            id="loanAmount"
+            class="form-control border-2 shadow-sm"
+            type="number"
+            formControlName="loanAmount"
+            placeholder="Enter amount"
+          />
+        </div>
+        <div class="col-md-4">
+          <label for="emi" class="form-label">EMI:</label>
+          <input
+            id="emi"
+            class="form-control border-2 shadow-sm"
+            type="number"
+            formControlName="emi"
+            placeholder="Enter EMI"
+          />
+        </div>
+      </div>
+    </div>
+    <hr />
+    <div class="d-flex justify-content-center gap-2">
+      <button class="btn btn-primary" type="submit">Save</button>
+      <button class="btn btn-success" type="button" (click)="updateLoan()">
+        Update
+      </button>
+      <button class="btn btn-danger" type="button" (click)="deleteLoan()">
+        Delete
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,108 @@
+/* 🎨 Stylisation du conteneur principal */
+.container {
+  max-width: 900px;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 🏦 Titre principal */
+.heading {
+  color: #1e3c72 !important;
+}
+
+/* 📩 Placeholders des inputs */
+.form-control::placeholder {
+  font-size: 16px;
+}
+
+/* 🎭 Icônes Bootstrap */
+i {
+  color: #1e3c72 !important;
+}
+
+/* 🎨 Bouton principal */
+.addmore {
+  background: linear-gradient(to right, #1e3c72, #2a5298);
+  border: none;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.addmore:hover {
+  background: linear-gradient(to right, #2a5298, #1e3c72);
+}
+
+/* 🏦 Formulaire de saisie */
+.input-group {
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border: 1px solid #ced4da;
+}
+
+/* 🔢 Numéros de carte */
+#panCard,
+#loanAmount,
+#emi {
+  text-transform: uppercase;
+}
+
+/* 📌 Boutons Actions */
+.d-flex button {
+  font-size: 16px;
+  padding: 8px 15px;
+  border-radius: 5px;
+  color: white;
+  border: none;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+/* ✅ Bouton "Save" */
+.d-flex .btn-primary {
+  background: linear-gradient(to right, #00c6ff, #0072ff);
+}
+.d-flex .btn-primary:hover {
+  background: linear-gradient(to right, #0072ff, #00c6ff);
+}
+
+/* 🔄 Bouton "Update" */
+.d-flex .btn-success {
+  background: linear-gradient(to right, #11998e, #38ef7d);
+}
+.d-flex .btn-success:hover {
+  background: linear-gradient(to right, #38ef7d, #11998e);
+}
+
+/* ❌ Bouton "Delete" */
+.d-flex .btn-danger {
+  background: linear-gradient(to right, #ff5f6d, #ffc371);
+}
+.d-flex .btn-danger:hover {
+  background: linear-gradient(to right, #ffc371, #ff5f6d);
+}
+
+/* 📱 Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  .d-flex {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+}

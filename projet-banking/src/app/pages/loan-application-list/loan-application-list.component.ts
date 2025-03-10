@@ -4,8 +4,6 @@ import { Component } from '@angular/core';
   selector: 'app-loan-application-list',
   imports: [],
   templateUrl: './loan-application-list.component.html',
-  styleUrl: './loan-application-list.component.css'
+  styleUrl: './loan-application-list.component.css',
 })
-export class LoanApplicationListComponent {
-
-}
+export class LoanApplicationListComponent {}

@@ -32,3 +32,6 @@ export const appRoutes: Routes = [
     component: NewLoanFormComponent,
   },
 ];
+
+// 🔹 Active le système de routage pour Angular 19
+export const appRouting = provideRouter(appRoutes);

@@ -39,3 +39,4 @@ Depuis Angular 15+, on peut remplacer les modules par une configuration basée s
 Importer les services nécessaires (Router, HttpClient).
 Définir appConfig pour fournir ces services à toute l’application.
 Angular utilise appConfig pour activer le routage et les requêtes HTTP dès le démarrage.
+*/
