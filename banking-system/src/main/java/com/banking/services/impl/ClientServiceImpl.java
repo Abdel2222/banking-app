@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.banking.services.CompteBancaireService;
+import com.banking.services.FraisDeGestionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

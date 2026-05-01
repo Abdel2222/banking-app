@@ -8,6 +8,7 @@ public interface DemandeCarteBancaireService {
 
     DemandeCarteBancaire demanderCarte(Long compteId);
 
+
     DemandeCarteBancaire approuverDemande(Long demandeId);
 
     DemandeCarteBancaire rejeterDemande(Long demandeId, String raison);

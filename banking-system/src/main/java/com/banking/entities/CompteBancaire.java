@@ -1,5 +1,8 @@
 package com.banking.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Transient;
+
 import com.banking.entity.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,6 +18,7 @@ import java.util.Random;
 @Table(name = "comptes_bancaires")
 @Getter @Setter
 @NoArgsConstructor
+@Inheritance(strategy = InheritanceType.JOINED)
 public class CompteBancaire {
 
     @Id
@@ -159,4 +163,14 @@ public class CompteBancaire {
         for (int i = 0; i < 16; i++) sb.append(r.nextInt(10));
         return sb.toString();
     }
+
+
+
+
+    @Transient
+    @JsonProperty("hasCard")
+    public boolean isHasCard() {
+        return this.getCarteBancaire() != null; // pas besoin de getEstActive()
+    }
+
 }

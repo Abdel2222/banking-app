@@ -54,13 +54,20 @@ public class OperationServiceImpl implements OperationService {
     public Operation createOperation(String numCompte, BigDecimal montant, TypeOperation type, String description) {
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte non trouvé: " + numCompte));
-        Operation op = new Operation(compte, montant, type,
-                (description != null && !description.isBlank()) ? description : type.name());
+        Operation op = new Operation(
+                compte,
+                montant,
+                type,
+                (description != null && !description.isBlank()) ? description : type.name()
+        );
         return operationRepository.save(op);
     }
 
-    @Override public Optional<Operation> findById(Long id) { return operationRepository.findById(id); }
-    @Override public List<Operation> findAll() { return operationRepository.findAll(); }
+    @Override
+    public Optional<Operation> findById(Long id) { return operationRepository.findById(id); }
+
+    @Override
+    public List<Operation> findAll() { return operationRepository.findAll(); }
 
     @Override
     public Page<Operation> findAllPaginated(Pageable pageable) {
@@ -75,7 +82,7 @@ public class OperationServiceImpl implements OperationService {
 
     @Override
     public Operation executeDeposit(String numCompte, BigDecimal montant, String description) {
-        // délégué au service comptes pour tenir le solde à jour
+        // délègue au service comptes pour tenir le solde à jour
         return compteBancaireService.deposit(numCompte, montant, description);
     }
 
@@ -91,13 +98,15 @@ public class OperationServiceImpl implements OperationService {
 
     @Override
     public Operation executeCardBlock(String numCompte, String raison) {
-        // Si tu as une vraie logique de blocage dans CompteBancaireService, appelle-la ici
-        // et journalise une opération BLOCAGE_CARTE.
-        // Ici on enregistre juste une opération "informatif".
+        // journalise une opération "informatif"
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte non trouvé: " + numCompte));
-        Operation op = new Operation(compte, BigDecimal.ZERO, TypeOperation.BLOCAGE_CARTE,
-                (raison != null && !raison.isBlank()) ? raison : "Blocage de carte");
+        Operation op = new Operation(
+                compte,
+                BigDecimal.ZERO,
+                TypeOperation.BLOCAGE_CARTE,
+                (raison != null && !raison.isBlank()) ? raison : "Blocage de carte"
+        );
         return operationRepository.save(op);
     }
 
@@ -106,11 +115,11 @@ public class OperationServiceImpl implements OperationService {
     @Override
     @Transactional(readOnly = true)
     public List<Operation> findByAccount(String numCompte) {
-        CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
-                .orElseThrow(() -> new ResourceNotFoundException("Compte non trouvé: " + numCompte));
-        // on réutilise la requête période avec une grande fenêtre
-        return operationRepository.findByCompteAndDateBetween(
-                compte, LocalDateTime.of(1970,1,1,0,0), LocalDateTime.now());
+        // grande fenêtre par défaut : 5 dernières années
+        LocalDateTime debut = LocalDate.now().minusYears(5).atStartOfDay();
+        LocalDateTime fin   = LocalDateTime.now();
+        return operationRepository
+                .findByCompteBancaire_NumCompteAndDateOperationBetweenOrderByDateOperationDesc(numCompte, debut, fin);
     }
 
     @Override
@@ -142,7 +151,9 @@ public class OperationServiceImpl implements OperationService {
     public List<Operation> findByAccountAndDateRange(String numCompte, LocalDateTime start, LocalDateTime end) {
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte non trouvé: " + numCompte));
-        return operationRepository.findByCompteAndDateBetween(compte, start, end);
+        return operationRepository
+                .findByCompteBancaireAndDateOperationBetweenOrderByDateOperationDesc(compte, start, end);
+
     }
 
     @Override
@@ -291,8 +302,8 @@ public class OperationServiceImpl implements OperationService {
     public byte[] exportOperationsToPdf(String numCompte, LocalDateTime start, LocalDateTime end) {
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte non trouvé: " + numCompte));
-
-        List<Operation> ops = operationRepository.findByCompteAndDateBetween(compte, start, end);
+        List<Operation> ops = operationRepository
+                .findByCompteBancaireAndDateOperationBetweenOrderByDateOperationDesc(compte, start, end);
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             Document doc = new Document();
@@ -351,6 +362,7 @@ public class OperationServiceImpl implements OperationService {
     }
 
     private static String s(Object o) { return o == null ? "" : o.toString(); }
+
     private static String escapeCsv(String s) {
         if (s == null) return "";
         String x = s.replace("\"", "\"\"");

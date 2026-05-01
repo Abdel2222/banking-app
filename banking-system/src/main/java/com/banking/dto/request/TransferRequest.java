@@ -12,14 +12,13 @@ import java.math.BigDecimal;
 @Data
 public class TransferRequest {
 
-    private static final String ACCOUNT_REGEX =
-            "^([A-Z]{2}\\d{2}[A-Z0-9]{11,30}|[A-Z0-9]{6,34})$";
+    // ✅ Nouveau regex : accepte comptes numériques entre 6 et 34 chiffres
+    private static final String ACCOUNT_REGEX = "^[0-9]{6,34}$";
 
     @NotBlank(message = "Le compte source est obligatoire")
     @Pattern(
             regexp = ACCOUNT_REGEX,
-            flags = {Pattern.Flag.CASE_INSENSITIVE},
-            message = "Numéro de compte source invalide (IBAN ou alphanumérique 6–34)"
+            message = "Numéro de compte source invalide"
     )
     @JsonAlias({"fromAccount", "sourceAccount", "compteSource"})
     private String numCompteSource;
@@ -27,8 +26,7 @@ public class TransferRequest {
     @NotBlank(message = "Le compte destinataire est obligatoire")
     @Pattern(
             regexp = ACCOUNT_REGEX,
-            flags = {Pattern.Flag.CASE_INSENSITIVE},
-            message = "Numéro de compte destinataire invalide (IBAN ou alphanumérique 6–34)"
+            message = "Numéro de compte destinataire invalide"
     )
     @JsonAlias({"toAccount", "destinationAccount", "compteDestinataire"})
     private String numCompteDestinataire;

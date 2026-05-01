@@ -2,36 +2,33 @@ package com.banking.entities;
 
 import com.banking.entity.enums.TypeOperation;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// ✅ ajoute le listener
 @Entity
 @Table(name = "operations")
+@EntityListeners(Operation.OperationJournalListener.class)
 public class Operation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // FK vers comptes_bancaires.id (aligné sur ta BDD)
+    // FK vers comptes_bancaires.id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "compte_bancaire_id", nullable = false)
     private CompteBancaire compteBancaire;
 
-    // Numéro du compte source (présent dans ta BDD)
     @Column(name = "numero_compte", nullable = false)
     private String numeroCompte;
 
-    // Numéro du compte destinataire (présent dans ta BDD)
     @Column(name = "numero_compte_destinataire")
     private String numeroCompteDestinataire;
 
-    // Nom du titulaire destinataire (utilisé par ton service)
     @Column(name = "nom_titulaire_destinataire")
     private String nomTitulaireDestinataire;
 
-    // Type d’opération (aligné sur ta BDD: type_operation)
     @Enumerated(EnumType.STRING)
     @Column(name = "type_operation", nullable = false)
     private TypeOperation typeOperation;
@@ -51,25 +48,20 @@ public class Operation {
     @Column(name = "commentaire")
     private String commentaire;
 
-    /* ================== Constructeurs ================== */
-
     public Operation() { }
 
-    // 3 paramètres (utilisé par tes services) -> délègue au 4 paramètres
     public Operation(CompteBancaire compte, BigDecimal montant, TypeOperation typeOperation) {
         this(compte, montant, typeOperation, null);
     }
 
     public Operation(CompteBancaire compte, BigDecimal montant, TypeOperation typeOperation, String description) {
         this.compteBancaire = compte;
-        this.numeroCompte = (compte != null ? compte.getNumCompte() : null);
-        this.montant = montant;
-        this.typeOperation = typeOperation;
-        this.description = description;
-        this.dateOperation = LocalDateTime.now();
+        this.numeroCompte   = (compte != null ? compte.getNumCompte() : null);
+        this.montant        = montant;
+        this.typeOperation  = typeOperation;
+        this.description    = description;
+        this.dateOperation  = LocalDateTime.now();
     }
-
-    /* ================== Getters / Setters ================== */
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -104,14 +96,49 @@ public class Operation {
     public String getCommentaire() { return commentaire; }
     public void setCommentaire(String commentaire) { this.commentaire = commentaire; }
 
-    /* ======== ALIAS pour compatibilité (évite de changer tout le code existant) ======== */
-
-    // Plusieurs classes appellent getType() au lieu de getTypeOperation()
+    // Alias de compatibilité
     public TypeOperation getType() { return this.typeOperation; }
     public void setType(TypeOperation type) { this.typeOperation = type; }
-
-    // Certains DTOs appellent getDescriptionOperation()
     public String getDescriptionOperation() { return this.description; }
+
+    /* ============================================================
+       LISTENER qui pousse une ligne dans `releves_mensuels` à chaque insert
+       ============================================================ */
+    public static class OperationJournalListener {
+
+        @PostPersist
+        public void afterPersist(Operation op) {
+            try {
+                // Récupère les beans Spring (repo) via le holder statique
+                var releveRepo = com.banking.support.SpringContext.getBean(com.banking.repositories.ReleveDeCompteRepository.class);
+
+                BigDecimal solde = null;
+                try {
+                    // On tente de lire le solde à jour du compte
+                    var cRepo = com.banking.support.SpringContext.getBean(com.banking.repositories.CompteBancaireRepository.class);
+                    com.banking.entities.CompteBancaire c =
+                            (op.getCompteBancaire() != null)
+                                    ? op.getCompteBancaire()
+                                    : cRepo.findByNumCompte(op.getNumeroCompte()).orElse(null);
+                    if (c != null) solde = c.getBalance();
+                } catch (Exception ignore) { /* on ne bloque pas */ }
+
+                // Construit la ligne "relevé"
+                com.banking.entities.ReleveDeCompte r = new com.banking.entities.ReleveDeCompte();
+                r.setNumCompte(op.getNumeroCompte());
+                r.setTypeOperation(op.getTypeOperation());
+                r.setMontant(op.getMontant());
+                r.setDescription(op.getDescription());
+                r.setDateOperation(op.getDateOperation());
+                r.setSolde(solde);
+                r.setCompte(op.getCompteBancaire());
+
+                // Enregistre
+                releveRepo.save(r);
+            } catch (Throwable t) {
+                // Surtout ne pas casser l'opération bancaire si le journal échoue
+                // (tu peux logger ici si tu veux)
+            }
+        }
+    }
 }
-
-

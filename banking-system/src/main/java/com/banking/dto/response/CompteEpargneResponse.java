@@ -1,44 +1,56 @@
 package com.banking.dto.response;
 
 import com.banking.entities.CompteEpargne;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class CompteEpargneResponse {
-
     private Long id;
-    private String numCompte;
+    private String numCompteBancaire;
+    private String numCompteEpargne;
     private BigDecimal soldeEpargne;
     private BigDecimal tauxInteret;
-    private LocalDateTime dateDerniereCapitalisation;
+    private BigDecimal taxationVirtuelle;   // colonne virtuelle
+    private LocalDateTime derniereCapitalisation;
 
-    /** Surcharge sûre (on fournit le numCompte nous-mêmes depuis le contrôleur) */
-    public static CompteEpargneResponse fromEntity(CompteEpargne epargne, String numCompte) {
+    /** Fabrique un DTO à partir de l'entité (récupère le numCompteBancaire via la relation) */
+    public static CompteEpargneResponse fromEntity(CompteEpargne epargne) {
         if (epargne == null) return null;
+        String numCB = (epargne.getCompteBancaire() != null)
+                ? epargne.getCompteBancaire().getNumCompte()
+                : null;
+
         return CompteEpargneResponse.builder()
                 .id(epargne.getId())
-                .numCompte(numCompte)
+                .numCompteBancaire(numCB)
+                .numCompteEpargne(epargne.getNumCompteEpargne())
                 .soldeEpargne(epargne.getSoldeEpargne())
                 .tauxInteret(epargne.getTauxInteret())
-                .dateDerniereCapitalisation(epargne.getDateDerniereCapitalisation())
+                .taxationVirtuelle(epargne.getTaxationVirtuelle())
+                .derniereCapitalisation(epargne.getDateDerniereCapitalisation())
                 .build();
     }
 
-    /** Compat : si tu ne passes pas le numCompte, on essaie de le déduire (peut être null si LAZY) */
-    public static CompteEpargneResponse fromEntity(CompteEpargne epargne) {
+    /** Variante avec fallback si tu as déjà le numCompteBancaire en paramètre */
+    public static CompteEpargneResponse fromEntity(CompteEpargne epargne, String fallbackNumCompteBancaire) {
         if (epargne == null) return null;
-        String maybeNum =
-                (epargne.getCompteBancaire() != null ? epargne.getCompteBancaire().getNumCompte() : null);
-        return fromEntity(epargne, maybeNum);
+        String numCB = (epargne.getCompteBancaire() != null && epargne.getCompteBancaire().getNumCompte() != null)
+                ? epargne.getCompteBancaire().getNumCompte()
+                : fallbackNumCompteBancaire;
+
+        return CompteEpargneResponse.builder()
+                .id(epargne.getId())
+                .numCompteBancaire(numCB)
+                .numCompteEpargne(epargne.getNumCompteEpargne())
+                .soldeEpargne(epargne.getSoldeEpargne())
+                .tauxInteret(epargne.getTauxInteret())
+                .taxationVirtuelle(epargne.getTaxationVirtuelle())
+                .derniereCapitalisation(epargne.getDateDerniereCapitalisation())
+                .build();
     }
 }
-

@@ -344,6 +344,70 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
                 .toList();
     }
 
+    // ==================== FRAIS D'OUVERTURE (NOUVEAU) ====================
+
+    @Override
+    public void appliquerFraisOuverture(String numCompte) {
+        final BigDecimal FEE = new BigDecimal("2.00");
+        final String COMMENT = "FRAIS_OUVERTURE_COMPTE";
+
+        // 0) Idempotence : si déjà facturé, on stoppe
+        if (operationRepository.countByCompteBancaire_NumCompteAndCommentaire(numCompte, COMMENT) > 0) {
+            logger.info("Frais d'ouverture déjà appliqué pour {}", numCompte);
+            return;
+        }
+
+        // 1) Charger le compte
+        CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
+                .orElseThrow(() -> new ResourceNotFoundException("Compte introuvable: " + numCompte));
+
+        // 2) Seuil : appliquer seulement si solde >= 20,00 €
+        BigDecimal balance = compte.getBalance() == null ? BigDecimal.ZERO : compte.getBalance();
+        if (balance.compareTo(new BigDecimal("20.00")) < 0) {
+            logger.info("Frais d'ouverture non appliqué (solde < 20€) pour {}", numCompte);
+            return;
+        }
+
+        // 3) Débiter 2,00 €
+        compte.debiter(FEE);
+        compteBancaireRepository.save(compte);
+
+        // 4) Journaliser l’opération (montant POSITIF, le type = FRAIS)
+        Operation op = new Operation();
+        op.setCompteBancaire(compte);
+
+        // ⚠️ selon ton entité Operation :
+        // - si le champ s’appelle 'typeOperation', utilise setTypeOperation(...)
+        // - si c’est 'type', utilise setType(...)
+        op.setTypeOperation(TypeOperation.FRAIS);
+
+        op.setMontant(FEE);
+        op.setCommentaire(COMMENT);
+        op.setDateOperation(LocalDateTime.now());
+        operationRepository.save(op);
+
+        // 5) Tracer aussi dans 'frais_de_gestion' (non bloquant)
+        try {
+            FraisDeGestion fg = new FraisDeGestion();
+            fg.setClient(compte.getClient());
+            fg.setMontant(FEE);
+            fg.setDescription("Frais d'ouverture de compte");
+            fg.setTypeFrais(FraisDeGestion.TypeFrais.TENUE_COMPTE);
+            fg.setPeriodicite(FraisDeGestion.Periodicite.PONCTUEL);
+            fg.setDateDebut(LocalDate.now());
+            fg.setDateFin(LocalDate.now());
+            fg.setEstActif(false);
+            fg.setMontantTotalFacture(FEE);
+            fg.setDerniereFacturation(LocalDate.now());
+            fraisRepository.save(fg);
+        } catch (Exception e) {
+            logger.warn("Trace frais_de_gestion non créée (non bloquant): {}", e.getMessage());
+        }
+
+        logger.info("Frais d'ouverture appliqué sur {}", numCompte);
+    }
+
+
     // ==================== MÉTHODES PRIVÉES ====================
 
     private void validerFrais(FraisDeGestion frais) {
@@ -407,4 +471,3 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
         operationRepository.save(op);
     }
 }
-

@@ -18,6 +18,9 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import com.banking.entities.CarteBancaire;
+import com.banking.repositories.CarteBancaireRepository;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -30,6 +33,7 @@ public class DemandeCarteBancaireServiceImpl implements DemandeCarteBancaireServ
     private final DemandeCarteBancaireRepository demandeRepo;
     private final CompteBancaireRepository compteRepo;
     private final ClientRepository clientRepo;
+
 
     public DemandeCarteBancaireServiceImpl(
             DemandeCarteBancaireRepository demandeRepo,

@@ -10,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static com.banking.entities.FraisDeGestion.TypeFrais.MONTANT_FRAIS_OUVERTURE;
+
 @Entity
 @Table(name = "frais_de_gestion")
 public class FraisDeGestion {
@@ -76,6 +78,7 @@ public class FraisDeGestion {
         AUTRE("Autres frais");
 
         private final String libelle;
+        public static final java.math.BigDecimal MONTANT_FRAIS_OUVERTURE = new java.math.BigDecimal("2.00");
 
         TypeFrais(String libelle) {
             this.libelle = libelle;
@@ -123,6 +126,25 @@ public class FraisDeGestion {
         this.dateFin = dateFin;
         this.client = client;
     }
+    /**
+     * Crée un frais d'ouverture de compte (2,00 €, ponctuel, facturé immédiatement).
+     * Usage: FraisDeGestion fg = FraisDeGestion.creerFraisOuverture(compte.getClient());
+     */
+    public static FraisDeGestion creerFraisOuverture(Client client) {
+        FraisDeGestion f = new FraisDeGestion();
+        f.setClient(client);
+        f.setMontant(MONTANT_FRAIS_OUVERTURE);
+        f.setDescription("Frais d'ouverture de compte");
+        f.setTypeFrais(TypeFrais.TENUE_COMPTE);           // adapte si tu préfères AUTRE/CARTE_BANCAIRE
+        f.setPeriodicite(Periodicite.PONCTUEL);           // frais one-shot
+        f.setDateDebut(java.time.LocalDate.now());
+        f.setDateFin(java.time.LocalDate.now());          // même jour = ponctuel
+        f.setEstActif(false);                             // déjà facturé, pas “actif” en continu
+        f.setMontantTotalFacture(MONTANT_FRAIS_OUVERTURE);
+        f.setDerniereFacturation(java.time.LocalDate.now());
+        return f;
+    }
+
 
     @PrePersist
     protected void onCreate() {
@@ -338,4 +360,5 @@ public class FraisDeGestion {
     public void setClient(Client client) {
         this.client = client;
     }
+
 }

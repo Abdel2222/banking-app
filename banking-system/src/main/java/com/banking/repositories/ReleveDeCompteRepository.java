@@ -2,17 +2,17 @@ package com.banking.repositories;
 
 import com.banking.entities.ReleveDeCompte;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
+@Repository
 public interface ReleveDeCompteRepository extends JpaRepository<ReleveDeCompte, Long> {
 
-    List<ReleveDeCompte> findByCompte_IdOrderByDateReleveDesc(Long compteId);
+    List<ReleveDeCompte> findByNumCompteAndDateOperationBetweenOrderByDateOperationAsc(
+            String numCompte, LocalDateTime start, LocalDateTime end
+    );
 
-    List<ReleveDeCompte> findByCompte_NumCompteOrderByDateReleveDesc(String numCompte);
-
-    Optional<ReleveDeCompte> findByCompte_IdAndAnneeAndMois(Long compteId, Integer annee, Integer mois);
-
-    List<ReleveDeCompte> findByPdfGenere(boolean pdfGenere);
+    List<ReleveDeCompte> findByNumCompteOrderByDateOperationDesc(String numCompte);
 }

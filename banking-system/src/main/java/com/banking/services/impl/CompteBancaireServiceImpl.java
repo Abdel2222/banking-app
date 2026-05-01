@@ -12,21 +12,32 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.banking.services.FraisDeGestionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @Service
 @Transactional
 public class CompteBancaireServiceImpl implements CompteBancaireService {
+    void appliquerFraisOuverture(String numCompte) {
+
+    }
+
+    private static final Logger log = LoggerFactory.getLogger(CompteBancaireServiceImpl.class);
 
     @Autowired private CompteBancaireRepository compteBancaireRepository;
     @Autowired private ClientRepository        clientRepository;
     @Autowired private OperationRepository     operationRepository;
     @Autowired private CarteBancaireRepository carteBancaireRepository;
     @Autowired private CompteEpargneRepository compteEpargneRepository;
+    @Autowired
+    private FraisDeGestionService fraisDeGestionService;
 
     /* ===================== Utilitaires ===================== */
 
@@ -67,8 +78,21 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
 
         String numCompte = generateAccountNumber();
         CompteBancaire compte = new CompteBancaire(numCompte, client);
-        return compteBancaireRepository.save(compte);
+
+        // ⬇️ On sauve d’abord le compte…
+        CompteBancaire saved = compteBancaireRepository.save(compte);
+
+        // ⬇️ …puis on applique le frais d’ouverture (2,00 €)
+        try {
+            fraisDeGestionService.appliquerFraisOuverture(saved.getNumCompte());
+        } catch (Exception e) {
+            // optionnel : log + on n’empêche pas la création du compte
+            // log.warn("Frais d'ouverture non appliqué sur {}", saved.getNumCompte(), e);
+        }
+
+        return saved;
     }
+
 
     @Override @Transactional(readOnly = true)
     public Optional<CompteBancaire> findById(Long id) { return compteBancaireRepository.findById(id); }
@@ -138,39 +162,66 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
     @Override
     public Operation transfer(String numCompteSource, String numCompteDestinataire,
                               BigDecimal montant, String communication) {
+
+
+        log.info(">>> Virement demandé : {} € de [{}] vers [{}] avec message [{}]",
+                montant, numCompteSource, numCompteDestinataire, communication);
+
+
         assertMontantPositif(montant);
         if (Objects.equals(numCompteSource, numCompteDestinataire)) {
             throw new IllegalArgumentException("Source et destinataire ne peuvent pas être identiques");
         }
 
+
         CompteBancaire source = getCompteOrThrowByNum(numCompteSource);
-        CompteBancaire dest   = getCompteOrThrowByNum(numCompteDestinataire);
+        CompteBancaire dest = getCompteOrThrowByNum(numCompteDestinataire);
+
+
+        if (dest.getClient() == null) {
+            throw new IllegalStateException("Le compte destinataire n'est pas lié à un client.");
+        }
+
+
         assertActif(source);
         assertActif(dest);
+
 
         source.debiter(montant);
         dest.crediter(montant);
         compteBancaireRepository.save(source);
         compteBancaireRepository.save(dest);
+        compteBancaireRepository.flush();
 
-        // Journal côté source
+
+        String nomClientDest = dest.getClient().getNomComplet();
+
+
         Operation oSrc = new Operation(source, montant, TypeOperation.VIREMENT);
         oSrc.setNumeroCompteDestinataire(numCompteDestinataire);
         oSrc.setCommunication(communication);
-        oSrc.setNomTitulaireDestinataire(dest.getClient().getNomComplet());
+        oSrc.setNomTitulaireDestinataire(nomClientDest);
 
-        // Journal côté dest (réception)
+
         Operation oDst = new Operation(dest, montant, TypeOperation.VIREMENT);
         oDst.setNumeroCompteDestinataire(numCompteDestinataire);
         oDst.setCommunication("Réception: " + (communication != null ? communication : ""));
-        oDst.setNomTitulaireDestinataire(dest.getClient().getNomComplet());
+        oDst.setNomTitulaireDestinataire(nomClientDest);
+
 
         operationRepository.save(oSrc);
         operationRepository.save(oDst);
 
-        return oSrc; // par convention
+
+        return oSrc;
     }
 
+
+    // ✅ Ajout de la méthode pour le controller
+    @Override
+    public void effectuerVirement(String sourceAccount, String destinationAccount, BigDecimal montant, String description) {
+        this.transfer(sourceAccount, destinationAccount, montant, description);
+    }
     /* ===================== Changement d'état du compte ===================== */
 
     @Override
@@ -343,13 +394,16 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
     @Override @Transactional(readOnly = true)
     public List<Operation> getAccountHistory(String numCompte, LocalDateTime debut, LocalDateTime fin) {
         CompteBancaire compte = getCompteOrThrowByNum(numCompte);
-        return operationRepository.findByCompteAndDateBetween(compte, debut, fin);
+        return operationRepository
+                .findByCompteBancaireAndDateOperationBetweenOrderByDateOperationDesc(compte, debut, fin);
     }
 
     @Override @Transactional(readOnly = true)
     public List<Operation> getLastOperations(String numCompte, int nombre) {
         CompteBancaire compte = getCompteOrThrowByNum(numCompte);
-        return operationRepository.findLastOperations(compte, PageRequest.of(0, nombre));
+        return operationRepository
+                .findByCompteBancaireOrderByDateOperationDesc(compte, PageRequest.of(0, nombre))
+                .getContent();
     }
 
     @Override @Transactional(readOnly = true)
@@ -359,17 +413,38 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
         Map<String, BigDecimal> stats = new HashMap<>();
         stats.put("solde", compte.getBalance());
 
-        BigDecimal depots   = Optional.ofNullable(operationRepository.sumDepositsByAccount(compte)).orElse(BigDecimal.ZERO);
-        BigDecimal retraits = Optional.ofNullable(operationRepository.sumWithdrawalsByAccount(compte)).orElse(BigDecimal.ZERO);
+        // On calcule les totaux en mémoire (si tu préfères, crée des @Query d'agrégats côté repo).
+        LocalDateTime now = LocalDateTime.now();
+        // Fenêtre large (20 ans) pour couvrir l'historique sans méthodes d'agrégat dédiées
+        LocalDateTime veryOld = now.minusYears(20);
+
+        List<Operation> allOps = operationRepository
+                .findByCompteBancaire_NumCompteAndDateOperationBetweenOrderByDateOperationDesc(
+                        numCompte, veryOld, now);
+
+        BigDecimal depots = allOps.stream()
+                .filter(o -> o.getTypeOperation() == TypeOperation.DEPOT)
+                .map(Operation::getMontant)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal retraits = allOps.stream()
+                .filter(o -> o.getTypeOperation() == TypeOperation.RETRAIT)
+                .map(Operation::getMontant)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         stats.put("totalDepots", depots);
         stats.put("totalRetraits", retraits);
 
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        List<Operation> recentOps = operationRepository.findByCompteAndDateBetween(
-                compte, thirtyDaysAgo, LocalDateTime.now());
+        LocalDateTime thirtyDaysAgo = now.minusDays(30);
+        List<Operation> recentOps = operationRepository
+                .findByCompteBancaireAndDateOperationBetweenOrderByDateOperationDesc(
+                        compte, thirtyDaysAgo, now);
 
         BigDecimal totalMouvements = recentOps.stream()
                 .map(Operation::getMontant)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         stats.put("mouvementsMensuels", totalMouvements);
@@ -464,14 +539,16 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
         }
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        List<Operation> todayWithdrawals = operationRepository.findByCompteAndDateBetween(
+        List<Operation> todayWithdrawals = operationRepository
+                .findByCompteBancaireAndDateOperationBetweenOrderByDateOperationDesc(
                         compte, startOfDay, LocalDateTime.now())
                 .stream()
-                .filter(op -> op.getType() == TypeOperation.RETRAIT)
+                .filter(op -> op.getTypeOperation() == TypeOperation.RETRAIT)
                 .toList();
 
         BigDecimal totalToday = todayWithdrawals.stream()
                 .map(Operation::getMontant)
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal limit = BigDecimal.valueOf(carte.getPlafondJournalier());
@@ -481,17 +558,17 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
 
     @Override
     public void sendLowBalanceAlert(String numCompte) {
-
+        // TODO: implémenter une notification (email/sms/webhook) si besoin
     }
 
     @Override
     public void sendStatementNotification(String numCompte) {
-
+        // TODO: implémenter une notification (email/sms/webhook) si besoin
     }
 
     @Override
     public List<String> getPendingNotifications(String numCompte) {
-        return null;
+        return Collections.emptyList();
     }
 
     /* ====== Comptes du principal (par email) ====== */
@@ -524,6 +601,7 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
         Random random = new Random();
         return String.format("%03d", random.nextInt(1000));
     }
+
     @Override
     public void savingsDeposit(String numCompte, BigDecimal montant) {
         assertMontantPositif(montant);
@@ -540,7 +618,7 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
         epargne.alimenter(montant);
         compteEpargneRepository.save(epargne);
 
-        // tracer 2 opérations si tu veux (ou 1 avec type TRANSFERT_INTERNE)
+        // tracer l’opération
         Operation o = new Operation(compte, montant, TypeOperation.VIREMENT, "Virement vers épargne");
         o.setNumeroCompteDestinataire(compte.getNumCompte());
         o.setCommunication("Courant -> Epargne");

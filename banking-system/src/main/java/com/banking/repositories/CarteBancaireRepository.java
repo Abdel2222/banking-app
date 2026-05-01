@@ -40,4 +40,8 @@ public interface CarteBancaireRepository extends JpaRepository<CarteBancaire, Lo
 
     // (optionnel) Lister par client
     List<CarteBancaire> findByCompteBancaire_Client_Id(Long clientId);
+
+    Optional<Object> findByCompteBancaire_NumCompte(String numCompte);
+
+    Optional<CarteBancaire> findTopByCompteBancaireIsNullOrderByIdDesc();
 }

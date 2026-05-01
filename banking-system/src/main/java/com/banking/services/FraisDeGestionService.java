@@ -131,6 +131,9 @@ public interface FraisDeGestionService {
      * @param clientId L'identifiant du client
      * @return Montant total des frais actifs
      */
+    default void appliquerFraisOuverture(String numCompte) {
+
+    }
     BigDecimal calculerMontantTotalActifClient(Long clientId);
 
     /**

@@ -74,4 +74,5 @@ public interface CompteBancaireRepository extends JpaRepository<CompteBancaire, 
              AND c.createdAt < :date
            """)
     List<CompteBancaire> findInactiveAccountsOlderThan(@Param("date") LocalDateTime date);
+
 }

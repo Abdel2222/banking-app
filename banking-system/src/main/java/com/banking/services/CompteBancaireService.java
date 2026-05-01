@@ -30,6 +30,9 @@ public interface CompteBancaireService {
     Operation transfer(String numCompteSource, String numCompteDestinataire, BigDecimal montant, String communication);
 
 
+    // ✅ Ajout de la méthode pour le controller
+    void effectuerVirement(String sourceAccount, String destinationAccount, BigDecimal montant, String description);
+
     // Gestion du statut
     CompteBancaire activateAccount(String numCompte);
     CompteBancaire suspendAccount(String numCompte);

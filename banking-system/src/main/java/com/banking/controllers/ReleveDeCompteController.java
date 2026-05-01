@@ -1,73 +1,48 @@
 package com.banking.controllers;
 
-import com.banking.services.OperationService;
-import com.banking.services.ReleveDeCompteService;
+import com.banking.entities.ReleveDeCompte;
+import com.banking.repositories.ReleveDeCompteRepository;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import static org.springframework.format.annotation.DateTimeFormat.ISO;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/statements")
+@RequestMapping("/api/releves")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class ReleveDeCompteController {
 
-    private final ReleveDeCompteService releveService; // ta version @Service qui produit le texte
-    private final OperationService operationService;   // pour le PDF
+    private final ReleveDeCompteRepository repo;
 
-    public ReleveDeCompteController(ReleveDeCompteService releveService,
-                                    OperationService operationService) {
-        this.releveService = releveService;
-        this.operationService = operationService;
+    public ReleveDeCompteController(ReleveDeCompteRepository repo) {
+        this.repo = repo;
     }
 
-    // Relevé TEXTE "lisible" (plain text) : /api/statements/{num}/plain?start=YYYY-MM-DD&end=YYYY-MM-DD
-    @GetMapping("/{numeroCompte}/plain")
-    public ResponseEntity<byte[]> getPlain(
-            @PathVariable String numeroCompte,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
-
-        LocalDateTime from = start.atStartOfDay();
-        LocalDateTime to   = end.atTime(23,59,59);
-
-        String txt = releveService.generatePlainTextStatement(numeroCompte, from, to);
-        byte[] body = txt.getBytes(StandardCharsets.UTF_8);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(new MediaType("text", "plain", StandardCharsets.UTF_8));
-        headers.setContentLength(body.length);
-        headers.setContentDisposition(
-                ContentDisposition.attachment().filename("releve-" + numeroCompte + ".txt").build()
-        );
-        return ResponseEntity.ok().headers(headers).body(body);
+    // GET /api/releves/{numCompte}?start=2025-08-01T00:00:00&end=2025-08-31T23:59:59
+    @GetMapping("/{numCompte}")
+    public ResponseEntity<List<ReleveDeCompte>> getHistorique(
+            @PathVariable String numCompte,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
+    ) {
+        if (start != null && end != null) {
+            return ResponseEntity.ok(
+                    repo.findByNumCompteAndDateOperationBetweenOrderByDateOperationAsc(numCompte, start, end)
+            );
+        }
+        return ResponseEntity.ok(repo.findByNumCompteOrderByDateOperationDesc(numCompte));
     }
 
-    // Relevé PDF : /api/statements/{num}/pdf?start=YYYY-MM-DD&end=YYYY-MM-DD
-    @GetMapping("/{numeroCompte}/pdf")
-    public ResponseEntity<byte[]> getPdf(
-            @PathVariable String numeroCompte,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
-
-        LocalDateTime from = start.atStartOfDay();
-        LocalDateTime to   = end.atTime(23,59,59);
-
-        byte[] pdf = operationService.exportOperationsToPdf(numeroCompte, from, to);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentLength(pdf.length);
-        headers.setContentDisposition(
-                ContentDisposition.attachment().filename("releve-" + numeroCompte + ".pdf").build()
-        );
-        return ResponseEntity.ok().headers(headers).body(pdf);
+    // GET /api/releves/{numCompte}/last/10
+    @GetMapping("/{numCompte}/last/{n}")
+    public ResponseEntity<List<ReleveDeCompte>> getDerniers(
+            @PathVariable String numCompte, @PathVariable int n
+    ) {
+        // Simple: on prend tout et on tronque (si tu veux optimisé, fais un query paginé)
+        List<ReleveDeCompte> all = repo.findByNumCompteOrderByDateOperationDesc(numCompte);
+        int to = Math.min(n, all.size());
+        return ResponseEntity.ok(all.subList(0, to));
     }
 }
