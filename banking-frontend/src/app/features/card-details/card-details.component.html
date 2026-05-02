@@ -1,0 +1,155 @@
+<div class="card-details-page">
+  <header class="topbar">
+    <button class="back-btn" (click)="goBack()">
+      ← Retour au dashboard
+    </button>
+    <h1>Ma Carte Bancaire</h1>
+  </header>
+
+  <main class="content">
+    <div *ngIf="loading()" class="loading">
+      <div class="spinner"></div>
+      <p>Chargement de votre carte...</p>
+    </div>
+
+    <div *ngIf="error()" class="error-box">
+      <p>{{ error() }}</p>
+      <button (click)="goBack()">Retour</button>
+    </div>
+
+    <div *ngIf="!loading() && !error() && card()" class="card-showcase">
+      <div class="instructions">
+        <p>👆 Cliquez sur la carte pour voir le verso</p>
+      </div>
+
+      <!-- Carte 3D avec flip -->
+      <div class="card-3d-container" (click)="toggleFlip()">
+        <div class="card-flipper" [class.flipped]="isFlipped()">
+          
+          <!-- RECTO de la carte -->
+          <div class="card-face card-front">
+            <div class="card-background"></div>
+            
+            <div class="card-header">
+              <div class="card-logo">💳</div>
+              <div class="card-type">T€chno-Bank</div>
+            </div>
+
+            <div class="card-chip">
+              <div class="chip-line"></div>
+              <div class="chip-line"></div>
+              <div class="chip-line"></div>
+              <div class="chip-line"></div>
+            </div>
+
+            <div class="card-number">
+              {{ formatCardNumber(card()?.numeroCarte) }}
+            </div>
+
+            <div class="card-info-row">
+              <div class="card-holder">
+                <div class="label">TITULAIRE</div>
+                <div class="value">{{ userName().toUpperCase() }}</div>
+              </div>
+              <div class="card-expiry">
+                <div class="label">EXPIRE FIN</div>
+                <div class="value">{{ formatExpirationDate(card()?.dateExpiration) }}</div>
+              </div>
+            </div>
+
+            <div class="card-network">VISA</div>
+          </div>
+
+          <!-- VERSO de la carte -->
+          <div class="card-face card-back">
+            <div class="card-background"></div>
+            
+            <div class="magnetic-strip"></div>
+
+            <div class="signature-panel">
+              <div class="signature">{{ userName() }}</div>
+            </div>
+
+            <div class="cvv-section">
+              <div class="cvv-label">CVV</div>
+              <div class="cvv-value">{{ getCVV() }}</div>
+            </div>
+
+            <div class="card-info-text">
+              <p>Pour toute question, contactez le 0800 123 456</p>
+              <p>www.techno-bank.com</p>
+            </div>
+
+            <div class="card-network-back">VISA</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informations supplémentaires -->
+      <div class="card-info-panel">
+        <h2>Informations de la carte</h2>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-icon">💳</span>
+            <div class="info-content">
+              <span class="info-label">Numéro de carte</span>
+              <span class="info-value">{{ formatCardNumber(card()?.numeroCarte) }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">📅</span>
+            <div class="info-content">
+              <span class="info-label">Date d'expiration</span>
+              <span class="info-value">{{ formatExpirationDate(card()?.dateExpiration) }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">🔒</span>
+            <div class="info-content">
+              <span class="info-label">Code CVV</span>
+              <span class="info-value">{{ getCVV() }} (au verso)</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon" [class.active]="card()?.estActive" [class.blocked]="!card()?.estActive">
+              {{ card()?.estActive ? '✓' : '✗' }}
+            </span>
+            <div class="info-content">
+              <span class="info-label">Statut</span>
+              <span class="info-value" [class]="cardStatusClass">{{ cardStatus }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">💰</span>
+            <div class="info-content">
+              <span class="info-label">Plafond journalier</span>
+              <span class="info-value">{{ card()?.plafondJournalier || 500 }} €</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">📊</span>
+            <div class="info-content">
+              <span class="info-label">Plafond mensuel</span>
+              <span class="info-value">{{ card()?.plafondMensuel || 3000 }} €</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="security-notice">
+          <div class="notice-icon">🔐</div>
+          <div class="notice-content">
+            <p><strong>Sécurité de votre carte</strong></p>
+            <p>Ne communiquez jamais votre code CVV par téléphone ou email.</p>
+            <p>En cas de perte ou de vol, bloquez immédiatement votre carte depuis votre dashboard.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

@@ -1,0 +1,213 @@
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand techno-brand">⚡ T€chno-Bank </div>
+    <div class="user">
+      <span>Bonjour, <b>{{ userName() || 'Client' }}</b></span>
+      <a class="logout" (click)="logout()">Se déconnecter</a>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- Col gauche : comptes -->
+    <section class="panel">
+      <h3>Mes comptes</h3>
+
+      <div *ngIf="loading()" class="muted">Chargement…</div>
+      <div *ngIf="error()" class="err">{{ error() }}</div>
+
+      <div class="accounts" *ngIf="((accounts()?.length) || 0) > 0; else noacc">
+        <button *ngFor="let a of (accounts() || [])"
+                (click)="select(a)"
+                [class.active]="selected() && a.numCompte === selected()?.numCompte"
+                class="account-card">
+          <div class="account-icon">
+            {{ (a.intitule?.toLowerCase() || '').includes('épargne') ? '💰' : '🏦' }}
+          </div>
+          <div class="account-info">
+            <div class="account-label">{{ a.intitule || 'Compte' }}</div>
+            <div class="num">{{ a.numCompte }}</div>
+            <div class="bal">{{ (a.balance ?? a.solde) | money }}</div>
+            <div class="st">{{ a.status }}</div>
+          </div>
+        </button>
+      </div>
+      <ng-template #noacc>
+        <p class="muted">Aucun compte.</p>
+      </ng-template>
+
+      <!-- ========== NOTIFICATIONS EN BAS DES COMPTES ========== -->
+      <div class="notification-wrapper-sidebar">
+        <button class="notification-btn-sidebar" (click)="toggleNotifications()">
+          <span class="notif-icon">🔔</span>
+          <span class="notif-text">Notifications</span>
+          <span class="badge" *ngIf="unreadCount() > 0">{{ unreadCount() }}</span>
+        </button>
+
+        <!-- PANEL NOTIFICATIONS -->
+        <div class="notification-panel-sidebar" *ngIf="showNotifications()">
+          <div class="panel-header">
+            <h3>Notifications ({{ unreadCount() }} non lue(s))</h3>
+            <button class="clear-btn" (click)="clearAllNotifications()" *ngIf="notifications().length > 0">
+              Tout effacer
+            </button>
+          </div>
+
+          <div class="panel-content">
+            <div *ngIf="notifications().length === 0" class="empty-state">
+              <p>Aucune notification</p>
+            </div>
+
+            <div
+              *ngFor="let notif of notifications()"
+              class="notification-item"
+              [class.unread]="!notif.read">
+              <div class="notif-icon">
+                <span *ngIf="notif.type === 'rdv'">📅</span>
+                <span *ngIf="notif.type === 'success'">✅</span>
+                <span *ngIf="notif.type === 'info'">ℹ️</span>
+                <span *ngIf="notif.type === 'error'">❌</span>
+              </div>
+              <div class="notif-content" (click)="markAsRead(notif.id)">
+                <h4>{{ notif.title }}</h4>
+                <p>{{ notif.message }}</p>
+                <span class="notif-time">{{ notif.timestamp | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div class="notif-actions">
+                <button class="delete-btn" (click)="deleteNotification(notif.id); $event.stopPropagation()" title="Effacer">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Col droite : résumé + actions -->
+    <section class="panel span2">
+      <ng-container *ngIf="selected(); else noSelection">
+        <div class="cards">
+          <!-- Solde -->
+          <div class="card">
+            <div class="label">Solde - {{ selected()?.intitule }}</div>
+            <div class="value big">{{ (selected()?.balance ?? selected()?.solde ?? 0) | money }}</div>
+          </div>
+
+          <!-- Carte Cliquable -->
+          <ng-container *ngIf="card(); else nocard">
+            <div class="card card-clickable" (click)="goToCardDetails()">
+              <div class="label">💳 Ma Carte Bancaire</div>
+              <div class="value">
+                <div class="card-preview">
+                  <div class="card-icon-large">💳</div>
+                  <div class="card-info-preview">
+                    <div class="card-number-preview">
+                      •••• •••• •••• {{ card()?.numeroCarte?.slice(-4) || '••••' }}
+                    </div>
+                    <small>Expire: {{ formatCardExpiry(card()?.dateExpiration) }}</small>
+                  </div>
+                </div>
+
+                <div class="card-status-row">
+                  <div class="status" [class.ok]="card()?.estActive" [class.ko]="!card()?.estActive">
+                    {{ card()?.estActive ? '✓ Active' : '✗ Bloquée' }}
+                  </div>
+                </div>
+
+                <div class="view-details-btn">
+                  → Voir ma carte complète
+                </div>
+              </div>
+
+              <div class="actions mt">
+                <button (click)="toggleCard(); $event.stopPropagation()" class="btn-secondary">
+                  {{ card()?.estActive ? 'Bloquer' : 'Débloquer' }}
+                </button>
+              </div>
+            </div>
+          </ng-container>
+          <ng-template #nocard>
+            <div class="card muted">
+              <div class="label">💳 Carte</div>
+              <div>Aucune carte liée à ce compte.</div>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Actions PROFESSIONNELLES -->
+        <div class="rdv-actions">
+          <div class="rdv-card depot-card">
+            <div class="rdv-icon">💰</div>
+            <h4>Dépôt en espèces</h4>
+            <p>Déposez vos espèces en toute sécurité dans l'une de nos agences à Bruxelles</p>
+            <button class="btn-rdv-primary" (click)="goToRDVDepot()">
+              📅 Prendre rendez-vous
+            </button>
+          </div>
+
+          <div class="rdv-card retrait-card">
+            <div class="rdv-icon">💸</div>
+            <h4>Retrait en espèces</h4>
+            <p>Retirez des espèces à l'agence de votre choix sur rendez-vous (minimum 3000€)</p>
+            <button class="btn-rdv-primary" (click)="goToRDVRetrait()">
+              📅 Prendre rendez-vous
+            </button>
+          </div>
+        </div>
+
+        <!-- Bouton Virement -->
+        <div class="box virement-box">
+          <h4>Virement</h4>
+          <button
+            class="btn-virement-gold"
+            (click)="goToVirement()">
+            Effectuer un Virement
+          </button>
+        </div>
+
+        <!-- ========== OPÉRATIONS AVEC BOUTON VOIR TOUT ========== -->
+        <div class="ops">
+          <div class="ops-header">
+            <h4>Dernières opérations</h4>
+            <button class="btn-voir-tout" (click)="goToOperations()">
+              📊 Voir tout
+            </button>
+          </div>
+
+          <table *ngIf="((ops()?.length) || 0) > 0; else noops">
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th style="text-align:right">Montant</th>
+            </tr>
+            <tr *ngFor="let o of (ops() || [])">
+              <td>{{ o.date | date:'short' }}</td>
+              <td>{{ o.description }}</td>
+              <td style="text-align:right">{{ o.montant | money }}</td>
+            </tr>
+          </table>
+          <ng-template #noops>
+            <p class="muted">Aucune opération récente.</p>
+          </ng-template>
+        </div>
+
+        <p class="err" *ngIf="error()">{{ error() }}</p>
+      </ng-container>
+
+      <ng-template #noSelection>
+        <div class="card">
+          <div class="label">Aucun compte sélectionné</div>
+          <div>Sélectionne un compte à gauche pour voir le détail.</div>
+        </div>
+      </ng-template>
+    </section>
+  </main>
+
+  <!-- Chatbot Component -->
+  <app-chatbot
+    [selectedAccount]="selected()"
+    [operations]="ops()"
+    [userName]="userName()"
+    class="chatbot-animated">
+  </app-chatbot>
+</div>

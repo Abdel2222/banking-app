@@ -541,6 +541,9 @@ Email : admin@bank.local
 Mot de passe : Admin#2025!
 
 
+Email :nini.kex@bank.local
+Mot de passe :Nini#2025!
+
 
 # === Helpers ===
 $ErrorActionPreference = "Stop"

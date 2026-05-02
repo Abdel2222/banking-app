@@ -1,0 +1,213 @@
+<div class="chatbot-monitor">
+  <!-- Loading indicator -->
+  <div class="loading-overlay" *ngIf="loading()">
+    <div class="spinner"></div>
+    <span>Chargement des données...</span>
+  </div>
+
+  <!-- Header avec stats améliorées -->
+  <div class="monitor-header">
+    <div class="header-top">
+      <h3>🤖 Supervision Chatbot</h3>
+      <div class="header-actions">
+        <button (click)="refreshData()" class="refresh-btn" [disabled]="loading()">
+          🔄 Actualiser
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon">💬</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().totalInteractions }}</div>
+          <div class="stat-label">Interactions totales</div>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().uniqueUsers }}</div>
+          <div class="stat-label">Utilisateurs uniques</div>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().resolutionRate }}%</div>
+          <div class="stat-label">Taux de résolution</div>
+        </div>
+      </div>
+
+      <div class="stat-card warning">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().avgResponseTime }}s</div>
+          <div class="stat-label">Temps de réponse</div>
+        </div>
+      </div>
+
+      <div class="stat-card accent">
+        <div class="stat-icon">📅</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().todayInteractions }}</div>
+          <div class="stat-label">Aujourd'hui</div>
+        </div>
+      </div>
+
+      <div class="stat-card positive">
+        <div class="stat-icon">😊</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats().satisfactionRate }}%</div>
+          <div class="stat-label">Satisfaction</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres améliorés -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Catégorie:</label>
+      <select (change)="filterByCategory($event)" class="filter-select">
+        <option value="">Toutes les catégories</option>
+        <option value="balance">💰 Solde</option>
+        <option value="operations">📊 Opérations</option>
+        <option value="card">💳 Carte</option>
+        <option value="help">❓ Aide</option>
+        <option value="other">📋 Autre</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Sentiment:</label>
+      <select (change)="filterBySentiment($event)" class="filter-select">
+        <option value="">Tous les sentiments</option>
+        <option value="positive">😊 Positif</option>
+        <option value="neutral">😐 Neutre</option>
+        <option value="negative">😞 Négatif</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Période:</label>
+      <select (change)="filterByDate($event)" class="filter-select">
+        <option value="">Toute la période</option>
+        <option value="today">Aujourd'hui</option>
+        <option value="week">Cette semaine</option>
+        <option value="month">Ce mois</option>
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <button (click)="exportData()" class="export-btn">
+        📊 Exporter CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Liste des interactions -->
+  <div class="interactions-list">
+    <div class="interaction-card"
+         *ngFor="let interaction of filteredInteractions()"
+         [class.unresolved]="!interaction.resolved"
+         [class.negative]="interaction.sentiment === 'negative'">
+
+      <div class="interaction-header">
+        <div class="user-info">
+          <div class="user-avatar">{{ interaction.userName.charAt(0).toUpperCase() }}</div>
+          <div class="user-details">
+            <strong>{{ interaction.userName }}</strong>
+            <span class="user-id">({{ interaction.userId }})</span>
+          </div>
+        </div>
+        <div class="interaction-meta">
+          <span class="timestamp">{{ formatTime(interaction.timestamp) }}</span>
+          <span class="category" [class]="'cat-' + interaction.category">
+            {{ getCategoryLabel(interaction.category) }}
+          </span>
+          <span class="sentiment">
+            {{ getSentimentIcon(interaction.sentiment) }}
+          </span>
+          <span class="status-badge" [class.resolved]="interaction.resolved">
+            {{ interaction.resolved ? '✅ Résolu' : '⏳ En attente' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="conversation">
+        <div class="message user-message">
+          <div class="message-label">👤 Question:</div>
+          <div class="message-content">{{ interaction.userMessage }}</div>
+        </div>
+        <div class="message bot-message">
+          <div class="message-label">🤖 Réponse:</div>
+          <div class="message-content" [innerHTML]="interaction.botResponse"></div>
+        </div>
+      </div>
+
+      <div class="context-info" *ngIf="interaction.context.accountNumber">
+        <small>
+          📊 Contexte: Compte {{ interaction.context.accountNumber }}
+          <span *ngIf="interaction.context.balance">({{ interaction.context.balance | currency:'EUR' }})</span>
+        </small>
+      </div>
+
+      <div class="interaction-actions">
+        <button (click)="markAsResolved(interaction)"
+                *ngIf="!interaction.resolved"
+                class="action-btn resolve-btn">
+          ✅ Marquer résolu
+        </button>
+        <button (click)="flagForReview(interaction)" class="action-btn flag-btn">
+          🚩 Signaler
+        </button>
+        <button (click)="viewUserHistory(interaction.userId)" class="action-btn history-btn">
+          📋 Historique
+        </button>
+      </div>
+    </div>
+
+    <!-- Message si aucune interaction -->
+    <div class="no-data" *ngIf="filteredInteractions().length === 0 && !loading()">
+      <div class="no-data-icon">🤖</div>
+      <h4>Aucune interaction trouvée</h4>
+      <p>Aucune interaction ne correspond aux filtres sélectionnés.</p>
+    </div>
+  </div>
+
+  <!-- Questions fréquentes -->
+  <div class="frequent-questions" *ngIf="stats().topQuestions.length">
+    <h4>🔥 Questions les plus fréquentes</h4>
+    <div class="question-list">
+      <div class="question-item" *ngFor="let q of stats().topQuestions; let i = index">
+        <div class="question-rank">#{{ i + 1 }}</div>
+        <span class="question-text">{{ q.question }}</span>
+        <span class="question-count">{{ q.count }}x</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'historique utilisateur -->
+  <div class="modal" *ngIf="showUserHistory()" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h4>📋 Historique - {{ selectedUser() }}</h4>
+        <button (click)="closeModal()" class="modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="user-interactions">
+          <div class="interaction-summary" *ngFor="let interaction of userHistory()">
+            <div class="summary-header">
+              <span class="summary-time">{{ formatTime(interaction.timestamp) }}</span>
+              <span class="summary-category">{{ getCategoryLabel(interaction.category) }}</span>
+            </div>
+            <div class="summary-content">{{ interaction.userMessage }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,135 @@
+<div class="container" [class.active]="isSignup()">
+
+  <!-- LOGIN (gauche par défaut) -->
+  <div class="form-card sign-in">
+    <div class="success-banner" *ngIf="showInscriptionSuccess()">
+      <div class="success-content">
+        <div class="success-icon">
+          <div class="checkmark">
+            <div class="checkmark-circle"></div>
+            <div class="checkmark-stem"></div>
+            <div class="checkmark-kick"></div>
+          </div>
+        </div>
+        <div class="success-text">
+          <h3>Bienvenue dans votre espace bancaire</h3>
+          <p>Votre compte a été créé avec succès.<br>
+             Connectez-vous maintenant pour accéder à vos services.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="balloon-container">
+      <div class="balloon"></div><div class="balloon"></div><div class="balloon"></div>
+      <div class="balloon"></div><div class="balloon"></div>
+    </div>
+    <div class="wave"></div>
+    <h2>{{ showInscriptionSuccess() ? 'Connexion à votre compte' : 'Login' }}</h2>
+
+    <form [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+      <div class="input-group">
+        <i class="icon">&#x2709;</i>
+        <input type="email" placeholder="Email" formControlName="email" required />
+      </div>
+      <div class="input-group">
+        <i class="icon">&#x1F512;</i>
+        <input type="password" placeholder="Mot de passe" formControlName="motDePasse" required />
+      </div>
+      <div class="options">
+        <label>
+          <input type="checkbox" formControlName="remember" />
+          Se souvenir de moi
+        </label>
+        <a href="#">Mot de passe oublié ?</a>
+      </div>
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Connexion...' : 'SE CONNECTER' }}
+      </button>
+      <p *ngIf="!hideSignupForm()">
+        Pas encore de compte ?
+        <a href="#" (click)="goToSignup(); $event.preventDefault()">S'inscrire</a>
+      </p>
+      <p *ngIf="hideSignupForm()">
+        Besoin de créer un autre compte ?
+        <a href="#" (click)="showSignupAgain(); $event.preventDefault()">S'inscrire</a>
+      </p>
+      <div class="error" *ngIf="errorLogin()">{{ errorLogin() }}</div>
+    </form>
+  </div>
+
+  <!-- SIGNUP (caché par défaut) -->
+  <div class="form-card sign-up">
+    <div class="balloon-container">
+      <div class="balloon"></div><div class="balloon"></div><div class="balloon"></div>
+      <div class="balloon"></div><div class="balloon"></div>
+    </div>
+    <div class="wave"></div>
+    <h2>Créer un compte</h2>
+
+    <form [formGroup]="signupForm" (ngSubmit)="submitSignup()">
+      <div class="input-group">
+        <i class="icon">&#x1F464;</i>
+        <input type="text" placeholder="Prénom" formControlName="prenom" required />
+      </div>
+      <div class="input-group">
+        <i class="icon">&#x1F464;</i>
+        <input type="text" placeholder="Nom" formControlName="nom" required />
+      </div>
+      <div class="input-group">
+        <i class="icon">&#x2709;</i>
+        <input type="email" placeholder="Email" formControlName="email" required />
+      </div>
+      <div class="input-group">
+        <i class="icon">&#x1F512;</i>
+        <input type="password" placeholder="Mot de passe" formControlName="motDePasse" required />
+      </div>
+      <div class="options">
+        <label>
+          <input type="checkbox" formControlName="remember" />
+          J'accepte les conditions
+        </label>
+        <a href="#">Conditions d'utilisation</a>
+      </div>
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Inscription...' : "S'INSCRIRE" }}
+      </button>
+      <p>
+        Déjà un compte ?
+        <a href="#" (click)="goToLogin(); $event.preventDefault()">Se connecter</a>
+      </p>
+      <div class="error" *ngIf="errorSignup()">{{ errorSignup() }}</div>
+    </form>
+  </div>
+
+  <!-- PANNEAU GLISSANT -->
+  <div class="toggle-container">
+    <div class="toggle">
+
+      <!-- Gauche : visible quand signup actif → branding Techno-Bank -->
+      <div class="toggle-panel toggle-left">
+        <div class="wave"></div>
+        <div class="balloon-container">
+          <div class="balloon"></div><div class="balloon"></div><div class="balloon"></div>
+        </div>
+        <div class="brand-euro">€</div>
+        <h1>Techno-Bank</h1>
+        <p>Bienvenue dans votre banque.<br/>Gérez votre argent en toute sécurité.</p>
+        <button class="panel-btn" (click)="goToLogin()">SE CONNECTER</button>
+      </div>
+
+      <!-- Droite : visible par défaut → invite à s'inscrire -->
+      <div class="toggle-panel toggle-right">
+        <div class="wave"></div>
+        <div class="balloon-container">
+          <div class="balloon"></div><div class="balloon"></div><div class="balloon"></div>
+        </div>
+        <div class="brand-euro">€</div>
+        <h1>Techno-Bank</h1>
+        <p>Nouveau client ?<br/>Créez votre compte en quelques secondes.</p>
+        <button class="panel-btn" (click)="goToSignup()">S'INSCRIRE</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

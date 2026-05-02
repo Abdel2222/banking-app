@@ -1,0 +1,74 @@
+<div class="chatbot-container" [class.expanded]="isExpanded()">
+  <!-- Toggle Button -->
+  <button
+    class="chat-toggle"
+    (click)="toggleChat()"
+    [attr.aria-label]="isExpanded() ? 'Fermer le chat' : 'Ouvrir le chat'">
+    <span class="icon">{{ isExpanded() ? '✕' : '💬' }}</span>
+    <span class="badge" *ngIf="!isExpanded() && hasUnreadMessages()">!</span>
+  </button>
+
+  <!-- Chat Window -->
+  <div class="chat-window" *ngIf="isExpanded()">
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="bot-info">
+        <div class="bot-avatar">🤖</div>
+        <div>
+          <div class="bot-name">Assistant Bancaire</div>
+          <div class="bot-status">En ligne</div>
+        </div>
+      </div>
+      <button class="close-btn" (click)="toggleChat()">✕</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" #messagesContainer>
+      <div *ngFor="let msg of messages()"
+           class="message"
+           [class.bot]="msg.isBot"
+           [class.user]="!msg.isBot">
+        <div class="message-content">
+          <div class="text" [innerHTML]="msg.text"></div>
+          <div class="time">{{ formatTime(msg.timestamp) }}</div>
+        </div>
+      </div>
+
+      <!-- Typing indicator -->
+      <div class="message bot" *ngIf="isTyping()">
+        <div class="message-content">
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions" *ngIf="quickActions().length > 0 && !isTyping()">
+      <button
+        *ngFor="let action of quickActions()"
+        class="quick-action-btn"
+        (click)="handleQuickAction(action)">
+        <span class="icon">{{ action.icon }}</span>
+        {{ action.label }}
+      </button>
+    </div>
+
+    <!-- Input -->
+    <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="chat-input">
+      <input
+        type="text"
+        formControlName="message"
+        placeholder="Tapez votre message..."
+        [disabled]="isTyping()"
+        #messageInput>
+      <button
+        type="submit"
+        [disabled]="messageForm.invalid || isTyping()"
+        class="send-btn">
+        📤
+      </button>
+    </form>
+  </div>
+</div>
