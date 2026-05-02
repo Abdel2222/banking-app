@@ -1,0 +1,252 @@
+<div class="rdv-page">
+  <header class="topbar">
+    <button class="back-btn" (click)="goBack()">
+      ← Retour au dashboard
+    </button>
+    <h1>Prendre Rendez-vous en Agence</h1>
+  </header>
+
+  <main class="content">
+    <div class="alert-box">
+      <div class="alert-icon">📅</div>
+      <div class="alert-content">
+        <h2>Rendez-vous pour {{ typeOperation() }}</h2>
+        <p *ngIf="montant() > 0">
+          Vous souhaitez effectuer un <strong>{{ typeOperation() }}</strong> de
+          <strong>{{ formatMontant(montant()) }}</strong>.
+        </p>
+        <p *ngIf="montant() === 0">
+          Vous souhaitez effectuer un <strong>{{ typeOperation() }}</strong> en agence.
+        </p>
+        <p>
+          Veuillez choisir une date, un horaire et remplir vos informations ci-dessous.
+        </p>
+      </div>
+    </div>
+
+    <div *ngIf="!success()" class="rdv-container">
+      <!-- Calendrier -->
+      <div class="calendar-section">
+        <h3>📅 Choisissez une date</h3>
+
+        <div class="calendar">
+          <div class="calendar-header">
+            <button class="nav-btn" (click)="previousMonth()">‹</button>
+            <span class="month-year">{{ getMonthYear() }}</span>
+            <button class="nav-btn" (click)="nextMonth()">›</button>
+          </div>
+
+          <div class="calendar-weekdays">
+            <div class="weekday">Dim</div>
+            <div class="weekday">Lun</div>
+            <div class="weekday">Mar</div>
+            <div class="weekday">Mer</div>
+            <div class="weekday">Jeu</div>
+            <div class="weekday">Ven</div>
+            <div class="weekday">Sam</div>
+          </div>
+
+          <div class="calendar-grid">
+            <div
+              *ngFor="let day of calendarDays()"
+              class="calendar-day"
+              [class.other-month]="!day.isCurrentMonth"
+              [class.today]="day.isToday"
+              [class.past]="day.isPast"
+              [class.selected]="day.isSelected"
+              (click)="selectDate(day)">
+              {{ day.day }}
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedDate()" class="selected-date-display">
+          <span class="date-icon">📆</span>
+          <span class="date-text">{{ formatSelectedDate() }}</span>
+        </div>
+      </div>
+
+      <!-- Horaires -->
+      <div class="time-section">
+        <h3>🕐 Choisissez un horaire</h3>
+
+        <div *ngIf="!selectedDate()" class="time-placeholder">
+          Veuillez d'abord sélectionner une date
+        </div>
+
+        <div *ngIf="selectedDate()" class="time-slots-container">
+          <div class="time-period">
+            <h4>Matin</h4>
+            <div class="time-slots">
+              <button
+                *ngFor="let slot of timeSlots().slice(0, 6)"
+                class="time-slot"
+                [class.available]="slot.available"
+                [class.unavailable]="!slot.available"
+                [class.selected]="selectedTime() === slot.time"
+                [disabled]="!slot.available"
+                (click)="selectTime(slot)">
+                {{ slot.time }}
+              </button>
+            </div>
+          </div>
+
+          <div class="time-period">
+            <h4>Après-midi</h4>
+            <div class="time-slots">
+              <button
+                *ngFor="let slot of timeSlots().slice(6)"
+                class="time-slot"
+                [class.available]="slot.available"
+                [class.unavailable]="!slot.available"
+                [class.selected]="selectedTime() === slot.time"
+                [disabled]="!slot.available"
+                (click)="selectTime(slot)">
+                {{ slot.time }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulaire -->
+      <div class="form-section">
+        <h3>📝 Vos informations</h3>
+
+        <form [formGroup]="rdvForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" formControlName="prenom" placeholder="Votre prénom">
+              <span class="error" *ngIf="rdvForm.get('prenom')?.invalid && rdvForm.get('prenom')?.touched">
+                Prénom requis (min. 2 caractères)
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" formControlName="nom" placeholder="Votre nom">
+              <span class="error" *ngIf="rdvForm.get('nom')?.invalid && rdvForm.get('nom')?.touched">
+                Nom requis (min. 2 caractères)
+              </span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" formControlName="email" placeholder="votre.email@example.com">
+              <span class="error" *ngIf="rdvForm.get('email')?.invalid && rdvForm.get('email')?.touched">
+                Email valide requis
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Téléphone (optionnel)</label>
+              <input type="tel" formControlName="telephone" placeholder="0612345678 (optionnel)">
+              <span class="info-text">Le téléphone est optionnel mais recommandé pour confirmation</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Montant (€) *</label>
+            <input type="number" formControlName="montant" placeholder="Montant de l'opération" min="0.01" step="0.01">
+            <span class="error" *ngIf="rdvForm.get('montant')?.invalid && rdvForm.get('montant')?.touched">
+              {{ montantErrorMessage }}
+            </span>
+            <span class="info-text" *ngIf="minMontant() > 0">
+              Montant minimum : {{ formatMontant(minMontant()) }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Agence *</label>
+            <select formControlName="agence">
+              <option *ngFor="let agence of agences" [value]="agence">{{ agence }}</option>
+            </select>
+          </div>
+
+          <!-- Localisation de l'agence -->
+          <div class="agence-location" *ngIf="rdvForm.get('agence')?.value">
+            <h4>📍 Localisation de l'agence</h4>
+            <div class="location-card">
+              <div class="location-icon">🏦</div>
+              <div class="location-info">
+                <strong>{{ rdvForm.get('agence')?.value }}</strong>
+                <p>{{ getAgenceAddress(rdvForm.get('agence')?.value || '') }}</p>
+                <a
+                  [href]="'https://www.google.com/maps/search/?api=1&query=' + getAgenceAddress(rdvForm.get('agence')?.value || '')"
+                  target="_blank"
+                  class="maps-link">
+                  🗺️ Ouvrir dans Google Maps
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Motif du rendez-vous *</label>
+            <textarea
+              formControlName="motif"
+              rows="4"
+              placeholder="Décrivez brièvement le motif de votre rendez-vous..."></textarea>
+            <span class="error" *ngIf="rdvForm.get('motif')?.invalid && rdvForm.get('motif')?.touched">
+              Motif requis
+            </span>
+          </div>
+
+          <!-- Récapitulatif -->
+          <div class="rdv-summary" *ngIf="selectedDate() && selectedTime() && rdvForm.get('montant')?.valid">
+            <h4>📋 Récapitulatif de votre rendez-vous</h4>
+            <div class="summary-item">
+              <span class="label">Date :</span>
+              <span class="value">{{ formatSelectedDate() }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Heure :</span>
+              <span class="value">{{ selectedTime() }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Opération :</span>
+              <span class="value">{{ typeOperation() }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Montant :</span>
+              <span class="value">{{ formatMontant(rdvForm.get('montant')?.value || 0) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Agence :</span>
+              <span class="value">{{ rdvForm.get('agence')?.value }}</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="goBack()">Annuler</button>
+            <button
+              type="button"
+              class="btn-primary"
+              [disabled]="!canSubmit()"
+              (click)="submitRDV()">
+              ✅ Confirmer le rendez-vous
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Écran de succès -->
+    <div *ngIf="success()" class="success-box">
+      <div class="success-icon">✅</div>
+      <h2>Rendez-vous confirmé !</h2>
+      <p>Votre demande a été enregistrée avec succès.</p>
+      <p>Vous recevrez un email de confirmation à l'adresse indiquée.</p>
+      <div class="success-details">
+        <p><strong>Date :</strong> {{ formatSelectedDate() }}</p>
+        <p><strong>Heure :</strong> {{ selectedTime() }}</p>
+        <p><strong>Opération :</strong> {{ typeOperation() }} de {{ formatMontant(rdvForm.get('montant')?.value || 0) }}</p>
+        <p><strong>Agence :</strong> {{ rdvForm.get('agence')?.value }}</p>
+      </div>
+      <p class="redirect-info">Redirection vers le dashboard dans quelques instants...</p>
+    </div>
+  </main>
+</div>

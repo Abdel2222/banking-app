@@ -1,0 +1,267 @@
+<div class="virement-container">
+  <h2>Nouveau Virement</h2>
+
+  <!-- Affichage des erreurs/succès -->
+  <div *ngIf="error()" class="alert alert-danger">
+    {{ error() }}
+  </div>
+  <div *ngIf="success()" class="alert alert-success">
+    {{ success() }}
+  </div>
+
+  <!-- NOUVEAU : Switch Virement Interne/Externe -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="virementInterneSwitch"
+          [checked]="virementInterne()"
+          (change)="toggleVirementInterne()">
+        <label class="form-check-label" for="virementInterneSwitch">
+          <strong>💰 Virement entre mes comptes</strong> (compte épargne, etc.)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 1: Sélection du compte source -->
+  <div class="card mb-3">
+    <div class="card-header">
+      <h5>1. Mon compte (source)</h5>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>Compte à débiter</label>
+        <select
+          class="form-control"
+          [value]="selectedCompteSource()?.numCompte || ''"
+          (change)="onCompteSourceSelect($any($event.target).value)">
+          <option value="">-- Choisir un compte --</option>
+          <option
+            *ngFor="let compte of mesComptes()"
+            [value]="compte.numCompte">
+            {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
+          </option>
+        </select>
+      </div>
+
+      <!-- Affichage du compte sélectionné -->
+      <div *ngIf="selectedCompteSource()" class="mt-3 p-3 bg-light rounded">
+        <strong>Compte sélectionné</strong><br>
+        {{ selectedCompteSource()!.intitule || 'Compte' }} - {{ selectedCompteSource()!.numCompte }}<br>
+        Solde : {{ formatCurrency(selectedCompteSource()!.balance) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 2: Sélection du destinataire -->
+  <div class="card mb-3" [class.disabled]="!selectedCompteSource()">
+    <div class="card-header">
+      <h5>2. Destinataire</h5>
+    </div>
+    <div class="card-body">
+
+      <!-- Virement INTERNE : Mes comptes -->
+      <div *ngIf="virementInterne()">
+        <div class="alert alert-info">
+          <strong>💰 Virement interne</strong><br>
+          Transférez de l'argent entre vos propres comptes (ex: vers votre compte épargne)
+        </div>
+
+        <div class="form-group">
+          <label>Compte destinataire</label>
+          <select
+            class="form-control"
+            [value]="selectedCompteDestinataire()?.numCompte || ''"
+            (change)="onCompteDestinataireSelect($any($event.target).value)"
+            [disabled]="!selectedCompteSource()">
+            <option value="">-- Choisir un compte --</option>
+            <option
+              *ngFor="let compte of mesComptes()"
+              [value]="compte.numCompte"
+              [disabled]="compte.numCompte === selectedCompteSource()?.numCompte">
+              {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
+            </option>
+          </select>
+        </div>
+
+        <div *ngIf="selectedCompteDestinataire()" class="mt-3 p-3 bg-light rounded">
+          <strong>Compte destinataire</strong><br>
+          {{ selectedCompteDestinataire()!.intitule || 'Compte' }} - {{ selectedCompteDestinataire()!.numCompte }}
+        </div>
+      </div>
+
+      <!-- Virement EXTERNE : Autres clients -->
+      <div *ngIf="!virementInterne()">
+        <!-- Recherche client -->
+        <div class="form-group mb-3">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="🔍 Rechercher un client..."
+            [(ngModel)]="searchFilter"
+            [disabled]="!selectedCompteSource()">
+        </div>
+
+        <!-- Sélection client -->
+        <div class="form-group">
+          <label>Client destinataire</label>
+          <select
+            class="form-control"
+            [value]="selectedClientDestinataire()?.id || ''"
+            (change)="onClientDestinataireSelect($any($event.target).value)"
+            [disabled]="!selectedCompteSource()">
+            <option value="">-- Choisir un destinataire --</option>
+            <option
+              *ngFor="let client of getFilteredClients()"
+              [value]="client.id">
+              {{ client.prenom }} {{ client.nom }} - {{ client.email }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Affichage du chargement -->
+        <div *ngIf="loading() && selectedClientDestinataire()" class="mt-3 text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p>Chargement des comptes...</p>
+        </div>
+
+        <!-- Sélection du compte destinataire -->
+        <div *ngIf="comptesDestinataire().length > 0" class="form-group mt-3">
+          <label>Compte destinataire</label>
+          <select
+            class="form-control"
+            [value]="selectedCompteDestinataire()?.numCompte || ''"
+            (change)="onCompteDestinataireSelect($any($event.target).value)">
+            <option value="">-- Choisir un compte --</option>
+            <option
+              *ngFor="let compte of comptesDestinataire()"
+              [value]="compte.numCompte">
+              {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Affichage du compte destinataire sélectionné -->
+        <div *ngIf="selectedCompteDestinataire()" class="mt-3 p-3 bg-light rounded">
+          <strong>Destinataire</strong><br>
+          Client : {{ selectedClientDestinataire()?.prenom }} {{ selectedClientDestinataire()?.nom }}<br>
+          Compte : {{ selectedCompteDestinataire()!.numCompte }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉTAPE 3: Montant et confirmation -->
+  <div class="card mb-3" [class.disabled]="!selectedCompteDestinataire()">
+    <div class="card-header">
+      <h5>3. Montant et confirmation</h5>
+    </div>
+    <div class="card-body">
+      <form [formGroup]="virementForm">
+        <!-- Montant -->
+        <div class="form-group mb-3">
+          <label>Montant (EUR)</label>
+          <input
+            type="number"
+            class="form-control"
+            formControlName="montant"
+            placeholder="0.00"
+            step="0.01"
+            [disabled]="!selectedCompteDestinataire()">
+          <small *ngIf="montantError" class="text-danger">{{ montantError }}</small>
+        </div>
+
+        <!-- NOUVEAU : Switch Communication Structurée/Libre -->
+        <div class="form-check form-switch mb-3">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="communicationStructureeSwitch"
+            [checked]="communicationStructuree()"
+            (change)="toggleCommunicationStructuree()"
+            [disabled]="!selectedCompteDestinataire()">
+          <label class="form-check-label" for="communicationStructureeSwitch">
+            <strong>📋 Communication structurée (OGM)</strong>
+          </label>
+        </div>
+
+        <!-- Communication LIBRE -->
+        <div *ngIf="!communicationStructuree()" class="form-group mb-3">
+          <label>Communication libre</label>
+          <input
+            type="text"
+            class="form-control"
+            formControlName="communication"
+            placeholder="Libellé du virement"
+            [disabled]="!selectedCompteDestinataire()">
+          <small *ngIf="communicationError" class="text-danger">{{ communicationError }}</small>
+        </div>
+
+        <!-- Communication STRUCTURÉE (OGM) -->
+        <div *ngIf="communicationStructuree()" class="form-group mb-3">
+          <label>Communication structurée (OGM)</label>
+          <div class="input-group">
+            <input
+              type="text"
+              class="form-control"
+              formControlName="communicationOGM"
+              placeholder="+++123/4567/89012+++"
+              [disabled]="!selectedCompteDestinataire()">
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              (click)="genererCommunicationOGM()"
+              [disabled]="!selectedCompteDestinataire()">
+              🎲 Générer
+            </button>
+          </div>
+          <small class="text-muted">Format: +++XXX/XXXX/XXXXX+++</small><br>
+          <small *ngIf="communicationOGMError" class="text-danger">{{ communicationOGMError }}</small>
+        </div>
+
+        <!-- Description (optionnel) -->
+        <div class="form-group mb-3">
+          <label>Description (optionnel)</label>
+          <textarea
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Note personnelle"
+            [disabled]="!selectedCompteDestinataire()"></textarea>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Boutons d'action -->
+  <div class="d-flex justify-content-between">
+    <button
+      class="btn btn-secondary"
+      (click)="retourDashboard()"
+      [disabled]="loading()">
+      ← Retour
+    </button>
+
+    <div>
+      <button
+        class="btn btn-warning me-2"
+        (click)="resetForm()"
+        [disabled]="loading()">
+        🔄 Réinitialiser
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="confirmerVirement()"
+        [disabled]="!virementForm.valid || !selectedCompteSource() || !selectedCompteDestinataire() || loading()">
+        <span *ngIf="loading()" class="spinner-border spinner-border-sm me-2"></span>
+        {{ loading() ? 'Traitement...' : '✅ Confirmer le virement' }}
+      </button>
+    </div>
+  </div>
+</div>

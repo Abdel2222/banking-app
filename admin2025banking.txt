@@ -1,0 +1,1270 @@
+SUPER_ADMIN → root@bank.local / Root#2025!
+
+ADMIN → admin@bank.local / Admin#2025!
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.8</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>com.banking</groupId>
+	<artifactId>banking-system</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>banking-system</name>
+	<description>Demo project for Spring Boot</description>
+
+	<properties>
+		<!-- Java et encodage -->
+		<java.version>17</java.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<!-- versions plugins/libs -->
+		<maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
+		<maven.resources.plugin.version>3.3.1</maven.resources.plugin.version>
+		<spring.boot.maven.plugin.version>3.4.8</spring.boot.maven.plugin.version>
+		<lombok.version>1.18.32</lombok.version>
+		<jjwt.version>0.11.5</jjwt.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Tests -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- JWT -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!-- Pas de filtrage pour application.properties (évite les soucis d'accents) -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<includes>
+					<include>application.properties</include>
+				</includes>
+			</resource>
+			<!-- Si tu veux d'autres resources filtrées, ajoute un 2e bloc avec filtering=true -->
+		</resources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<configuration>
+					<release>17</release>
+					<encoding>UTF-8</encoding>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>${maven.resources.plugin.version}</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+					<!-- Variante: pour exclure tous les .properties du filtrage
+                    <nonFilteredFileExtensions>
+                      <nonFilteredFileExtension>properties</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
+                    -->
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${spring.boot.maven.plugin.version}</version>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>
+package com.banking.repositories;
+
+import com.banking.entities.CompteBancaire;
+import com.banking.entities.Client;
+import com.banking.entity.enums.AccountStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface CompteBancaireRepository extends JpaRepository<CompteBancaire, Long> {
+
+
+    // Recherche par numéro de compte
+    Optional<CompteBancaire> findByNumCompte(String numCompte);
+
+    // Vérifier si un numéro de compte existe
+    boolean existsByNumCompte(String numCompte);
+
+    // Comptes par client
+    List<CompteBancaire> findByClient(Client client);
+
+    // Comptes par statut
+    List<CompteBancaire> findByStatus(AccountStatus status);
+
+    // Comptes actifs
+    @Query("SELECT c FROM CompteBancaire c WHERE c.status = 'ACTIVATED'")
+    List<CompteBancaire> findActiveAccounts();
+
+    // Comptes avec solde supérieur à
+    List<CompteBancaire> findByBalanceGreaterThan(BigDecimal balance);
+
+    // Comptes créés entre deux dates
+    List<CompteBancaire> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    // Comptes avec carte bancaire
+    @Query("SELECT c FROM CompteBancaire c WHERE c.carteBancaire IS NOT NULL")
+    List<CompteBancaire> findAccountsWithCard();
+
+    // Comptes épargne
+    @Query("SELECT c FROM CompteBancaire c WHERE c.compteEpargne IS NOT NULL")
+    List<CompteBancaire> findSavingsAccounts();
+
+    // Solde total de tous les comptes
+    @Query("SELECT SUM(c.balance) FROM CompteBancaire c")
+    BigDecimal getTotalBalance();
+
+    // Solde moyen
+    @Query("SELECT AVG(c.balance) FROM CompteBancaire c")
+    BigDecimal getAverageBalance();
+
+    // Comptes à découvert (si on gère les découverts)
+    @Query("SELECT c FROM CompteBancaire c WHERE c.balance < 0")
+    List<CompteBancaire> findOverdrawnAccounts();
+
+    // Comptes inactifs depuis plus de X jours
+    @Query("SELECT c FROM CompteBancaire c WHERE c.status != 'ACTIVATED' " +
+            "AND c.createdAt < :date")
+    List<CompteBancaire> findInactiveAccountsOlderThan(@Param("date") LocalDateTime date);
+
+
+
+
+
+
+ # 🧱 Initialisation
+$ErrorActionPreference = "Stop"
+function JsonCall {
+    param([string]$Method, [string]$Url, [hashtable]$Headers = $null, [hashtable]$Body = $null)
+    try {
+        $bodyJson = $null
+        if ($Body) { $bodyJson = $Body | ConvertTo-Json -Depth 6 }
+        if ($bodyJson) {
+            return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers -Body $bodyJson -ContentType "application/json"
+        } else {
+            return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers
+        }
+    } catch {
+        if ($_.Exception.Response) {
+            $code = $_.Exception.Response.StatusCode.value__
+            $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+            $resp = $reader.ReadToEnd()
+            Write-Host "❌ HTTP $code -> $Url" -ForegroundColor Red
+            Write-Host $resp
+        } else {
+            Write-Host $_.Exception.Message -ForegroundColor Red
+        }
+        return $null
+    }
+}
+function Login($base, $email, $pwd) {
+    return JsonCall -Method Post -Url "$base/api/auth/login" -Body @{ email = $email; motDePasse = $pwd }
+}
+
+# 📡 Endpoints
+$base     = "http://localhost:8084"
+$auth     = "$base/api/auth"
+$accounts = "$base/api/comptes"
+$ops      = "$base/api/operations"
+$cards    = "$base/api/cartes"
+
+# 🔐 Admin login
+$respAdmin = Login $base "admin@bank.local" "Admin#2025!"
+if (-not $respAdmin) { Write-Host "❌ Login ADMIN KO" -ForegroundColor Red; return }
+$HAdmin = @{ Authorization = "Bearer $($respAdmin.data.token)" }
+
+# 👤 Client : Jean Durant
+$rand = Get-Random -Minimum 10000 -Maximum 99999
+$email = "jean$rand@bank.local"
+$pwd   = "Passw0rd!"
+
+$reg = JsonCall -Method Post -Url "$auth/register" -Body @{
+    prenom = "Jean"; nom = "Durant"; email = $email; motDePasse = $pwd
+}
+if (-not $reg) { Write-Host "❌ Inscription KO" -ForegroundColor Red; return }
+Write-Host "✅ Client Jean Durant inscrit !" -ForegroundColor Green
+Write-Host "📧 Email: $email"
+Write-Host "🔑 Mot de passe: $pwd"
+
+# 🔑 Connexion
+$respJean = Login $base $email $pwd
+if (-not $respJean) { Write-Host "❌ Login CLIENT KO" -ForegroundColor Red; return }
+$HJean = @{ Authorization = "Bearer $($respJean.data.token)" }
+Write-Host "✅ Jean connecté avec succès !" -ForegroundColor Green
+
+# 💼 Création compte
+$acc = JsonCall -Method Post -Url $accounts -Headers $HJean -Body @{
+    intitule = "Compte principal"; devise = "EUR"
+}
+if (-not $acc) { Write-Host "❌ Création compte KO" -ForegroundColor Red; return }
+$numCompte = $acc.numCompte
+Write-Host "✅ Compte créé : $numCompte"
+
+# ✅ Activation compte (admin)
+$act = JsonCall -Method Post -Url "$accounts/$numCompte/activer" -Headers $HAdmin
+if (-not $act) { Write-Host "❌ Activation KO" -ForegroundColor Red; return }
+Write-Host "✅ Compte activé !" -ForegroundColor Green
+
+# 💰 Dépôt initial 200 €
+JsonCall -Method Post -Url "$ops/deposit" -Headers $HJean -Body @{
+    numCompte = $numCompte; montant = 200; description = "Dépôt initial"
+} | Out-Null
+Write-Host "✅ Dépôt de 200 € effectué"
+
+# 💳 Emission carte (admin)
+JsonCall -Method Post -Url "$cards/$numCompte/issue" -Headers $HAdmin | Out-Null
+Write-Host "✅ Carte émise"
+
+# 🔓 Déblocage carte (admin)
+JsonCall -Method Post -Url "$cards/$numCompte/debloquer" -Headers $HAdmin | Out-Null
+Write-Host "✅ Carte débloquée"
+
+# 🔍 Lecture carte
+$carte = JsonCall -Method Get -Url "$cards/$numCompte" -Headers $HJean
+Write-Host "💳 Infos carte:"
+$carte | ConvertTo-Json -Depth 6
+
+
+PS C:\Windows\system32> $respAdmin = Login $base "admin@bank.local" "admin123" 
+PS C:\Windows\system32> if (-not $respAdmin) { Write-Host "Login ADMIN KO." -ForegroundColor Yellow; return } PS C:\Windows\system32> $adminToken = $respAdmin.data.token PS C:\Windows\system32> $HAdmin = @{ Authorization = "Bearer $adminToken" } PS C:\Windows\system32> PS C:\Windows\system32> $email = "new$rand@bank.local" PS C:\Windows\system32> $pwd = "Passw0rd!" PS C:\Windows\system32> $reg = JsonCall -Method Post -Url "$auth/register" -Body @{ >> prenom = "New"; nom = "Client$rand"; email = $email; motDePasse = $pwd >> } PS C:\Windows\system32> if (-not $reg) { Write-Host "Inscription KO." -ForegroundColor Yellow; return } PS C:\Windows\system32> PS C:\Windows\system32> $respUser = Login $base $email $pwd PS C:\Windows\system32> if (-not $respUser) { Write-Host "Login CLIENT KO." -ForegroundColor Yellow; return } PS C:\Windows\system32> $token = $respUser.data.token PS C:\Windows\system32> $HUser = @{ Authorization = "Bearer $token" } PS C:\Windows\system32> rant"; devise="EUR" } PS C:\Windows\system32> if (-not $accCreated) 
+{ Write-Host "Création compte KO." -ForegroundColor Yellow; return } PS C:\Windows\system32> $numero = $accCreated.numCompte PS C:\Windows\system32> $activated = JsonCall -Method Post -Url "$accounts/$numero/activer" -Headers $HAdmin PS C:\Windows\system32> JsonCall -Method Post -Url "$ops/deposit" -Headers $HUser -Body @{ numCompte=$numero; montant=50; description="DEPOT_INIT" } | Out-Null PS C:\Windows\system32> JsonCall -Method Post -Url "$ops/withdraw" -Headers $HUser -Body @{ numCompte=$numero; montant=20; description="RETRAIT_INIT" } | Out-Null PS C:\Windows\system32> PS C:\Windows\system32> # --------- ??? PARCOURS CARTE BANCAIRE ??? --------- PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== EMISSION CARTE (ADMIN) ===" -ForegroundColor Cyan === EMISSION CARTE (ADMIN) === { "id": 6, "numeroCarte": "0448848435862985", "dateExpiration": "2028-08-22", "cvv": null, "compteId": null } PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== LECTURE CARTE (CLIENT) ===" -ForegroundColor Cyan === LECTURE CARTE (CLIENT) === PS C:\Windows\system32> $card = JsonCall -Method Get -Url "$cards/$numero" -Headers $HUser PS C:\Windows\system32> $card | ConvertTo-Json -Depth 6 { "id": 6, "cvv": null, "estActive": true, "compteId": null } PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== BLOQUER / DEBLOQUER (ADMIN) ===" -ForegroundColor Cyan === BLOQUER / DEBLOQUER (ADMIN) === PS C:\Windows\system32> JsonCall -Method Post -Url "$cards/$numero/bloquer?raison=test_suspect" -Headers $HAdmin | Out-Null PS C:\Windows\system32> JsonCall -Method Post -Url "$cards/$numero/debloquer" -Headers $HAdmin | Out-Null "id": 6, "numeroCarte": "0448848435862985", "dateExpiration": "2028-08-22", "estActive": true, "plafondJournalier": 500.0, } PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== MISE A JOUR PLAFONDS (ADMIN) ===" -ForegroundColor Cyan === MISE A JOUR PLAFONDS (ADMIN) === PS C:\Windows\system32> JsonCall -Method Patch -Url "$cards/$numero/plafonds" -Headers $HAdmin -Body @{ >> } 
+| Out-Null PS C:\Windows\system32> $card3 = JsonCall -Method Get -Url "$cards/$numero" -Headers $HUser PS C:\Windows\system32> $card3 | ConvertTo-Json -Depth 6 "id": 6, "numeroCarte": "0448848435862985", "estActive": true, "plafondJournalier": 250.0, "plafondMensuel": 1000.0, } PS C:\Windows\system32> === VERIF via /api/comptes (hasCard) === PS C:\Windows\system32> $accs = JsonCall -Method Get -Url $accounts -Headers $HUser { "id": 29, "status": "ACTIVATED", "clientName": "New Client83273", "createdAt": "2025-08-22T22:00:48" } PS C:\Windows\system32> PS C:\Windows\system32> # --------- EPARGNE (facultatif mais complet) --------- PS C:\Windows\system32> Write-Host "n=== CONVERSION EPARGNE (ADMIN) ===" -ForegroundColor Cyan === CONVERSION EPARGNE (ADMIN) === PS C:\Windows\system32> JsonCall -Method Post -Url "$savings/$numero/convertir" -Headers $HAdmin -Body @{ tauxInteret=0.0125 } | ConvertTo-Json -Depth 6 HTTP 500 -> http://localhost:8084/api/savings/7317014369338363/convertir {"status":500} PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== ALIMENTER EPARGNE +100 (CLIENT) ===" 
+-ForegroundColor Cyan === ALIMENTER EPARGNE +100 (CLIENT) === PS C:\Windows\system32> JsonCall -Method Post -Url "$savings/$numero/alimenter" -Headers $HUser -Body @{ montant=100 } | ConvertTo-Json -Depth 6 HTTP 500 -> http://localhost:8084/api/savings/7317014369338363/alimenter {"status":500} PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== RETIRER EPARGNE -40 (CLIENT) ===" -ForegroundColor Cyan === RETIRER EPARGNE -40 (CLIENT) === PS C:\Windows\system32> JsonCall -Method Post -Url "$savings/$numero/retirer" 
+-Headers $HUser -Body @{ montant=40 } | ConvertTo-Json -Depth 6 HTTP 400 -> http://localhost:8084/api/savings/7317014369338363/retirer {"status":400} PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== TAUX -> 2.5% (ADMIN) ===" -ForegroundColor Cyan === TAUX -> 2.5% (ADMIN) === PS C:\Windows\system32> JsonCall -Method Patch -Url "$savings/$numero/taux" -Headers $HAdmin -Body @{ tauxInteret=0.025 } | ConvertTo-Json -Depth 6 HTTP 400 -> http://localhost:8084/api/savings/7317014369338363/taux {"status":400} PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== INTERETS (CLIENT) ===" -ForegroundColor Cyan === INTERETS (CLIENT) === PS C:\Windows\system32> JsonCall -Method Get -Url "$savings/$numero/interets" -Headers $HUser | ConvertTo-Json -Depth 6 HTTP 400 -> http://localhost:8084/api/savings/7317014369338363/interets {"status":400} PS C:\Windows\system32> PS C:\Windows\system32> Write-Host "n=== CAPITALISER (CLIENT) ===" -ForegroundColor Cyan === CAPITALISER (CLIENT) === PS C:\Windows\system32> JsonCall -Method Post -Url "$savings/$numero/capitaliser" -Headers $HUser | ConvertTo-Json -Depth 6 HTTP 400 -> http://localhost:8084/api/savings/7317014369338363/capitaliser {"status":400} PS C:\Windows\system32>
+
+
+
+
+
+
+
+# convertir un compte courant -> épargne
+JsonCall -Method Post -Url "$base/api/savings/$numero/convertir" -Headers $HAdmin -Body @{ tauxInteret = 0.0125 }
+
+# alimenter / retirer
+JsonCall -Method Post -Url "$base/api/savings/$numero/alimenter" -Headers $HUser -Body @{ montant = 100 }
+JsonCall -Method Post -Url "$base/api/savings/$numero/retirer"   -Headers $HUser -Body @{ montant = 40 }
+
+# taxation (virtuelle)
+JsonCall -Method Get  -Url "$base/api/savings/$numero/taxation"  -Headers $HUser
+
+# capitaliser (si un an écoulé)
+JsonCall -Method Post -Url "$base/api/savings/$numero/capitaliser" -Headers $HUser
+
+
+
+
+# === Helpers ===
+$ErrorActionPreference = "Stop"
+function JsonCall {
+  param([string]$Method, [string]$Url, [hashtable]$Headers = $null, [hashtable]$Body = $null)
+  try {
+    $bodyJson = $null; if ($Body) { $bodyJson = $Body | ConvertTo-Json -Depth 6 }
+    if ($bodyJson) {
+      return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers -Body $bodyJson -ContentType "application/json"
+    } else {
+      return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers
+    }
+  } catch {
+    if ($_.Exception.Response) {
+      $code = $_.Exception.Response.StatusCode.value__
+      $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+      $resp = $reader.ReadToEnd()
+      Write-Host "❌ HTTP $code -> $Url" -ForegroundColor Red
+      Write-Host $resp
+    } else { Write-Host $_.Exception.Message -ForegroundColor Red }
+    return $null
+  }
+}
+function Login($base, $email, $pwd) {
+  JsonCall -Method Post -Url "$base/api/auth/login" -Body @{ email=$email; motDePasse=$pwd }
+}
+
+# === Endpoints ===
+$base     = "http://localhost:8084"
+$auth     = "$base/api/auth"
+$accounts = "$base/api/comptes"
+$ops      = "$base/api/operations"
+$savings  = "$base/api/savings"
+
+# === 1) Admin login ===
+$adminLogin = Login $base "admin@bank.local" "Admin#2025!"
+if (-not $adminLogin) { throw "Admin login KO" }
+$HAdmin = @{ Authorization = "Bearer $($adminLogin.data.token)" }
+
+# === 2) Créer client + login ===
+$rand  = Get-Random -Minimum 10000 -Maximum 99999
+$email = "test$rand@bank.local"
+$pwd   = "Passw0rd!"
+$reg = JsonCall -Method Post -Url "$auth/register" -Body @{ prenom="Test"; nom="Epargne$rand"; email=$email; motDePasse=$pwd }
+if (-not $reg) { throw "Inscription KO" }
+$userLogin = Login $base $email $pwd
+if (-not $userLogin) { throw "Login client KO" }
+$HUser = @{ Authorization = "Bearer $($userLogin.data.token)" }
+Write-Host "✅ Client $email créé et connecté" -ForegroundColor Green
+
+# === 3) Créer compte + activer ===
+$acc = JsonCall -Method Post -Url $accounts -Headers $HUser -Body @{ intitule="Compte principal"; devise="EUR" }
+if (-not $acc) { throw "Création compte KO" }
+$num = $acc.numCompte
+Write-Host "✅ Compte créé: $num" -ForegroundColor Green
+$act = JsonCall -Method Post -Url "$accounts/$num/activer" -Headers $HAdmin
+if (-not $act) { throw "Activation KO" }
+Write-Host "✅ Compte activé" -ForegroundColor Green
+
+# === 4) Dépôt 200 € ===
+JsonCall -Method Post -Url "$ops/deposit" -Headers $HUser -Body @{ numCompte=$num; montant=200; description="DEPOT_TEST" } | Out-Null
+Write-Host "✅ Dépôt 200€ OK" -ForegroundColor Green
+
+# === 5) Convertir en épargne (taux 1.25%) ===
+$ce = JsonCall -Method Post -Url "$savings/$num/convertir" -Headers $HAdmin -Body @{ tauxInteret=0.0125 }
+if (-not $ce) { throw "Conversion épargne KO" }
+Write-Host "✅ Épargne créée: numEpargne=$($ce.numCompteEpargne) taux=$($ce.tauxInteret)" -ForegroundColor Green
+
+# === 6) Détails + taxation ===
+$details = JsonCall -Method Get -Url "$savings/$num" -Headers $HUser
+$tax     = JsonCall -Method Get -Url "$savings/$num/taxation" -Headers $HUser
+Write-Host ("ℹ️  Solde épargne: {0} | Taxation virtuelle: {1}" -f $details.soldeEpargne, $tax.taxationVirtuelle)
+
+# === 7) Alimenter +100 puis Retirer 40 ===
+$afterAlim = JsonCall -Method Post -Url "$savings/$num/alimenter" -Headers $HUser -Body @{ montant=100 }
+$afterRet  = JsonCall -Method Post -Url "$savings/$num/retirer"   -Headers $HUser -Body @{ montant=40 }
+Write-Host ("✅ Solde après alim: {0} | après retrait: {1}" -f $afterAlim.soldeEpargne, $afterRet.soldeEpargne) -ForegroundColor Green
+
+# === 8) Capitaliser ===
+$afterCap = JsonCall -Method Post -Url "$savings/$num/capitaliser" -Headers $HUser
+Write-Host ("✅ Capitalisation: nouveau solde épargne = {0}" -f $afterCap.soldeEpargne) -ForegroundColor Green
+
+# === 9) Résumé rapide ===
+$final = JsonCall -Method Get -Url "$savings/$num" -Headers $HUser
+Write-Host "—— Résumé ———————————————————————————"
+Write-Host "Compte bancaire   : $num"
+Write-Host "Épargne (num)     : $($final.numCompteEpargne)"
+Write-Host "Solde épargne     : $($final.soldeEpargne)"
+Write-Host "Taux d’intérêt    : $($final.tauxInteret)"
+Write-Host "Taxation virtuelle: $((JsonCall -Method Get -Url "$savings/$num/taxation" -Headers $HUser).taxationVirtuelle)"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# === Paramètres ===
+$base  = "http://localhost:8084"
+$auth  = "$base/api/auth"
+$frais = "$base/api/frais"
+
+function PostJson($url, $obj, $headers) {
+  $json = $obj | ConvertTo-Json -Depth 6
+  Invoke-RestMethod -Uri $url -Method POST -ContentType "application/json" -Headers $headers -Body $json
+}
+
+# 1) Login admin → token
+$admin  = PostJson "$auth/login" @{ email="admin@bank.local"; motDePasse="Admin#2025!" } $null
+$HAdmin = @{ Authorization = "Bearer $($admin.data.token)" }
+
+# 2) (IMPORTANT) RENSEIGNE un client existant (remplace 15 par un vrai id)
+$clientId = 15   # <-- mets ici l'ID réel d'un client. Ne mets pas <CLIENT_ID> !
+
+# 3) Construit l'objet frais (ENUMS doivent matcher ton entity: TENUE_COMPTE / MENSUEL)
+$today    = Get-Date
+$lastDay  = Get-Date -Year $today.Year -Month $today.Month -Day ([DateTime]::DaysInMonth($today.Year,$today.Month))
+
+$body = @{
+  montant     = 2.89
+  description = "FRAIS_GESTION TEST"
+  dateDebut   = $today.ToString("yyyy-MM-dd")
+  dateFin     = $lastDay.ToString("yyyy-MM-dd")
+  typeFrais   = "TENUE_COMPTE"
+  periodicite = "MENSUEL"
+  estActif    = $true
+}
+
+# 4) INSERT via l’endpoint prévu: POST /api/frais/client/{clientId}
+$resp = PostJson "$frais/client/$clientId" $body $HAdmin
+$resp | ConvertTo-Json -Depth 6
+
+# 5) Vérification: GET /api/frais et filtre sur la description
+$all = Invoke-RestMethod "$frais" -Headers $HAdmin
+if ($all.PSObject.Properties.Name -contains 'data') { $rows = $all.data } else { $rows = $all }
+
+$rows `
+| Where-Object { $_.description -like "*FRAIS_GESTION TEST*" } `
+| Select-Object id, description, montant, dateDebut, dateFin, typeFrais, periodicite, estActif `
+| Sort-Object id -Descending `
+| Select-Object -First 10 `
+| Format-Table -Auto
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------------------------TEST ULTIME---------------------------------------------------------------------------------------
+
+
+
+               TEST COMPLET INSCRIPTION JUSQU A FRAIS  
+Email : imane.swiry@bank.local
+Mot de passe : Imane#2025!
+Email : admin@bank.local
+Mot de passe : Admin#2025!
+
+
+Email :nini.kex@bank.local
+Mot de passe :Nini#2025!
+
+
+# === Helpers ===
+$ErrorActionPreference = "Stop"
+function JsonCall {
+  param([string]$Method, [string]$Url, [hashtable]$Headers = $null, [hashtable]$Body = $null)
+  try {
+    $bodyJson = $null; if ($Body) { $bodyJson = $Body | ConvertTo-Json -Depth 6 }
+    if ($bodyJson) {
+      return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers -Body $bodyJson -ContentType "application/json"
+    } else {
+      return Invoke-RestMethod -Uri $Url -Method $Method -Headers $Headers
+    }
+  } catch {
+    if ($_.Exception.Response) {
+      $code = $_.Exception.Response.StatusCode.value__
+      $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+      $resp = $reader.ReadToEnd()
+      Write-Host "❌ HTTP $code -> $Url" -ForegroundColor Red
+      Write-Host $resp
+    } else { Write-Host $_.Exception.Message -ForegroundColor Red }
+    return $null
+  }
+}
+function Login($base, $email, $pwd) {
+  JsonCall -Method Post -Url "$base/api/auth/login" -Body @{ email=$email; motDePasse=$pwd }
+}
+
+# === Endpoints ===
+$base     = "http://localhost:8084"
+$auth     = "$base/api/auth"
+$accounts = "$base/api/comptes"
+$ops      = "$base/api/operations"
+$savings  = "$base/api/savings"
+$frais    = "$base/api/frais"
+
+# === 1) Admin login ===
+$adminLogin = Login $base "admin@bank.local" "Admin#2025!"
+if (-not $adminLogin) { throw "Admin login KO" }
+$HAdmin = @{ Authorization = "Bearer $($adminLogin.data.token)" }
+
+# === 2) Créer cliente Imane Swiry + login ===
+$email = "imane.swiry@bank.local"
+$pwd   = "Imane#2025!"
+$reg = JsonCall -Method Post -Url "$auth/register" -Body @{ prenom="Imane"; nom="Swiry"; email=$email; motDePasse=$pwd }
+if (-not $reg) { throw "Inscription KO" }
+$userLogin = Login $base $email $pwd
+if (-not $userLogin) { throw "Login cliente KO" }
+$HUser = @{ Authorization = "Bearer $($userLogin.data.token)" }
+$clientId = $reg.data.id
+Write-Host "✅ Cliente $email créée (id=$clientId) et connectée" -ForegroundColor Green
+
+# === 3) Créer compte + activer ===
+$acc = JsonCall -Method Post -Url $accounts -Headers $HUser -Body @{ intitule="Compte principal"; devise="EUR" }
+if (-not $acc) { throw "Création compte KO" }
+$num = $acc.numCompte
+Write-Host "✅ Compte créé: $num" -ForegroundColor Green
+$act = JsonCall -Method Post -Url "$accounts/$num/activer" -Headers $HAdmin
+if (-not $act) { throw "Activation KO" }
+Write-Host "✅ Compte activé" -ForegroundColor Green
+
+# === 4) Dépôt 200 € ===
+JsonCall -Method Post -Url "$ops/deposit" -Headers $HUser -Body @{ numCompte=$num; montant=200; description="DEPOT_INIT" } | Out-Null
+Write-Host "✅ Dépôt 200€ OK" -ForegroundColor Green
+
+# === 5) Convertir en épargne (taux 1.25%) ===
+$ce = JsonCall -Method Post -Url "$savings/$num/convertir" -Headers $HAdmin -Body @{ tauxInteret=0.0125 }
+if (-not $ce) { throw "Conversion épargne KO" }
+Write-Host "✅ Épargne créée: numEpargne=$($ce.numCompteEpargne) taux=$($ce.tauxInteret)" -ForegroundColor Green
+
+# === 6) Détails + taxation ===
+$details = JsonCall -Method Get -Url "$savings/$num" -Headers $HUser
+$tax     = JsonCall -Method Get -Url "$savings/$num/taxation" -Headers $HUser
+Write-Host ("ℹ️  Solde épargne: {0} | Taxation virtuelle: {1}" -f $details.soldeEpargne, $tax.taxationVirtuelle)
+
+# === 7) Alimenter +100 puis Retirer 40 ===
+$afterAlim = JsonCall -Method Post -Url "$savings/$num/alimenter" -Headers $HUser -Body @{ montant=100 }
+$afterRet  = JsonCall -Method Post -Url "$savings/$num/retirer"   -Headers $HUser -Body @{ montant=40 }
+Write-Host ("✅ Solde après alim: {0} | après retrait: {1}" -f $afterAlim.soldeEpargne, $afterRet.soldeEpargne) -ForegroundColor Green
+
+# === 8) Capitaliser ===
+$afterCap = JsonCall -Method Post -Url "$savings/$num/capitaliser" -Headers $HUser
+Write-Host ("✅ Capitalisation: nouveau solde épargne = {0}" -f $afterCap.soldeEpargne) -ForegroundColor Green
+
+# === 9) Ajouter frais de gestion ===
+$today    = Get-Date
+$lastDay  = Get-Date -Year $today.Year -Month $today.Month -Day ([DateTime]::DaysInMonth($today.Year,$today.Month))
+$bodyFrais = @{
+  montant     = 2.89
+  description = "FRAIS_GESTION IMANE"
+  dateDebut   = $today.ToString("yyyy-MM-dd")
+  dateFin     = $lastDay.ToString("yyyy-MM-dd")
+  typeFrais   = "TENUE_COMPTE"
+  periodicite = "MENSUEL"
+  estActif    = $true
+}
+$fraisResp = JsonCall -Method Post -Url "$frais/client/$clientId" -Headers $HAdmin -Body $bodyFrais
+Write-Host "✅ Frais ajoutés (id=$($fraisResp.id), montant=$($fraisResp.montant))" -ForegroundColor Yellow
+# === 💳 Carte bancaire ===
+# 1) Emission carte (admin)
+JsonCall -Method Post -Url "$cards/$num/issue" -Headers $HAdmin | Out-Null
+Write-Host "✅ Carte émise" -ForegroundColor Green
+
+# 2) Déblocage carte (admin)
+JsonCall -Method Post -Url "$cards/$num/debloquer" -Headers $HAdmin | Out-Null
+Write-Host "✅ Carte débloquée" -ForegroundColor Green
+
+# 3) Lecture infos carte (côté client)
+$carte = JsonCall -Method Get -Url "$cards/$num" -Headers $HUser
+Write-Host "💳 Infos carte:"
+$carte | ConvertTo-Json -Depth 6
+
+
+# === 10) Résumé final ===
+$final = JsonCall -Method Get -Url "$savings/$num" -Headers $HUser
+$finalTax = JsonCall -Method Get -Url "$savings/$num/taxation" -Headers $HUser
+Write-Host "—— Résumé ———————————————————————————"
+Write-Host "Cliente           : Imane Swiry"
+Write-Host "Compte bancaire   : $num"
+Write-Host "Épargne (num)     : $($final.numCompteEpargne)"
+Write-Host "Solde épargne     : $($final.soldeEpargne)"
+Write-Host "Taux d’intérêt    : $($final.tauxInteret)"
+Write-Host "Taxation virtuelle: $($finalTax.taxationVirtuelle)"
+Write-Host "Derniers frais    : $($fraisResp.description) -> $($fraisResp.montant) €"
+
+
+
+
+>>
+>> try {
+>>   $result = Invoke-RestMethod -Uri "$base/api/operations/transfer" -Method Post -Headers $headers -Body ($virement | ConvertTo-Json) -ContentType "application/json"
+>>   Write-Host "SUCCÈS:" ($result | ConvertTo-Json)
+>> } catch {
+>>   Write-Host "ERREUR:" $_.Exception.Message
+>>   Write-Host "Détails:" $_.Exception.Response
+>> }
+Envoi du virement: {
+    "communication":  "TEST_DIRECT",
+    "numCompteDestinataire":  "9050773065598627",
+    "numCompteSource":  "7225297738084116",
+    "montant":  50
+}
+SUCCÈS: {
+    "id":  182,
+    "dateOperation":  "2025-09-29T00:21:56.251987",
+    "montant":  50,
+    "type":  "VIREMENT",
+    "description":  null,
+    "numeroCompte":  "7225297738084116",
+    "numeroCompteDestinataire":  "9050773065598627",
+    "communication":  "TEST_DIRECT",
+    "nomTitulaireDestinataire":  "Bob Dupont"
+}
+PS C:\Users\User>
+
+auth.ts 
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { finalize, of, switchMap, map, catchError } from 'rxjs';
+
+@Component({
+  selector: 'app-auth-balloons',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './auth-balloons.component.html',
+  styleUrls: ['./auth-balloons.component.scss']
+})
+export class AuthBalloonsComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  loading = signal(false);
+  errorLogin = signal<string | null>(null);
+  errorSignup = signal<string | null>(null);
+  showInscriptionSuccess = signal(false);
+  hideSignupForm = signal(false);
+
+  /** Contrôle le panel glissant : true = signup visible */
+  isSignup = signal(false);
+
+  loginForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    motDePasse: ['', [Validators.required, Validators.minLength(6)]],
+    remember: [false],
+  });
+
+  signupForm = this.fb.group({
+    prenom: ['', [Validators.required, Validators.minLength(2)]],
+    nom: ['', [Validators.required, Validators.minLength(2)]],
+    email: ['', [Validators.required, Validators.email]],
+    motDePasse: ['', [Validators.required, Validators.minLength(6)]],
+    remember: [false],
+  });
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['inscrit'] === 'true') {
+        this.showInscriptionSuccess.set(true);
+        this.hideSignupForm.set(true);
+        setTimeout(() => this.showInscriptionSuccess.set(false), 8000);
+      }
+    });
+  }
+
+  // ── Panel navigation ──────────────────────────────────────────────────────
+  goToSignup(): void {
+    this.isSignup.set(true);
+    this.errorLogin.set(null);
+  }
+
+  goToLogin(): void {
+    this.isSignup.set(false);
+    this.errorSignup.set(null);
+  }
+
+  showSignupAgain(): void {
+    this.hideSignupForm.set(false);
+    this.showInscriptionSuccess.set(false);
+    this.goToSignup();
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  submitLogin(): void {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+    this.loading.set(true);
+    this.errorLogin.set(null);
+
+    const emailTyped = String(this.loginForm.value.email || '').trim().toLowerCase();
+
+    this.auth.login(this.loginForm.value as any).pipe(
+      switchMap(() => {
+        if (emailTyped === 'admin@bank.local') return of({ url: '/admin' });
+        if (this.auth.isAdmin()) return of({ url: '/admin' });
+        return this.auth.me().pipe(
+          map((me: any) => {
+            const d = me?.data ?? me ?? {};
+            const roles = [
+              d.role,
+              ...(Array.isArray(d.roles) ? d.roles : []),
+              ...(Array.isArray(d.authorities) ? d.authorities.map((a: any) => a?.authority ?? a) : []),
+            ].filter(Boolean).map((r: string) => r.toUpperCase());
+            return { url: roles.some(r => r.includes('ADMIN')) ? '/admin' : '/dashboard' };
+          }),
+          catchError(() => of({ url: '/dashboard' }))
+        );
+      }),
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: ({ url }) => this.router.navigateByUrl(url),
+      error: (err) => this.errorLogin.set(this.msg(err))
+    });
+  }
+
+  // ── Signup ────────────────────────────────────────────────────────────────
+  submitSignup(): void {
+    if (this.signupForm.invalid) {
+      this.signupForm.markAllAsTouched();
+      console.log('Formulaire invalide:', this.signupForm.errors);
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorSignup.set(null);
+
+    const { prenom, nom, email, motDePasse } = this.signupForm.value;
+
+    const payload = {
+      prenom: prenom!,
+      nom: nom!,
+      email: email!,
+      motDePasse: motDePasse!
+    };
+
+    console.log('=== INSCRIPTION ===');
+    console.log('Payload envoyé:', payload);
+
+    this.auth.register(payload)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (response) => {
+          console.log('Inscription réussie:', response);
+          this.hideSignupForm.set(true);
+          this.showInscriptionSuccess.set(true);
+          this.loginForm.patchValue({ email: email! });
+          this.goToLogin();
+          setTimeout(() => this.showInscriptionSuccess.set(false), 8000);
+        },
+        error: (err) => {
+          console.error('=== ERREUR INSCRIPTION ===');
+          console.error('Erreur complète:', err);
+          console.error('Status HTTP:', err.status);
+          console.error('Message backend:', err.error);
+
+          let errorMessage = this.msg(err);
+
+          if (err.status === 400) {
+            const backendMsg = err?.error?.message || err?.error?.error || err?.error;
+            console.error('Message du backend:', backendMsg);
+
+            if (typeof backendMsg === 'string') {
+              if (backendMsg.toLowerCase().includes('email')) {
+                errorMessage = 'Cet email est déjà utilisé';
+              } else if (backendMsg.toLowerCase().includes('password') || backendMsg.toLowerCase().includes('mot de passe')) {
+                errorMessage = 'Le mot de passe ne respecte pas les critères requis';
+              } else {
+                errorMessage = backendMsg;
+              }
+            }
+          }
+
+          this.errorSignup.set(errorMessage);
+        }
+      });
+  }
+
+  private msg(err: any): string {
+    if (err.status === 400) {
+      const backendMsg = err?.error?.message || err?.error?.error;
+      if (backendMsg) {
+        return backendMsg;
+      }
+      return 'Données invalides. Vérifiez vos informations.';
+    }
+    return err?.error?.message ?? err?.message ?? 'Erreur réseau';
+securityconfig package com.banking.config;
+
+import com.banking.security.jwt.JwtAuthenticationEntryPoint;
+import com.banking.security.jwt.JwtAuthenticationFilter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+@Configuration
+@EnableWebSecurity(debug = false)
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                // Désactive CSRF (API stateless) et CORS (active-le si tu as un front)
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
+
+                // JWT = stateless
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Règles d’accès
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+
+                // Gestion des erreurs d’auth
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+
+                // Filtre JWT avant UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+}
+
+  }
+}
+
+
+token 
+import { HttpInterceptorFn } from '@angular/common/http';
+import { catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+
+const TOKEN_KEY = 'auth_token';
+
+export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
+  const router = inject(Router);
+  const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
+  console.log(`[TOKEN_INTERCEPTOR] Processing ${req.method} ${req.url}`);
+
+  let token: string | null = null;
+
+  if (isBrowser) {
+    token = localStorage.getItem(TOKEN_KEY);
+    console.log(`[TOKEN_INTERCEPTOR] Token status: ${token ? 'FOUND' : 'NOT_FOUND'}`);
+
+    // Debug: afficher les premières lettres du token si présent
+    if (token) {
+      console.log(`[TOKEN_INTERCEPTOR] Token preview: ${token.substring(0, 10)}...`);
+    }
+  } else {
+    console.log('[TOKEN_INTERCEPTOR] Not in browser environment, no token available');
+  }
+
+  // Cloner la requête avec le token si disponible
+  let authReq = req;
+  if (token) {
+    authReq = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    console.log(`[HTTP DEBUG] ${authReq.method} ${authReq.url} AuthHeader: true`);
+  } else {
+    console.log(`[HTTP DEBUG] ${req.method} ${req.url} AuthHeader: false`);
+  }
+
+  return next(authReq).pipe(
+    catchError(error => {
+      console.error(`[TOKEN_INTERCEPTOR] HTTP error for ${req.method} ${req.url}:`, error);
+
+      if (error.status === 401) {
+        console.warn('[TOKEN_INTERCEPTOR] Unauthorized (401) - clearing token and redirecting');
+
+        // Nettoyer le token invalide
+        if (isBrowser) {
+          const oldToken = localStorage.getItem(TOKEN_KEY);
+          if (oldToken) {
+            console.log('[TOKEN_INTERCEPTOR] Removing invalid token from localStorage');
+            localStorage.removeItem(TOKEN_KEY);
+          }
+        }
+
+        // Rediriger vers la page d'authentification
+        console.log('[TOKEN_INTERCEPTOR] Redirecting to /auth');
+        router.navigate(['/auth']);
+      } else if (error.status === 403) {
+        console.warn('[TOKEN_INTERCEPTOR] Forbidden (403) - insufficient permissions');
+      } else if (error.status === 500) {
+        console.error('[TOKEN_INTERCEPTOR] Internal Server Error (500)');
+      }
+
+      return throwError(() => error);
+    })
+  );
+};
+
+auth ts 
+import { Component, inject, signal, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
+import { finalize, of, switchMap, map, catchError } from 'rxjs';
+
+@Component({
+  selector: 'app-auth-balloons',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './auth-balloons.component.html',
+  styleUrls: ['./auth-balloons.component.scss']
+})
+export class AuthBalloonsComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  loading = signal(false);
+  errorLogin = signal<string | null>(null);
+  errorSignup = signal<string | null>(null);
+  showInscriptionSuccess = signal(false);
+  hideSignupForm = signal(false);
+
+  /** Contrôle le panel glissant : true = signup visible */
+  isSignup = signal(false);
+
+  loginForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    motDePasse: ['', [Validators.required, Validators.minLength(6)]],
+    remember: [false],
+  });
+
+  signupForm = this.fb.group({
+    prenom: ['', [Validators.required, Validators.minLength(2)]],
+    nom: ['', [Validators.required, Validators.minLength(2)]],
+    email: ['', [Validators.required, Validators.email]],
+    motDePasse: ['', [Validators.required, Validators.minLength(6)]],
+    remember: [false],
+  });
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['inscrit'] === 'true') {
+        this.showInscriptionSuccess.set(true);
+        this.hideSignupForm.set(true);
+        setTimeout(() => this.showInscriptionSuccess.set(false), 8000);
+      }
+    });
+  }
+
+  // ── Panel navigation ──────────────────────────────────────────────────────
+  goToSignup(): void {
+    this.isSignup.set(true);
+    this.errorLogin.set(null);
+  }
+
+  goToLogin(): void {
+    this.isSignup.set(false);
+    this.errorSignup.set(null);
+  }
+
+  showSignupAgain(): void {
+    this.hideSignupForm.set(false);
+    this.showInscriptionSuccess.set(false);
+    this.goToSignup();
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  submitLogin(): void {
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+    this.loading.set(true);
+    this.errorLogin.set(null);
+
+    const emailTyped = String(this.loginForm.value.email || '').trim().toLowerCase();
+
+    this.auth.login(this.loginForm.value as any).pipe(
+      switchMap(() => {
+        if (emailTyped === 'admin@bank.local') return of({ url: '/admin' });
+        if (this.auth.isAdmin()) return of({ url: '/admin' });
+        return this.auth.me().pipe(
+          map((me: any) => {
+            const d = me?.data ?? me ?? {};
+            const roles = [
+              d.role,
+              ...(Array.isArray(d.roles) ? d.roles : []),
+              ...(Array.isArray(d.authorities) ? d.authorities.map((a: any) => a?.authority ?? a) : []),
+            ].filter(Boolean).map((r: string) => r.toUpperCase());
+            return { url: roles.some(r => r.includes('ADMIN')) ? '/admin' : '/dashboard' };
+          }),
+          catchError(() => of({ url: '/dashboard' }))
+        );
+      }),
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: ({ url }) => this.router.navigateByUrl(url),
+      error: (err) => this.errorLogin.set(this.msg(err))
+    });
+  }
+
+  // ── Signup : flux complet comme PowerShell ─────────────────────────────────
+  submitSignup(): void {
+    if (this.signupForm.invalid) {
+      this.signupForm.markAllAsTouched();
+      console.log('Formulaire invalide:', this.signupForm.errors);
+      return;
+    }
+
+    this.loading.set(true);
+    this.errorSignup.set(null);
+
+    const { prenom, nom, email, motDePasse } = this.signupForm.value;
+    const base = 'http://localhost:8084';
+
+    const adminEmail = 'admin@bank.local';
+    const adminPwd = 'Admin#2025!';
+
+    let userToken = '';
+    let adminToken = '';
+    let clientId: any = '';
+    let numCompte = '';
+
+    console.log('=== FLUX COMPLET INSCRIPTION ===');
+
+    // 1) Admin login
+    this.http.post<any>(`${base}/api/auth/login`, { email: adminEmail, motDePasse: adminPwd }).pipe(
+      switchMap(res => {
+        adminToken = res.data.token;
+        console.log('✅ Admin connecté');
+        return this.http.post<any>(`${base}/api/auth/register`, { prenom, nom, email, motDePasse });
+      }),
+      switchMap(res => {
+        clientId = res.data?.id;
+        console.log('✅ Client inscrit, id=', clientId);
+        return this.http.post<any>(`${base}/api/auth/login`, { email, motDePasse });
+      }),
+      switchMap(res => {
+        userToken = res.data.token;
+        console.log('✅ Client connecté');
+        return this.http.post<any>(`${base}/api/comptes`,
+          { intitule: 'Compte principal', devise: 'EUR' },
+          { headers: { Authorization: `Bearer ${userToken}` } }
+        );
+      }),
+      switchMap(res => {
+        numCompte = res.numCompte;
+        console.log('✅ Compte créé:', numCompte);
+        return this.http.post<any>(`${base}/api/comptes/${numCompte}/activer`, {},
+          { headers: { Authorization: `Bearer ${adminToken}` } }
+        );
+      }),
+      switchMap(() => {
+        console.log('✅ Compte activé');
+        return this.http.post<any>(`${base}/api/operations/deposit`,
+          { numCompte, montant: 200, description: 'DEPOT_INIT' },
+          { headers: { Authorization: `Bearer ${userToken}` } }
+        );
+      }),
+      // 🎴 Émission carte (OPTIONNELLE - si ça échoue on continue)
+      switchMap(() => {
+        console.log('✅ Dépôt 200€ OK');
+        return this.http.post<any>(`${base}/api/cards/${numCompte}/issue`, {},
+          { headers: { Authorization: `Bearer ${adminToken}` } }
+        ).pipe(
+          catchError(err => {
+            console.warn('⚠️ Émission carte ignorée (endpoint absent):', err.status);
+            return of(null);
+          })
+        );
+      }),
+      // 🎴 Déblocage carte (OPTIONNEL - si ça échoue on continue)
+      switchMap(() => {
+        return this.http.post<any>(`${base}/api/cards/${numCompte}/debloquer`, {},
+          { headers: { Authorization: `Bearer ${adminToken}` } }
+        ).pipe(
+          catchError(err => {
+            console.warn('⚠️ Déblocage carte ignoré:', err.status);
+            return of(null);
+          })
+        );
+      }),
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: () => {
+        console.log('🎉 Inscription complète terminée !');
+        this.auth.logout();
+        this.hideSignupForm.set(true);
+        this.showInscriptionSuccess.set(true);
+        this.loginForm.patchValue({ email: email! });
+        this.goToLogin();
+        setTimeout(() => this.showInscriptionSuccess.set(false), 8000);
+      },
+      error: (err) => {
+        console.error('=== ERREUR INSCRIPTION ===');
+        console.error('URL:', err.url);
+        console.error('Status HTTP:', err.status);
+        console.error('Message backend:', err.error);
+
+        let errorMessage = this.msg(err);
+
+        if (err.status === 403) {
+          errorMessage = 'Accès refusé : ' + (err.url?.includes('/activer') ? 'activation du compte impossible' : 'permissions insuffisantes');
+        } else if (err.status === 400) {
+          const backendMsg = err?.error?.message || err?.error?.error || err?.error;
+          if (typeof backendMsg === 'string') {
+            if (backendMsg.toLowerCase().includes('email')) {
+              errorMessage = 'Cet email est déjà utilisé';
+            } else if (backendMsg.toLowerCase().includes('password') || backendMsg.toLowerCase().includes('mot de passe')) {
+              errorMessage = 'Le mot de passe ne respecte pas les critères requis';
+            } else {
+              errorMessage = backendMsg;
+            }
+          }
+        }
+
+        this.errorSignup.set(errorMessage);
+      }
+    });
+  }
+
+  private msg(err: any): string {
+    if (err.status === 400) {
+      const backendMsg = err?.error?.message || err?.error?.error;
+      if (backendMsg) {
+        return backendMsg;
+      }
+      return 'Données invalides. Vérifiez vos informations.';
+    }
+    return err?.error?.message ?? err?.message ?? 'Erreur réseau';
+  }
+}
+
+
+

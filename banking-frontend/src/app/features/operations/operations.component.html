@@ -1,0 +1,105 @@
+<div class="operations-container">
+  <!-- Header -->
+  <div class="operations-header">
+    <button class="back-btn" (click)="retourDashboard()">
+      ← Retour au Dashboard
+    </button>
+    <h1 class="page-title">Historique des Opérations</h1>
+  </div>
+
+  <!-- Sélecteur de compte + Export PDF -->
+  <div class="compte-selector">
+    <label for="compte-select">Compte :</label>
+    <select 
+      id="compte-select"
+      [value]="compteSelectionne()"
+      (change)="onCompteChange($any($event.target).value)">
+      @for (compte of comptes(); track compte.numCompte) {
+        <option [value]="compte.numCompte">
+          {{ compte.intitule }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
+        </option>
+      }
+    </select>
+    <button class="export-btn" (click)="exportPDF()">
+      📄 Télécharger Extrait PDF
+    </button>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Chargement des opérations...</p>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="error-message">
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Table des opérations -->
+  @if (!loading() && !error() && operations().length > 0) {
+    <div class="operations-table">
+      <!-- En-tête du tableau -->
+      <div class="table-header">
+        <div>Date</div>
+        <div>Type</div>
+        <div>Description</div>
+        <div>Montant</div>
+        <div>Statut</div>
+      </div>
+
+      <!-- Lignes des opérations -->
+      @for (op of operations(); track op.id) {
+        <div class="operation-row">
+          <!-- Date -->
+          <div class="col-date">
+            {{ formatDate(op.dateOperation) }}
+          </div>
+
+          <!-- Type -->
+          <div class="col-type">
+            <span class="type-badge" [attr.data-type]="op.type">
+              <span class="type-icon">{{ getTypeIcon(op.type) }}</span>
+              <span class="type-text">{{ op.type }}</span>
+            </span>
+          </div>
+
+          <!-- Description -->
+          <div class="col-description">
+            <div class="description-main">
+              {{ op.description || op.communication || 'Sans description' }}
+            </div>
+            @if (op.numCompteDestinataire) {
+              <div class="description-sub">
+                → {{ op.numCompteDestinataire }}
+              </div>
+            }
+          </div>
+
+          <!-- Montant -->
+          <div class="col-montant" [class.positive]="op.montant > 0" [class.negative]="op.montant < 0">
+            {{ op.montant > 0 ? '+' : '' }}{{ formatCurrency(Math.abs(op.montant)) }}
+          </div>
+
+          <!-- Statut -->
+          <div class="col-statut">
+            <span class="status-badge" [attr.data-status]="getStatutDisplay(op)">
+              {{ getStatutDisplay(op) }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Aucune opération -->
+  @if (!loading() && !error() && operations().length === 0) {
+    <div class="no-operations">
+      <p>📭 Aucune opération disponible pour ce compte.</p>
+    </div>
+  }
+</div>
