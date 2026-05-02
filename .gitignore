@@ -1,0 +1,25 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+*.gz
+
+# Images (optionnel)
+*.jpg
+*.png
+*.webp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build Java
+target/
+*.class
+
+# Node frontend
+node_modules/
+dist/
