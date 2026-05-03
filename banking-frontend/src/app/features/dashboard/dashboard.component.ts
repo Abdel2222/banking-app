@@ -377,4 +377,21 @@ deleteNotification(id: number) {
   const updated = this.notifications().filter(n => n.id !== id);
   this.notificationService.notifications.set(updated);
 }
+// Récupère le nom complet en testant toutes les clés du JWT
+displayName(): string {
+  const u: any = this.auth.currentUser();
+  if (!u) return 'Client';
+
+  const nom =
+    u.nomComplet ||
+    u.fullName ||
+    u.name ||
+    [u.prenom, u.nom].filter(Boolean).join(' ') ||
+    [u.firstName, u.lastName].filter(Boolean).join(' ') ||
+    u.sub ||
+    u.email ||
+    'Client';
+
+  return (typeof nom === 'string' && nom.trim()) ? nom.trim() : 'Client';
+}
 }
