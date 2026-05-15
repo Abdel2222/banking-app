@@ -7,10 +7,14 @@ import { VirementComponent } from './features/virement/virement.component';
 import { CardDetailsComponent } from './features/card-details/card-details.component';
 import { RendezVousComponent } from './features/rendez-vous/rendez-vous.component';
 import { OperationsComponent } from './features/operations/operations.component';
+import { InvestmentsComponent } from './features/investments/investments/investments.component';
+import { InvestmentsHistoryComponent } from './features/investments/investments-history/investments-history.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth', pathMatch: 'full' },
+
   { path: 'auth', component: AuthBalloonsComponent },
+
   {
     path: 'dashboard',
     component: DashboardComponent,
@@ -37,9 +41,20 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-  path: 'operations',
-  component: OperationsComponent,
-  canActivate: [authGuard]
-},
-  { path: '**', redirectTo: 'auth' }  //
+    path: 'operations',
+    component: OperationsComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'investissements',
+    component: InvestmentsComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'investissements/historique',
+    component: InvestmentsHistoryComponent,
+    canActivate: [authGuard]
+  },
+
+  { path: '**', redirectTo: 'auth' }
 ];

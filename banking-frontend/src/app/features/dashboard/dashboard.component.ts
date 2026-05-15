@@ -1,8 +1,9 @@
 import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 import { AuthService } from '../../core/services/auth.service';
 import { AccountsService, BankAccount } from '../../core/services/accounts.service';
@@ -16,7 +17,7 @@ import { ChatbotComponent } from '../chatbot/chatbot.component';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MoneyPipe, DatePipe, ChatbotComponent],
+  imports: [CommonModule, ReactiveFormsModule, MoneyPipe, DatePipe, DecimalPipe, ChatbotComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -29,8 +30,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private virementService = inject(VirementService);
   private notificationService = inject(NotificationService);
+  private http = inject(HttpClient);
 
   private destroy$ = new Subject<void>();
+  private readonly API_BASE = 'http://localhost:8084/api';
+  private readonly TAUX_CONCURRENTIEL = 0.025;
 
   userName = signal<string | null>(null);
   error = signal<string | null>(null);
@@ -43,10 +47,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   card = signal<CardInfo | null>(null);
   ops = signal<Operation[]>([]);
 
-  // NOTIFICATIONS
+  frais = signal<any[]>([]);
+  savingsInfo = signal<any>(null);
+  showFraisModal = signal<boolean>(false);
+
   notifications = this.notificationService.notifications;
   unreadCount = computed(() => this.notificationService.getUnreadCount());
   showNotifications = signal(false);
+
+  fraisForm = this.fb.group({
+    montant: [2.89, [Validators.required, Validators.min(0)]],
+    description: ['Frais de gestion mensuel', Validators.required],
+    typeFrais: ['TENUE_COMPTE', Validators.required],
+    periodicite: ['MENSUEL', Validators.required]
+  });
 
   constructor() {
     console.log('[DASHBOARD] Component initialized');
@@ -63,15 +77,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadData() {
-    console.log('[DASHBOARD] Loading dashboard data...');
     const user = this.auth.currentUser();
     this.userName.set(user?.nomComplet || user?.email || 'Client');
-    console.log('[DASHBOARD] User loaded from token:', user?.email);
     this.loadAccounts();
   }
 
   private loadAccounts() {
-    console.log('[DASHBOARD] Loading accounts with VirementService...');
     this.loading.set(true);
     this.error.set(null);
 
@@ -79,8 +90,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (comptes) => {
-        console.log('[DASHBOARD] Comptes from VirementService:', comptes);
-
         const normalizedAccounts: BankAccount[] = comptes.map((c: any) => ({
           id: c.id,
           numCompte: c.numCompte,
@@ -94,14 +103,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
           createdAt: undefined
         }));
 
-        console.log('[DASHBOARD] Normalized accounts:', normalizedAccounts);
         this.accounts.set(normalizedAccounts);
 
         if (normalizedAccounts.length > 0) {
-          console.log('[DASHBOARD] Auto-selecting first account');
-          this.select(normalizedAccounts[0]);
+          const current = this.selected();
+          const sameAccount = current
+            ? normalizedAccounts.find(a => a.numCompte === current.numCompte)
+            : null;
+
+          this.select(sameAccount || normalizedAccounts[0]);
         } else {
-          console.log('[DASHBOARD] No accounts found');
           this.selected.set(null);
           this.card.set(null);
           this.ops.set([]);
@@ -110,7 +121,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: (e) => {
-        console.error('[DASHBOARD] Error loading accounts:', e);
         this.loading.set(false);
         this.handleApiError(e, 'Erreur de chargement des comptes');
       }
@@ -121,7 +131,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     console.error('[DASHBOARD] API Error:', error);
 
     if (error.status === 401) {
-      console.log('[DASHBOARD] Token expired, logging out');
       this.auth.logout();
       this.router.navigate(['/auth']);
     } else if (error.status === 404) {
@@ -149,31 +158,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   select(account: BankAccount) {
-    console.log('[DASHBOARD] Selecting account:', account.numCompte);
     this.selected.set(account);
     this.error.set(null);
     this.loadCard(account.numCompte);
     this.loadOps(account.numCompte);
+    this.loadFrais();
+    this.loadSavings(account.numCompte);
   }
 
   private loadCard(numCompte: string) {
-    console.log('[DASHBOARD] Loading card for account:', numCompte);
     this.cards.getByAccount(numCompte).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (cardData) => {
-        console.log('[DASHBOARD] Card data received:', cardData);
         this.card.set(cardData ?? null);
       },
-      error: (e) => {
-        console.log('[DASHBOARD] No card found or error for account', numCompte, ':', e);
+      error: () => {
         this.card.set(null);
       }
     });
   }
 
   private loadOps(numCompte: string) {
-    console.log('[DASHBOARD] Loading operations for account:', numCompte);
     if (this.operationsServiceDown()) {
       this.operationsServiceDown.set(false);
     }
@@ -182,87 +188,419 @@ export class DashboardComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe({
       next: (rows) => {
-        console.log('[DASHBOARD] Operations data received:', rows);
         const operations = Array.isArray(rows) ? rows.map(r => this.normalizeOp(r)) : [];
         this.ops.set(operations);
       },
       error: (e) => {
-        console.error('[DASHBOARD] Operations loading failed:', e);
         this.ops.set([]);
         if (e.status === 500) {
           this.operationsServiceDown.set(true);
-          console.log('[DASHBOARD] Operations service appears to be down');
         }
       }
     });
   }
 
-  goToVirement() {
-    this.router.navigate(['/virement']);
+  isAdmin(): boolean {
+    return this.auth.isAdmin();
   }
-  goToOperations() {
-  const selectedAccount = this.selected();
-  if (selectedAccount) {
-    console.log('[DASHBOARD] Navigating to operations for account:', selectedAccount.numCompte);
-    this.router.navigate(['/operations'], {
+
+  isSelectedSuspended(): boolean {
+    const status = this.selected()?.status;
+    return status === 'SUSPENDED' || status === 'BLOCKED';
+  }
+
+  isAccountSuspended(account: BankAccount | null | undefined): boolean {
+    const status = account?.status;
+    return status === 'SUSPENDED' || status === 'BLOCKED';
+  }
+
+  getDisplayStatus(status: string | undefined): string {
+    if (status === 'SUSPENDED' || status === 'BLOCKED') {
+      return '⛔ SUSPENDED';
+    }
+
+    return status || 'N/A';
+  }
+
+  isCardBlocked(): boolean {
+    return !!this.card() && !this.card()?.estActive;
+  }
+
+  private blockIfSuspended(action: 'virement' | 'depot' | 'retrait'): boolean {
+    if (!this.isSelectedSuspended()) {
+      return false;
+    }
+
+    if (action === 'virement') {
+      alert('⛔ Ce compte est SUSPENDU. Vous ne pouvez pas effectuer de virement.');
+    }
+
+    if (action === 'depot') {
+      alert('⛔ Les dépôts sont temporairement bloqués.');
+    }
+
+    if (action === 'retrait') {
+      alert('⛔ Les retraits sont temporairement bloqués.');
+    }
+
+    return true;
+  }
+
+  private loadFrais() {
+    const user: any = this.auth.currentUser();
+    const clientId = user?.id;
+
+    if (!clientId) {
+      this.frais.set([]);
+      return;
+    }
+
+    this.http.get<any>(`${this.API_BASE}/frais/client/${clientId}`).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        const fraisList = Array.isArray(data) ? data : (data?.data ?? []);
+        this.frais.set(fraisList);
+      },
+      error: () => {
+        this.frais.set([]);
+      }
+    });
+  }
+  facturerFraisManuellement() {
+  if (!confirm('Déclencher la facturation de tous les frais actifs ?')) return;
+
+  this.busy.set(true);
+
+  // Appelle l'endpoint existant
+  this.http.post<any>(
+    `${this.API_BASE}/frais/fees/gestion/apply-all?montant=2.89&autoriserDecouvert=false`,
+    {}
+  ).pipe(
+    takeUntil(this.destroy$)
+  ).subscribe({
+    next: (resp) => {
+      this.busy.set(false);
+      const stats = resp?.stats;
+      alert(
+        `✅ Facturation effectuée !\n\n` +
+        `Total comptes : ${stats?.total || 0}\n` +
+        `Frais appliqués : ${stats?.appliques || 0}\n` +
+        `Solde insuffisant : ${stats?.soldeInsuffisant || 0}\n` +
+        `Erreurs : ${stats?.erreurs || 0}`
+      );
+      this.refreshAccount();
+      this.loadFrais();
+    },
+    error: (e) => {
+      this.busy.set(false);
+      this.error.set('Erreur facturation: ' + (e?.error?.message || e?.message || ''));
+    }
+  });
+}
+
+  private loadSavings(numCompte: string) {
+    const sel = this.selected();
+    const isEpargne = sel?.intitule?.toLowerCase().includes('épargne');
+
+    if (!isEpargne) {
+      const compteEpargne = this.accounts().find(a =>
+        a.intitule?.toLowerCase().includes('épargne')
+      );
+
+      if (compteEpargne) {
+        this.fetchSavingsData(compteEpargne.numCompte, compteEpargne.balance ?? 0);
+      } else {
+        this.savingsInfo.set(null);
+      }
+
+      return;
+    }
+
+    this.fetchSavingsData(numCompte, sel?.balance ?? 0);
+  }
+
+  private fetchSavingsData(numCompte: string, soldeCompte: number) {
+    this.http.get<any>(`${this.API_BASE}/savings/${numCompte}/taxation`).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        this.applySavingsLogic(data, soldeCompte);
+      },
+      error: () => {
+        this.applySavingsLogic(null, soldeCompte);
+      }
+    });
+  }
+
+  private applySavingsLogic(apiData: any, soldeCompte: number) {
+    const soldeEpargne = soldeCompte > 0
+      ? soldeCompte
+      : (apiData?.soldeEpargne || 0);
+
+    const tauxApi = apiData?.tauxInteret;
+    const tauxInteret = (tauxApi && tauxApi > 0)
+      ? tauxApi
+      : this.TAUX_CONCURRENTIEL;
+
+    const interetsAnnuels = soldeEpargne * tauxInteret;
+    const interetsApi = apiData?.taxationVirtuelle;
+    const interetsCumules = (interetsApi && interetsApi > 0)
+      ? interetsApi
+      : (interetsAnnuels / 12);
+
+    this.savingsInfo.set({
+      soldeEpargne,
+      tauxInteret,
+      taxationVirtuelle: interetsCumules,
+      interetsAnnuelsEstimes: interetsAnnuels
+    });
+  }
+
+  capitaliserInterets() {
+    const num = this.selected()?.numCompte;
+    if (!num) return;
+
+    this.busy.set(true);
+
+    this.http.post(`${this.API_BASE}/savings/${num}/capitaliser`, {}).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: () => {
+        this.busy.set(false);
+        alert('✨ Intérêts capitalisés avec succès !');
+        this.loadSavings(num);
+        this.refreshAccount();
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.error.set('Erreur capitalisation: ' + (e?.error?.message || e?.message || ''));
+      }
+    });
+  }
+
+  toggleSuspendCompte() {
+    const sel = this.selected();
+    if (!sel) return;
+
+    const isSuspended = this.isAccountSuspended(sel);
+
+    const confirmed = confirm(
+      isSuspended
+        ? 'Êtes-vous sûr de vouloir réactiver ce compte ?'
+        : 'Êtes-vous sûr de vouloir suspendre ce compte ?'
+    );
+
+    if (!confirmed) return;
+
+    this.busy.set(true);
+    this.error.set(null);
+
+    const request = isSuspended
+      ? this.acc.activate(sel.numCompte)
+      : this.acc.suspend(sel.numCompte);
+
+    request.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: () => {
+        this.busy.set(false);
+        alert(isSuspended ? '✅ Compte réactivé' : '⏸️ Compte suspendu');
+        this.refreshAccount();
+      },
+      error: (e) => {
+        this.busy.set(false);
+
+        console.error('Erreur suspension/réactivation compte:', e);
+
+        const message =
+          e?.error?.message ||
+          e?.error?.error ||
+          e?.message ||
+          `Erreur HTTP ${e?.status || 'inconnue'} - ${e?.statusText || 'Aucun détail'}`;
+
+        this.error.set(message);
+      }
+    });
+  }
+
+  telechargerReleve() {
+    const num = this.selected()?.numCompte;
+    if (!num) return;
+
+    this.busy.set(true);
+
+    this.http.get(`${this.API_BASE}/comptes/${num}/releve`, {
+      responseType: 'blob'
+    }).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (blob: Blob) => {
+        this.busy.set(false);
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        a.href = url;
+        a.download = `releve_${num}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        window.URL.revokeObjectURL(url);
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.error.set('Erreur génération PDF: ' + (e?.error?.message || e?.message || ''));
+      }
+    });
+  }
+
+  openFraisModal() {
+    this.showFraisModal.set(true);
+  }
+
+  closeFraisModal() {
+    this.showFraisModal.set(false);
+  }
+
+  submitFrais() {
+    const user: any = this.auth.currentUser();
+    const clientId = user?.id;
+
+    if (!clientId || this.fraisForm.invalid) {
+      this.error.set('Formulaire invalide');
+      return;
+    }
+
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const body = {
+      ...this.fraisForm.value,
+      dateDebut: formatDate(today),
+      dateFin: formatDate(lastDay),
+      estActif: true
+    };
+
+    this.busy.set(true);
+
+    this.http.post(`${this.API_BASE}/frais/client/${clientId}`, body).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.closeFraisModal();
+        this.loadFrais();
+        alert('✅ Frais ajouté avec succès');
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.error.set('Erreur ajout frais: ' + (e?.error?.message || e?.message || ''));
+      }
+    });
+  }
+
+  goToInvestments() {
+    const selectedAccount = this.selected();
+
+    if (!selectedAccount) {
+      this.error.set('Veuillez sélectionner un compte');
+      return;
+    }
+
+    if (this.isSelectedSuspended()) {
+      alert('⛔ Ce compte est SUSPENDU. Vous ne pouvez pas investir dans un fonds.');
+      return;
+    }
+
+    this.router.navigate(['/investissements'], {
+      queryParams: {
+        compteId: selectedAccount.id,
+        numCompte: selectedAccount.numCompte
+      }
+    });
+  }
+
+  goToInvestmentsHistory() {
+    this.router.navigate(['/investissements/historique']);
+  }
+
+  goToVirement() {
+    const selectedAccount = this.selected();
+
+    if (!selectedAccount) {
+      this.error.set('Veuillez sélectionner un compte');
+      return;
+    }
+
+    if (this.blockIfSuspended('virement')) {
+      return;
+    }
+
+    this.router.navigate(['/virement'], {
       queryParams: { numCompte: selectedAccount.numCompte }
     });
-  } else {
-    console.log('[DASHBOARD] Navigating to operations without account selection');
-    this.router.navigate(['/operations']);
   }
-}
+
+  goToOperations() {
+    const selectedAccount = this.selected();
+
+    if (selectedAccount) {
+      this.router.navigate(['/operations'], {
+        queryParams: { numCompte: selectedAccount.numCompte }
+      });
+    } else {
+      this.router.navigate(['/operations']);
+    }
+  }
 
   goToCardDetails() {
     const selectedAccount = this.selected();
+
     if (selectedAccount && this.card()) {
-      console.log('[DASHBOARD] Navigating to card details for account:', selectedAccount.numCompte);
       this.router.navigate(['/card-details'], {
         queryParams: { numCompte: selectedAccount.numCompte }
       });
     }
   }
 
-  // MÉTHODE RDV DÉPÔT
   goToRDVDepot() {
     const selectedAccount = this.selected();
+
     if (!selectedAccount) {
       this.error.set('Veuillez sélectionner un compte');
       return;
     }
 
-    console.log('[DASHBOARD] Redirection vers RDV pour dépôt');
+    if (this.blockIfSuspended('depot')) {
+      return;
+    }
 
     this.router.navigate(['/rendez-vous'], {
-      queryParams: {
-        type: 'DÉPÔT',
-        numCompte: selectedAccount.numCompte
-      }
+      queryParams: { type: 'DÉPÔT', numCompte: selectedAccount.numCompte }
     });
   }
 
-  // MÉTHODE RDV RETRAIT (minimum 3000€)
   goToRDVRetrait() {
     const selectedAccount = this.selected();
+
     if (!selectedAccount) {
       this.error.set('Veuillez sélectionner un compte');
       return;
     }
 
-    const MIN_RETRAIT = 3000;
-
-    console.log('[DASHBOARD] Redirection vers RDV pour retrait (minimum', MIN_RETRAIT, '€)');
+    if (this.blockIfSuspended('retrait')) {
+      return;
+    }
 
     this.router.navigate(['/rendez-vous'], {
-      queryParams: {
-        type: 'RETRAIT',
-        numCompte: selectedAccount.numCompte,
-        minMontant: MIN_RETRAIT
-      }
+      queryParams: { type: 'RETRAIT', numCompte: selectedAccount.numCompte, minMontant: 3000 }
     });
   }
 
-  // MÉTHODES NOTIFICATIONS
   toggleNotifications() {
     this.showNotifications.update(v => !v);
   }
@@ -277,6 +615,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   toggleCard() {
+    if (!this.isAdmin()) {
+      alert('⛔ Action réservée à l’administrateur.');
+      return;
+    }
+
     const selectedAccount = this.selected();
     const currentCard = this.card();
 
@@ -285,11 +628,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const confirmed = confirm(
+      currentCard.estActive
+        ? 'Êtes-vous sûr de vouloir BLOQUER cette carte ?'
+        : 'Êtes-vous sûr de vouloir débloquer cette carte ?'
+    );
+
+    if (!confirmed) return;
+
     this.busy.set(true);
     this.error.set(null);
-
-    const action = currentCard.estActive ? 'bloquer' : 'débloquer';
-    console.log('[DASHBOARD] Card action:', action, 'for account', selectedAccount.numCompte);
 
     const request = currentCard.estActive
       ? this.cards.bloquer(selectedAccount.numCompte, 'Blocage depuis interface')
@@ -298,15 +646,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     request.pipe(
       takeUntil(this.destroy$)
     ).subscribe({
-      next: (response) => {
-        console.log('[DASHBOARD] Card toggle successful:', response);
+      next: () => {
         this.busy.set(false);
-        setTimeout(() => {
-          this.loadCard(selectedAccount.numCompte);
-        }, 500);
+        alert(currentCard.estActive ? '🔒 Carte bloquée' : '🔓 Carte débloquée');
+        setTimeout(() => this.loadCard(selectedAccount.numCompte), 500);
       },
       error: (e) => {
-        console.error('[DASHBOARD] Card toggle error:', e);
         this.busy.set(false);
         this.handleApiError(e, 'Erreur gestion carte');
       }
@@ -314,42 +659,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private refreshAccount() {
-    console.log('[DASHBOARD] Refreshing account data');
     const selectedAccount = this.selected();
     if (!selectedAccount) return;
 
     this.loadCard(selectedAccount.numCompte);
     this.loadOps(selectedAccount.numCompte);
     this.loadAccounts();
+    this.loadFrais();
+    this.loadSavings(selectedAccount.numCompte);
   }
 
   logout() {
-    console.log('[DASHBOARD] User logging out');
     this.auth.logout();
     this.router.navigate(['/auth']);
   }
 
   retryOperations() {
-    console.log('[DASHBOARD] Retrying operations service');
     this.operationsServiceDown.set(false);
+
     const selectedAccount = this.selected();
+
     if (selectedAccount) {
       this.loadOps(selectedAccount.numCompte);
     }
   }
 
   refreshData() {
-    console.log('[DASHBOARD] Manual refresh requested');
     this.error.set(null);
     this.loadAccounts();
   }
 
   formatCardExpiry(date: string | undefined): string {
     if (!date) return 'MM/AA';
+
     try {
       const d = new Date(date);
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = String(d.getFullYear()).slice(-2);
+
       return `${month}/${year}`;
     } catch {
       return 'MM/AA';
@@ -361,37 +708,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   formatBalance(balance: number | undefined): string {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(balance || 0);
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(balance || 0);
   }
 
   formatDate(date: string | null): string {
     if (!date) return 'N/A';
+
     try {
       return new Date(date).toLocaleDateString('fr-FR');
     } catch {
       return 'Date invalide';
     }
   }
-  // Dans la classe DashboardComponent
-deleteNotification(id: number) {
-  const updated = this.notifications().filter(n => n.id !== id);
-  this.notificationService.notifications.set(updated);
-}
-// Récupère le nom complet en testant toutes les clés du JWT
-displayName(): string {
-  const u: any = this.auth.currentUser();
-  if (!u) return 'Client';
 
-  const nom =
-    u.nomComplet ||
-    u.fullName ||
-    u.name ||
-    [u.prenom, u.nom].filter(Boolean).join(' ') ||
-    [u.firstName, u.lastName].filter(Boolean).join(' ') ||
-    u.sub ||
-    u.email ||
-    'Client';
+  deleteNotification(id: number) {
+    const updated = this.notifications().filter(n => n.id !== id);
+    this.notificationService.notifications.set(updated);
+  }
+  // === SIGNAL pour le panneau frais ===
+showFraisPanel = signal<boolean>(false);
 
-  return (typeof nom === 'string' && nom.trim()) ? nom.trim() : 'Client';
+// === Méthodes ===
+toggleFraisPanel() {
+  this.showFraisPanel.update(v => !v);
+  // Ferme les notifs si ouvert
+  if (this.showFraisPanel()) {
+    this.showNotifications.set(false);
+  }
 }
+
+scrollToFraisSection() {
+  this.showFraisPanel.set(false);
+  setTimeout(() => {
+    const el = document.querySelector('.frais-section');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+
+  displayName(): string {
+    const u: any = this.auth.currentUser();
+    if (!u) return 'Client';
+
+    const nom =
+      u.nomComplet ||
+      u.fullName ||
+      u.name ||
+      [u.prenom, u.nom].filter(Boolean).join(' ') ||
+      [u.firstName, u.lastName].filter(Boolean).join(' ') ||
+      u.sub ||
+      u.email ||
+      'Client';
+
+    return (typeof nom === 'string' && nom.trim()) ? nom.trim() : 'Client';
+  }
 }

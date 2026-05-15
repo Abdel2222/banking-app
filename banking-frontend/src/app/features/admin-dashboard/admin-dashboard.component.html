@@ -1,285 +1,972 @@
-<div class="wrap">
-  <header class="topbar">
-    <div class="brand"><span>🛠️</span><b>Admin</b> Dashboard</div>
-    <div class="actions">
-      <button (click)="logout()">Se déconnecter</button>
+<div class="admin-wrap">
+  <header class="admin-topbar">
+    <div class="admin-brand-3d">
+      <div class="admin-icon-wrapper">
+        <svg class="admin-shield-icon" viewBox="0 0 64 64" fill="none">
+          <defs>
+            <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff6b6b"/>
+              <stop offset="50%" stop-color="#c44569"/>
+              <stop offset="100%" stop-color="#3742fa"/>
+            </linearGradient>
+            <radialGradient id="shieldGlow">
+              <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#3742fa" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="32" cy="32" r="30" fill="url(#shieldGlow)"/>
+          <path d="M32 6 L52 14 L52 32 Q52 48 32 58 Q12 48 12 32 L12 14 Z" fill="url(#shieldGrad)" stroke="#fff" stroke-width="1.5"/>
+          <path d="M32 6 L42 10 L42 30 Q42 42 32 50 Q22 42 22 30 L22 10 Z" fill="#fff" opacity="0.2"/>
+          <path d="M22 30 L29 38 L44 22" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="32" y="20" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">A</text>
+        </svg>
+      </div>
+
+      <div class="admin-brand-text-wrapper">
+        <span class="star star-1">✦</span>
+        <span class="star star-2">✦</span>
+        <span class="admin-brand-text">ADMIN</span>
+        <span class="admin-brand-subtitle">CONTROL CENTER</span>
+        <span class="star star-3">✦</span>
+        <span class="star star-4">✦</span>
+      </div>
+    </div>
+
+    <div class="admin-actions">
+      <div class="admin-hello-card" *ngIf="me() as admin">
+        <span class="admin-crown">👑</span>
+        <div class="admin-hello-text">
+          <small class="admin-hello-label">SUPER ADMIN</small>
+          <span class="admin-hello-name">{{ admin?.nomComplet || admin?.email || 'Administrateur' }}</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn-admin-logout" (click)="logout(); $event.stopPropagation()">
+        <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Déconnexion</span>
+      </button>
     </div>
   </header>
 
-  <!-- Carte de bienvenue admin -->
-  <section class="panel" *ngIf="me() as admin">
-    <div class="card welcome">
-      <h3>Bienvenue Admin</h3>
-      <p>{{ admin?.nomComplet || admin?.email || 'Administrateur' }}</p>
-      <p class="muted">{{ admin?.email }}</p>
+  <section class="stats-grid">
+    <div class="stat-card stat-clients">
+      <div class="stat-icon-wrapper">
+        <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
+          <defs><linearGradient id="clientsGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ffcc"/><stop offset="100%" stop-color="#0099ff"/></linearGradient></defs>
+          <circle cx="22" cy="22" r="10" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5"/>
+          <circle cx="42" cy="22" r="10" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+          <path d="M8 50 Q8 38 22 38 Q36 38 36 50 Z" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5"/>
+          <path d="M28 50 Q28 38 42 38 Q56 38 56 50 Z" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Total Clients</div>
+        <div class="stat-value">{{ totalClients() || clientsWithAccounts().length }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-accounts">
+      <div class="stat-icon-wrapper">
+        <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
+          <defs><linearGradient id="accountsGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff89c"/><stop offset="100%" stop-color="#ff8c00"/></linearGradient></defs>
+          <polygon points="32,8 56,22 8,22" fill="url(#accountsGrad)" stroke="#fff" stroke-width="1.5"/>
+          <rect x="10" y="22" width="44" height="3" fill="#fff"/>
+          <rect x="14" y="28" width="4" height="20" fill="url(#accountsGrad)"/>
+          <rect x="24" y="28" width="4" height="20" fill="url(#accountsGrad)"/>
+          <rect x="34" y="28" width="4" height="20" fill="url(#accountsGrad)"/>
+          <rect x="44" y="28" width="4" height="20" fill="url(#accountsGrad)"/>
+          <rect x="8" y="50" width="48" height="4" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Comptes Gérés</div>
+        <div class="stat-value">{{ accounts()?.length || 0 }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-cards">
+      <div class="stat-icon-wrapper">
+        <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
+          <defs><linearGradient id="cardsStatGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#f093fb"/></linearGradient></defs>
+          <rect x="6" y="14" width="52" height="36" rx="4" fill="url(#cardsStatGrad)" stroke="#fff" stroke-width="1.5"/>
+          <rect x="10" y="22" width="10" height="7" rx="1" fill="#ffd700"/>
+          <rect x="10" y="36" width="30" height="2" fill="#fff" opacity="0.7"/>
+          <rect x="10" y="40" width="20" height="2" fill="#fff" opacity="0.5"/>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Cartes liées</div>
+        <div class="stat-value">{{ accounts()?.length || 0 }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card stat-status">
+      <div class="stat-icon-wrapper">
+        <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
+          <defs><linearGradient id="statusGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ff88"/><stop offset="100%" stop-color="#00cc6a"/></linearGradient></defs>
+          <circle cx="32" cy="32" r="22" fill="url(#statusGrad)" stroke="#fff" stroke-width="1.5"/>
+          <path d="M22 32 L29 39 L44 24" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="stat-content">
+        <div class="stat-label">Système</div>
+        <div class="stat-value-small">EN LIGNE</div>
+      </div>
     </div>
   </section>
 
-  <!-- Navigation par onglets -->
-  <section class="panel">
-    <div class="tabs">
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'accounts'"
-        (click)="switchTab('accounts')">
-        🏦 Gestion des comptes
+  <section class="admin-tabs-section">
+    <div class="admin-tabs">
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'accounts'" (click)="switchTab('accounts')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3v18h18"/><rect x="6" y="12" width="3" height="6"/><rect x="11" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/>
+        </svg>
+        <span>Gestion des Comptes</span>
       </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'chatbot'"
-        (click)="switchTab('chatbot')">
-        🤖 Supervision Chatbot
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'cards'" (click)="switchTab('cards')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+        <span>Gestion Carte</span>
       </button>
-      <button
-        class="tab-btn"
-        [class.active]="activeTab() === 'clients'"
-        (click)="switchTab('clients')">
-        👥 Liste des Clients
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'clients'" (click)="switchTab('clients')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Liste des Clients</span>
+      </button>
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'employees'" (click)="switchTab('employees')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Liste des Employés</span>
+      </button>
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'appointments'" (click)="switchTab('appointments')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span>Rendez-vous</span>
+      </button>
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'investments'" (click)="switchTab('investments')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 3v18h18"/>
+          <path d="M7 14l4-4 3 3 5-6"/>
+        </svg>
+        <span>Investissements</span>
+      </button>
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'funds'" (click)="switchTab('funds')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M8 12h8"/>
+          <path d="M12 8v8"/>
+        </svg>
+        <span>Fonds</span>
+      </button>
+
+      <button class="admin-tab-btn" [class.active]="activeTab() === 'chatbot'" (click)="switchTab('chatbot')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>Supervision Chatbot</span>
       </button>
     </div>
   </section>
 
-  <!-- ONGLET : Gestion des comptes -->
+  <!-- Comptes -->
   <main class="grid" *ngIf="activeTab() === 'accounts'">
-    <!-- Liste des comptes -->
-    <section class="panel">
-      <h3>Comptes</h3>
-      <div class="accounts">
-        <table *ngIf="accounts()?.length; else noacc">
+    <section class="panel-3d">
+      <h3 class="panel-title">
+        <span class="panel-title-icon">🏦</span>
+        <span class="panel-title-text">Comptes des clients</span>
+      </h3>
+
+      <div style="margin-bottom: 12px; text-align: right;">
+        <button class="btn-action btn-suspend" (click)="facturerTousLesComptes()" [disabled]="loading()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+          💸 Facturer tous les comptes
+        </button>
+      </div>
+
+      <div *ngIf="loading()" class="muted">Chargement des comptes clients...</div>
+
+      <div class="accounts-table-wrapper">
+        <table class="admin-table" *ngIf="accounts()?.length; else noacc">
           <thead>
-            <tr><th>Numéro</th><th>Solde</th><th>Statut</th><th></th></tr>
+            <tr><th>Client</th><th>Compte</th><th>Type</th><th>Solde</th><th>Carte</th><th>Statut</th><th>Action</th></tr>
           </thead>
           <tbody>
-            <tr *ngFor="let a of accounts()"
-                [class.active]="a.numCompte === selected()?.numCompte">
+            <tr *ngFor="let a of accounts()" [class.active]="a.numCompte === selected()?.numCompte">
+              <td>{{ a.clientName || 'Client inconnu' }}</td>
               <td class="mono">{{ a.numCompte }}</td>
-              <td class="right">{{ a.balance | money }}</td>
-              <td>{{ a.status }}</td>
-              <td class="right"><button (click)="select(a)">Voir</button></td>
+              <td>{{ a.intitule || 'Compte courant' }}</td>
+              <td class="right balance">{{ a.balance | money }}</td>
+              <td>{{ getCardDisplay(a) }}</td>
+              <td>
+                <span class="status-badge"
+                  [class.active-status]="a.status === 'ACTIVATED'"
+                  [class.pending-status]="a.status === 'CREATED'"
+                  [class.suspended-status]="isAccountSuspended(a)">
+                  {{ getDisplayStatus(a.status) }}
+                </span>
+              </td>
+              <td class="right">
+                <button class="btn-view" (click)="select(a)">👁️ Gérer</button>
+              </td>
             </tr>
           </tbody>
         </table>
-        <ng-template #noacc><p class="muted">Aucun compte.</p></ng-template>
+        <ng-template #noacc><p class="muted">Aucun compte client trouvé.</p></ng-template>
       </div>
     </section>
 
-    <!-- Détails compte sélectionné -->
-    <section class="panel span2" *ngIf="selected()">
+    <section class="panel-3d span2" *ngIf="selected()">
       <div class="row">
-        <div class="card">
-          <div class="label">Compte sélectionné</div>
-          <div class="mono strong">{{ selected()?.numCompte }}</div>
-          <div>Solde : <b>{{ selected()?.balance | money }}</b></div>
-          <div>Statut : <b>{{ selected()?.status }}</b></div>
-          <div class="mt">
-            <button (click)="activateAccount()">Activer le compte</button>
-            <button (click)="issueCard()">Émettre une carte</button>
+        <div class="info-card info-card-blue">
+          <div class="info-card-header">
+            <span class="info-icon">📋</span>
+            <span class="info-title">Compte sélectionné</span>
           </div>
-        </div>
 
-        <div class="card" *ngIf="card(); else nocard">
-          <div class="label">Carte liée</div>
-          <div class="mono">{{ card()?.numeroCarte || '—' }}</div>
-          <div>Expire : {{ card()?.dateExpiration || '—' }}</div>
-          <div class="status" [class.ok]="card()?.estActive" [class.ko]="!card()?.estActive">
-            {{ card()?.estActive ? 'Active' : 'Bloquée' }}
+          <div class="info-content">
+            <div class="info-row"><span class="label">Client :</span> <b>{{ selected()?.clientName }}</b></div>
+            <div class="info-row"><span class="label">Numéro :</span> <span class="mono strong">{{ selected()?.numCompte }}</span></div>
+            <div class="info-row"><span class="label">Type :</span> <b>{{ selected()?.intitule || 'Compte courant' }}</b></div>
+            <div class="info-row"><span class="label">Solde :</span> <b class="balance-big">{{ selected()?.balance | money }}</b></div>
+            <div class="info-row"><span class="label">Statut :</span> <b>{{ getDisplayStatus(selected()?.status) }}</b></div>
+            <div class="info-row"><span class="label">Carte :</span> <b>{{ selected() ? getCardDisplay(selected()!) : '—' }}</b></div>
           </div>
-          <div class="limits">
-            <div>Plafond J : {{ card()?.plafondJournalier ?? '—' }}</div>
-            <div>Plafond M : {{ card()?.plafondMensuel ?? '—' }}</div>
-          </div>
-          <div class="mt">
-            <button (click)="toggleCard()">
-              {{ card()?.estActive ? 'Bloquer' : 'Débloquer' }}
+
+          <div class="actions-buttons">
+            <button class="btn-action btn-activate" (click)="activateAccount()" [disabled]="selected()?.status === 'ACTIVATED' || loading()">
+              ✓ Activer le compte
+            </button>
+            <button class="btn-action btn-suspend" (click)="toggleSuspendCompte()" [disabled]="loading()">
+              {{ isSelectedSuspended() ? '▶️ RÉACTIVER' : '⏸️ SUSPENDRE' }}
             </button>
           </div>
         </div>
-        <ng-template #nocard>
-          <div class="card muted">
-            <div class="label">Carte liée</div>
-            <div class="muted">Aucune carte — utilisez "Émettre une carte".</div>
+
+        <div class="info-card info-card-green">
+          <div class="info-card-header">
+            <span class="info-icon">📊</span>
+            <span class="info-title">Dernières opérations</span>
+          </div>
+          <div class="ops-table-wrapper">
+            <table class="admin-table" *ngIf="ops()?.length; else noops">
+              <thead><tr><th>Date</th><th>Description</th><th class="right">Montant</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let o of ops()">
+                  <td>{{ o.date | date:'short' }}</td>
+                  <td>{{ o.description }}</td>
+                  <td class="right" [class.positive]="o.montant >= 0" [class.negative]="o.montant < 0">{{ o.montant | money }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <ng-template #noops><p class="muted">Aucune opération récente.</p></ng-template>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="info-card info-card-gold" style="grid-column: span 2;">
+          <div class="info-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>
+              <span class="info-icon">💰</span>
+              <span class="info-title">Frais de gestion - {{ selected()?.clientName }}</span>
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-action btn-activate" (click)="openFraisModal()" [disabled]="loading()" style="padding: 8px 16px; font-size: 0.9rem;">
+                ➕ Ajouter
+              </button>
+              <button class="btn-action btn-suspend" (click)="facturerSurCeCompte()" [disabled]="loading()" style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                💸 Facturer
+              </button>
+            </div>
+          </div>
+
+          <div class="info-content" style="margin-top: 12px;">
+            <table class="admin-table" *ngIf="frais()?.length; else noFrais">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th class="right">Montant</th>
+                  <th>Périodicité</th>
+                  <th>Période</th>
+                  <th>Total facturé</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let f of frais()">
+                  <td><span class="status-badge active-status">{{ f.typeFrais }}</span></td>
+                  <td>{{ f.description }}</td>
+                  <td class="right negative">-{{ f.montant | money }}</td>
+                  <td>{{ f.periodicite }}</td>
+                  <td>{{ f.dateDebut | date:'dd/MM/yy' }} → {{ f.dateFin | date:'dd/MM/yy' }}</td>
+                  <td class="right">{{ f.montantTotalFacture | money }}</td>
+                  <td>
+                    <span class="status-badge" [class.active-status]="f.estEnCours" [class.suspended-status]="f.estEchu">
+                      {{ f.estEnCours ? '✓ En cours' : (f.estEchu ? '⛔ Échu' : 'Inactif') }}
+                    </span>
+                  </td>
+                  <td class="right">
+                    <button class="btn-view" (click)="supprimerFrais(f.id)" style="background: #fee2e2; color: #991b1b;">🗑️</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <ng-template #noFrais>
+              <p class="muted" style="text-align: center; padding: 20px;">
+                ✨ Aucun frais de gestion actif pour ce client. Clique sur ➕ Ajouter pour en créer un.
+              </p>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <p class="err" *ngIf="error()">⚠️ {{ error() }}</p>
+    </section>
+  </main>
+
+  <!-- Cartes -->
+  <main class="grid" *ngIf="activeTab() === 'cards'">
+    <section class="panel-3d">
+      <h3 class="panel-title">
+        <span class="panel-title-icon">💳</span>
+        <span class="panel-title-text">Cartes par client</span>
+      </h3>
+
+      <div *ngIf="loading()" class="muted">Chargement des cartes...</div>
+
+      <div class="accounts-table-wrapper">
+        <table class="admin-table" *ngIf="accounts()?.length; else noaccCards">
+          <thead><tr><th>Client</th><th>Compte</th><th>Type</th><th>Carte</th><th>Statut compte</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let a of accounts()" [class.active]="a.numCompte === selected()?.numCompte">
+              <td>{{ a.clientName || 'Client inconnu' }}</td>
+              <td class="mono">{{ a.numCompte }}</td>
+              <td>{{ a.intitule || 'Compte courant' }}</td>
+              <td>{{ getCardDisplay(a) }}</td>
+              <td>
+                <span class="status-badge"
+                  [class.active-status]="a.status === 'ACTIVATED'"
+                  [class.pending-status]="a.status === 'CREATED'"
+                  [class.suspended-status]="isAccountSuspended(a)">
+                  {{ getDisplayStatus(a.status) }}
+                </span>
+              </td>
+              <td class="right">
+                <button class="btn-view" (click)="select(a)">💳 Gérer carte</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <ng-template #noaccCards><p class="muted">Aucun compte disponible pour la gestion carte.</p></ng-template>
+      </div>
+    </section>
+
+    <section class="panel-3d span2" *ngIf="selected()">
+      <div class="row">
+        <div class="info-card info-card-purple" *ngIf="card(); else nocardAdmin">
+          <div class="info-card-header">
+            <span class="info-icon">💳</span>
+            <span class="info-title">Gestion de la carte</span>
+          </div>
+          <div class="info-content">
+            <div class="info-row"><span class="label">Client :</span> <b>{{ selected()?.clientName }}</b></div>
+            <div class="info-row"><span class="label">Compte :</span> <span class="mono">{{ selected()?.numCompte }}</span></div>
+            <div class="info-row"><span class="label">Numéro carte :</span> <span class="mono">{{ card()?.numeroCarte || '—' }}</span></div>
+            <div class="info-row"><span class="label">Expire :</span> {{ card()?.dateExpiration || '—' }}</div>
+            <div class="info-row">
+              <span class="label">État :</span>
+              <span class="status-pill" [class.ok]="card()?.estActive" [class.ko]="!card()?.estActive">
+                {{ card()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}
+              </span>
+            </div>
+            <div class="limits-grid">
+              <div class="limit-box">
+                <span class="limit-label">Plafond Jour</span>
+                <span class="limit-value">{{ card()?.plafondJournalier ?? '—' }} €</span>
+              </div>
+              <div class="limit-box">
+                <span class="limit-label">Plafond Mois</span>
+                <span class="limit-value">{{ card()?.plafondMensuel ?? '—' }} €</span>
+              </div>
+            </div>
+          </div>
+          <div class="actions-buttons">
+            <button class="btn-action" [class.btn-block]="card()?.estActive" [class.btn-unblock]="!card()?.estActive" (click)="toggleCard()" [disabled]="loading()">
+              {{ card()?.estActive ? '🔒 BLOQUER' : '🔓 Débloquer la carte' }}
+            </button>
+          </div>
+        </div>
+
+        <ng-template #nocardAdmin>
+          <div class="info-card info-card-empty">
+            <div class="info-card-header">
+              <span class="info-icon">💳</span>
+              <span class="info-title">Aucune carte</span>
+            </div>
+            <div class="empty-state">
+              <p>Aucune carte liée à ce compte.</p>
+              <button class="btn-action btn-issue" (click)="issueCard()" [disabled]="loading()">💳 Émettre une carte</button>
+            </div>
           </div>
         </ng-template>
       </div>
 
       <div class="row">
-        <form [formGroup]="limitsForm" (ngSubmit)="setLimits()" class="card form">
-          <h4>Mettre à jour les plafonds</h4>
-          <div class="grid2">
-            <label>
-              <span>Plafond journalier</span>
+        <form [formGroup]="limitsForm" (ngSubmit)="setLimits()" class="info-card info-card-gold">
+          <div class="info-card-header">
+            <span class="info-icon">⚙️</span>
+            <span class="info-title">Plafonds de la carte</span>
+          </div>
+          <div class="form-grid">
+            <label class="form-label">
+              <span>Plafond journalier (€)</span>
               <input type="number" formControlName="plafondJournalier" min="1" step="1">
             </label>
-            <label>
-              <span>Plafond mensuel</span>
+            <label class="form-label">
+              <span>Plafond mensuel (€)</span>
               <input type="number" formControlName="plafondMensuel" min="1" step="1">
             </label>
           </div>
-          <div class="right mt">
-            <button [disabled]="limitsForm.invalid">Enregistrer</button>
+          <div class="actions-buttons">
+            <button class="btn-action btn-save" [disabled]="limitsForm.invalid || !card() || loading()">💾 Enregistrer</button>
           </div>
         </form>
-
-        <div class="card ops">
-          <h4>Dernières opérations</h4>
-          <table *ngIf="ops()?.length; else noops">
-            <thead>
-              <tr><th>Date</th><th>Description</th><th class="right">Montant</th></tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let o of ops()">
-                <td>{{ o.date | date:'short' }}</td>
-                <td>{{ o.description }}</td>
-                <td class="right">{{ o.montant | money }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <ng-template #noops><p class="muted">Aucune opération récente.</p></ng-template>
-        </div>
       </div>
 
-      <p class="err" *ngIf="error()">{{ error() }}</p>
+      <p class="err" *ngIf="error()">⚠️ {{ error() }}</p>
     </section>
   </main>
 
-  <!-- ONGLET : Supervision Chatbot -->
+  <!-- Clients -->
+  <main class="clients-section" *ngIf="activeTab() === 'clients'">
+    <section class="panel-3d">
+      <div class="clients-header">
+        <h3 class="panel-title">
+          <span class="panel-title-icon">👥</span>
+          <span class="panel-title-text">Liste complète des clients</span>
+        </h3>
+        <div class="header-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-label">Total</span>
+            <span class="mini-stat-value">{{ totalClients() }}</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-label">Filtrés</span>
+            <span class="mini-stat-value">{{ getFilteredClients().length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Rechercher par nom, prénom, email ou ID..." [value]="searchFilter()" (input)="onSearchChange($any($event.target).value)" class="search-input">
+        </div>
+        <button class="btn-refresh" (click)="refreshClients()" [disabled]="loadingClients()">
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Actualiser</span>
+        </button>
+      </div>
+
+      <div class="loading-card" *ngIf="loadingClients()"><div class="spinner-3d"></div><p>Chargement des clients...</p></div>
+      <div class="error-card" *ngIf="errorClients()"><p>❌ {{ errorClients() }}</p><button class="btn-retry" (click)="refreshClients()">🔄 Réessayer</button></div>
+
+      <div class="clients-table-wrapper" *ngIf="!loadingClients() && !errorClients()">
+        <table class="clients-table" *ngIf="getFilteredClients().length > 0; else noClients">
+          <thead><tr><th>ID</th><th>Nom complet</th><th>Email</th><th>Inscription</th><th>Actions</th></tr></thead>
+          <tbody>
+            <ng-container *ngFor="let client of getFilteredClients()">
+              <tr class="client-row" [class.expanded]="isClientExpanded(client.id)">
+                <td class="client-id-cell">#{{ client.id }}</td>
+                <td class="client-name-cell">
+                  <div class="client-avatar">{{ client.prenom?.[0] }}{{ client.nom?.[0] }}</div>
+                  <strong>{{ client.prenom }} {{ client.nom }}</strong>
+                </td>
+                <td class="client-email">{{ client.email }}</td>
+                <td class="client-date">{{ formatDate(client.dateInscription) }}</td>
+                <td class="client-actions">
+                  <button class="btn-toggle" (click)="toggleClientAccounts(client.id)" [class.active]="isClientExpanded(client.id)">
+                    <span>{{ isClientExpanded(client.id) ? '▼' : '▶' }}</span>
+                    {{ isClientExpanded(client.id) ? 'Masquer' : 'Voir' }}
+                    <span class="badge" *ngIf="client.comptes && client.comptes.length > 0">{{ client.comptes.length }}</span>
+                  </button>
+                </td>
+              </tr>
+              <tr class="accounts-row" *ngIf="isClientExpanded(client.id)">
+                <td colspan="5">
+                  <div class="accounts-details">
+                    <h4>💼 Comptes bancaires ({{ client.comptes?.length || 0 }})</h4>
+                    <div class="accounts-grid" *ngIf="client.comptes && client.comptes.length > 0; else noAccounts">
+                      <div class="account-mini-card" *ngFor="let compte of client.comptes">
+                        <div class="account-mini-header">
+                          <span class="account-mini-icon">{{ getAccountIcon(compte.intitule) }}</span>
+                          <span class="account-mini-type">{{ compte.intitule }}</span>
+                        </div>
+                        <div class="account-mini-num">
+                          <small>N° de compte</small>
+                          <span class="mono">{{ compte.numCompte }}</span>
+                        </div>
+                        <div class="account-mini-balance">
+                          <small>Solde disponible</small>
+                          <span class="balance-big-green">{{ formatCurrency(compte.balance) }}</span>
+                        </div>
+                        <div class="account-mini-footer">
+                          <span class="status-pill" [class.ok]="compte.status === 'ACTIVATED'" [class.ko]="compte.status !== 'ACTIVATED'">{{ getDisplayStatus(compte.status) }}</span>
+                          <span class="devise-badge">{{ compte.devise || 'EUR' }}</span>
+                        </div>
+                        <div class="account-mini-card-info">
+                          Carte : {{ compte.card ? ((compte.card.estActive ? 'Active ' : 'Bloquée ') + (compte.card.numeroCarte || '')) : 'Aucune carte' }}
+                        </div>
+                        <div class="account-mini-actions">
+                          <button class="btn-view" (click)="select(compte); switchTab('accounts')">Gérer compte</button>
+                          <button class="btn-view" (click)="select(compte); switchTab('cards')">Gérer carte</button>
+                        </div>
+                      </div>
+                    </div>
+                    <ng-template #noAccounts>
+                      <div class="no-accounts">
+                        <p>📭 Aucun compte bancaire pour ce client</p>
+                      </div>
+                    </ng-template>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+        <ng-template #noClients>
+          <div class="no-results">
+            <p>🔍 Aucun client trouvé</p>
+            <p class="muted">Essayez de modifier votre recherche</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+  </main>
+
+  <!-- Employés -->
+  <main class="clients-section" *ngIf="activeTab() === 'employees'">
+    <section class="panel-3d">
+      <div class="clients-header">
+        <h3 class="panel-title">
+          <span class="panel-title-icon">🧑‍💼</span>
+          <span class="panel-title-text">Liste des employés</span>
+        </h3>
+        <div class="header-stats">
+          <div class="mini-stat"><span class="mini-stat-label">Total</span><span class="mini-stat-value">{{ employees().length }}</span></div>
+          <div class="mini-stat"><span class="mini-stat-label">Filtrés</span><span class="mini-stat-value">{{ getFilteredEmployees().length }}</span></div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Rechercher par nom, prénom, email, rôle, poste ou matricule..."
+            [value]="employeeSearch()"
+            (input)="onEmployeeSearchChange($any($event.target).value)"
+            class="search-input">
+        </div>
+
+        <button class="btn-refresh" (click)="refreshEmployees()" [disabled]="loadingEmployees()">
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Actualiser</span>
+        </button>
+      </div>
+
+      <div class="loading-card" *ngIf="loadingEmployees()">
+        <div class="spinner-3d"></div>
+        <p>Chargement des employés...</p>
+      </div>
+
+      <div class="error-card" *ngIf="errorEmployees()">
+        <p>❌ {{ errorEmployees() }}</p>
+        <button class="btn-retry" (click)="refreshEmployees()">🔄 Réessayer</button>
+      </div>
+
+      <div class="clients-table-wrapper" *ngIf="!loadingEmployees() && !errorEmployees()">
+        <table class="clients-table" *ngIf="getFilteredEmployees().length > 0; else noEmployees">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom complet</th>
+              <th>Email</th>
+              <th>Rôle</th>
+              <th>Matricule</th>
+              <th>Poste</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let emp of getFilteredEmployees()">
+              <td class="client-id-cell">#{{ emp.id }}</td>
+              <td class="client-name-cell">
+                <div class="client-avatar">{{ emp.prenom?.[0] }}{{ emp.nom?.[0] }}</div>
+                <strong>{{ emp.prenom }} {{ emp.nom }}</strong>
+              </td>
+              <td class="client-email">{{ emp.email }}</td>
+              <td>{{ emp.role }}</td>
+              <td>{{ emp.matricule || '—' }}</td>
+              <td>{{ emp.poste || '—' }}</td>
+              <td class="client-actions">
+                <button class="btn-view" (click)="selectEmployee(emp)">👁️ Voir</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #noEmployees>
+          <div class="no-results">
+            <p>🔍 Aucun employé trouvé</p>
+            <p class="muted">Essayez de modifier votre recherche</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+  </main>
+
+  <!-- Rendez-vous (notifications démo) -->
+  <main class="clients-section" *ngIf="activeTab() === 'appointments'">
+    <section class="panel-3d">
+      <div class="clients-header">
+        <h3 class="panel-title">
+          <span class="panel-title-icon">📅</span>
+          <span class="panel-title-text">Notifications de rendez-vous</span>
+        </h3>
+        <div class="header-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-label">Total</span>
+            <span class="mini-stat-value">{{ appointments().length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <button class="btn-refresh" (click)="refreshAppointments()" [disabled]="loadingAppointments()">
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Actualiser</span>
+        </button>
+      </div>
+
+      <div class="loading-card" *ngIf="loadingAppointments()">
+        <div class="spinner-3d"></div>
+        <p>Chargement des rendez-vous...</p>
+      </div>
+
+      <div class="error-card" *ngIf="errorAppointments()">
+        <p>❌ {{ errorAppointments() }}</p>
+      </div>
+
+      <div class="clients-table-wrapper" *ngIf="!loadingAppointments() && !errorAppointments()">
+        <table class="clients-table" *ngIf="appointments().length > 0; else noAppointments">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Heure</th>
+              <th>Type</th>
+              <th>Agence</th>
+              <th>Montant</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let rdv of appointments()">
+              <td>{{ rdv.date }}</td>
+              <td>{{ rdv.heure }}</td>
+              <td>{{ rdv.typeOperation }}</td>
+              <td>{{ rdv.agence }}</td>
+              <td>{{ formatCurrency(rdv.montant) }}</td>
+              <td>
+                <span class="status-badge active-status">{{ rdv.statut }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #noAppointments>
+          <div class="no-results">
+            <p>📭 Aucune notification de rendez-vous</p>
+            <p class="muted">Les rendez-vous de démonstration apparaîtront ici</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+  </main>
+
+  <!-- Investissements -->
+  <main class="clients-section" *ngIf="activeTab() === 'investments'">
+    <section class="panel-3d">
+      <div class="clients-header">
+        <h3 class="panel-title">
+          <span class="panel-title-icon">📈</span>
+          <span class="panel-title-text">Placements des clients</span>
+        </h3>
+        <div class="header-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-label">Total</span>
+            <span class="mini-stat-value">{{ investments().length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <button class="btn-refresh" (click)="refreshInvestments()" [disabled]="loadingInvestments()">
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Actualiser</span>
+        </button>
+      </div>
+
+      <div class="loading-card" *ngIf="loadingInvestments()">
+        <div class="spinner-3d"></div>
+        <p>Chargement des investissements...</p>
+      </div>
+
+      <div class="error-card" *ngIf="errorInvestments()">
+        <p>❌ {{ errorInvestments() }}</p>
+      </div>
+
+      <div class="clients-table-wrapper" *ngIf="!loadingInvestments() && !errorInvestments()">
+        <table class="clients-table" *ngIf="investments().length > 0; else noInvestments">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Compte</th>
+              <th>Fonds</th>
+              <th>Montant</th>
+              <th>Gain prévu</th>
+              <th>Valeur estimée</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of investments()">
+              <td>{{ p.clientNomComplet }}</td>
+              <td>{{ p.numeroCompte }}</td>
+              <td>{{ p.nomFonds }}</td>
+              <td>{{ formatCurrency(p.montant) }}</td>
+              <td>{{ formatCurrency(p.gainPrevu) }}</td>
+              <td>{{ formatCurrency(p.valeurEstimee) }}</td>
+              <td>
+                <span class="status-badge"
+                  [class.active-status]="p.statut === 'ACTIF'"
+                  [class.pending-status]="p.statut === 'CLOTURE'"
+                  [class.suspended-status]="p.statut === 'ANNULE'">
+                  {{ p.statut }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-view" (click)="showClientFunds(p.clientId, p.clientNomComplet)">
+                  Voir fonds client
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #noInvestments>
+          <div class="no-results">
+            <p>📭 Aucun investissement trouvé</p>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+  </main>
+
+  <!-- Fonds -->
+  <main class="clients-section" *ngIf="activeTab() === 'funds'">
+    <section class="panel-3d">
+      <div class="clients-header">
+        <h3 class="panel-title">
+          <span class="panel-title-icon">💼</span>
+          <span class="panel-title-text">
+            {{ selectedClientFunds().length > 0 ? ('Placements de ' + selectedClientName()) : 'Catalogue des fonds' }}
+          </span>
+        </h3>
+
+        <button class="btn-refresh" *ngIf="selectedClientFunds().length > 0" (click)="clearSelectedClientFunds()">
+          <span>Retour</span>
+        </button>
+      </div>
+
+      <div class="loading-card" *ngIf="loadingFunds() || loadingInvestments()">
+        <div class="spinner-3d"></div>
+        <p>Chargement...</p>
+      </div>
+
+      <div class="error-card" *ngIf="errorFunds() || errorInvestments()">
+        <p>❌ {{ errorFunds() || errorInvestments() }}</p>
+      </div>
+
+      <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length === 0 && !loadingFunds() && !errorFunds()">
+        <table class="clients-table" *ngIf="fonds().length > 0; else noFunds">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Code</th>
+              <th>Rendement</th>
+              <th>Risque</th>
+              <th>Minimum</th>
+              <th>Disponible</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let f of fonds()">
+              <td>{{ f.nomFonds }}</td>
+              <td>{{ f.codeFonds || '—' }}</td>
+              <td>{{ f.rendement }} %</td>
+              <td>{{ f.niveauRisque }}</td>
+              <td>{{ formatCurrency(f.montantMinimum) }}</td>
+              <td>{{ f.disponible ? 'Oui' : 'Non' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ng-template #noFunds>
+          <div class="no-results">
+            <p>📭 Aucun fonds disponible</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length > 0 && !loadingInvestments()">
+        <table class="clients-table">
+          <thead>
+            <tr>
+              <th>Fonds</th>
+              <th>Compte</th>
+              <th>Montant</th>
+              <th>Rendement prévu</th>
+              <th>Gain prévu</th>
+              <th>Valeur estimée</th>
+              <th>Date placement</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of selectedClientFunds()">
+              <td>{{ p.nomFonds }}</td>
+              <td>{{ p.numeroCompte }}</td>
+              <td>{{ formatCurrency(p.montant) }}</td>
+              <td>{{ p.rendementPrevu }} %</td>
+              <td>{{ formatCurrency(p.gainPrevu) }}</td>
+              <td>{{ formatCurrency(p.valeurEstimee) }}</td>
+              <td>{{ formatDate(p.datePlacement) }}</td>
+              <td>{{ p.statut }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Chatbot -->
   <main class="chatbot-section" *ngIf="activeTab() === 'chatbot'">
     <app-admin-chatbot></app-admin-chatbot>
   </main>
 
-  <!-- ONGLET : Liste des Clients -->
-  <main class="clients-section" *ngIf="activeTab() === 'clients'">
-    <div class="chatbot-wrapper">
-      <!-- En-tête avec statistiques -->
-      <section class="panel">
-        <div class="card stats-header">
-          <h3>👥 Liste complète des clients de la banque</h3>
-          <div class="stats-row">
-            <div class="stat-box">
-              <span class="stat-label">Total clients</span>
-              <span class="stat-value">{{ totalClients() }}</span>
-            </div>
-            <div class="stat-box">
-              <span class="stat-label">Résultats filtrés</span>
-              <span class="stat-value">{{ getFilteredClients().length }}</span>
-            </div>
+  <!-- Modale frais -->
+  <div class="modal-overlay" *ngIf="showFraisModal()" (click)="closeFraisModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="background: white; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="margin: 0; color: #1a1a2e;">➕ Ajouter un frais</h3>
+        <button (click)="closeFraisModal()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+      </div>
+
+      <p style="color: #64748b; margin-bottom: 16px;">
+        Client : <strong>{{ selected()?.clientName }}</strong><br>
+        Compte : <span style="font-family: monospace;">{{ selected()?.numCompte }}</span>
+      </p>
+
+      <form [formGroup]="fraisForm" (ngSubmit)="submitFrais()">
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; margin-bottom: 4px; font-weight: 600;">💰 Montant (€)</label>
+          <input type="number" step="0.01" formControlName="montant" min="0" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; margin-bottom: 4px; font-weight: 600;">📝 Description</label>
+          <input type="text" formControlName="description" placeholder="Ex: Frais de tenue mensuel" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 600;">🏷️ Type</label>
+            <select formControlName="typeFrais" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+              <option value="TENUE_COMPTE">Tenue de compte</option>
+              <option value="CARTE_BANCAIRE">Carte bancaire</option>
+              <option value="VIREMENT_INTERNATIONAL">Virement international</option>
+              <option value="AGIOS">Agios / Découvert</option>
+              <option value="ASSURANCE">Assurance</option>
+              <option value="COMMISSION_INTERVENTION">Commission d'intervention</option>
+              <option value="INCIDENT_PAIEMENT">Incident de paiement</option>
+              <option value="PACKAGE_BANCAIRE">Package bancaire</option>
+              <option value="AUTRE">Autre</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 600;">🔄 Périodicité</label>
+            <select formControlName="periodicite" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+              <option value="MENSUEL">Mensuel</option>
+              <option value="TRIMESTRIEL">Trimestriel</option>
+              <option value="SEMESTRIEL">Semestriel</option>
+              <option value="ANNUEL">Annuel</option>
+              <option value="HEBDOMADAIRE">Hebdomadaire</option>
+              <option value="QUOTIDIEN">Quotidien</option>
+              <option value="PONCTUEL">Ponctuel</option>
+            </select>
           </div>
         </div>
-      </section>
 
-      <!-- Barre de recherche -->
-      <section class="panel">
-        <div class="search-container">
-          <input
-            type="text"
-            placeholder="🔍 Rechercher par nom, prénom, email ou ID..."
-            [value]="searchFilter()"
-            (input)="onSearchChange($any($event.target).value)"
-            class="search-input"
-          />
-          <button (click)="refreshClients()" class="btn-refresh" [disabled]="loadingClients()">
-            🔄 Actualiser
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button type="button" (click)="closeFraisModal()" style="padding: 10px 20px; background: #e2e8f0; color: #1a1a2e; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Annuler</button>
+          <button type="submit" [disabled]="fraisForm.invalid || loading()" style="padding: 10px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+            {{ loading() ? '⏳ Envoi...' : '✓ Ajouter le frais' }}
           </button>
         </div>
-      </section>
-
-      <!-- Message de chargement -->
-      <section class="panel" *ngIf="loadingClients()">
-        <div class="card loading-card">
-          <div class="spinner"></div>
-          <p>Chargement des clients et de leurs comptes...</p>
-        </div>
-      </section>
-
-      <!-- Message d'erreur -->
-      <section class="panel" *ngIf="errorClients()">
-        <div class="card error-card">
-          <p class="err">❌ {{ errorClients() }}</p>
-          <button (click)="refreshClients()" class="btn-retry">Réessayer</button>
-        </div>
-      </section>
-
-      <!-- Liste des clients -->
-      <section class="panel" *ngIf="!loadingClients() && !errorClients()">
-        <div class="card clients-card">
-          <table class="clients-table" *ngIf="getFilteredClients().length > 0; else noClients">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nom complet</th>
-                <th>Email</th>
-                <th>Date d'inscription</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <ng-container *ngFor="let client of getFilteredClients()">
-                <!-- Ligne principale du client -->
-                <tr class="client-row" [class.expanded]="isClientExpanded(client.id)">
-                  <td class="client-id">{{ client.id }}</td>
-                  <td class="client-name">
-                    <strong>{{ client.prenom }} {{ client.nom }}</strong>
-                  </td>
-                  <td class="client-email">{{ client.email }}</td>
-                  <td class="client-date">{{ formatDate(client.dateInscription) }}</td>
-                  <td class="client-actions">
-                    <button
-                      class="btn-toggle"
-                      (click)="toggleClientAccounts(client.id)"
-                      [class.active]="isClientExpanded(client.id)">
-                      {{ isClientExpanded(client.id) ? '▼ Masquer' : '▶ Voir comptes' }}
-                      <span class="badge" *ngIf="client.comptes && client.comptes.length > 0">({{ client.comptes.length }})</span>
-                    </button>
-                  </td>
-                </tr>
-
-                <!-- Ligne des comptes (accordéon) -->
-                <tr class="accounts-row" *ngIf="isClientExpanded(client.id)">
-                  <td colspan="5">
-                    <div class="accounts-details"><h4>💼 Comptes bancaires ({{ client.comptes.length || 0 }})</h4>
-                      <div class="accounts-grid" *ngIf="client.comptes && client.comptes.length > 0; else noAccounts">
-                        <div class="account-card" *ngFor="let compte of client.comptes; let i = index">
-                          <div class="account-header">
-                            <span class="account-icon">{{ getAccountIcon(compte.intitule) }}</span>
-                            <span class="account-type">{{ compte.intitule }}</span>
-                          </div>
-                          <div class="account-number">
-                            <span class="label-small">N° de compte</span>
-                            <span class="mono">{{ compte.numCompte }}</span>
-                          </div>
-                          <div class="account-balance">
-                            <span class="label">Solde disponible</span>
-                            <span class="value">{{ formatCurrency(compte.balance) }}</span>
-                          </div>
-                          <div class="account-footer">
-                            <div class="account-status" [class.active]="compte.status === 'ACTIVATED'" [class.inactive]="compte.status !== 'ACTIVATED'">
-                              <span *ngIf="compte.status === 'ACTIVATED'">✓ Actif</span>
-                              <span *ngIf="compte.status !== 'ACTIVATED'">○ {{ compte.status }}</span>
-                            </div>
-                            <div class="account-devise">{{ compte.devise || 'EUR' }}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <ng-template #noAccounts>
-                        <div class="no-accounts">
-                          <p>📭 Aucun compte bancaire trouvé pour ce client</p>
-                        </div>
-                      </ng-template>
-                    </div>
-                  </td>
-                </tr>
-              </ng-container>
-            </tbody>
-          </table>
-
-          <ng-template #noClients>
-            <div class="no-results">
-              <p>🔍 Aucun client trouvé</p>
-              <p class="muted">Essayez de modifier votre recherche</p>
-            </div>
-          </ng-template>
-        </div>
-      </section>
+      </form>
     </div>
-  </main>
+  </div>
 </div>

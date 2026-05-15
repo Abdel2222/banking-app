@@ -2,6 +2,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { OperationsService } from '../../core/services/operations.service';
@@ -22,6 +24,16 @@ interface CalendarDay {
   isWeekend: boolean;
 }
 
+interface Employe {
+  id: number;
+  prenom: string;
+  nom: string;
+  email: string;
+  role: string;
+  matricule?: string;
+  poste?: string;
+}
+
 @Component({
   selector: 'app-rendez-vous',
   standalone: true,
@@ -33,6 +45,8 @@ export class RendezVousComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
+
   private authService = inject(AuthService);
   private notificationService = inject(NotificationService);
   private operationsService = inject(OperationsService);
@@ -50,6 +64,10 @@ export class RendezVousComponent implements OnInit {
   selectedTime = signal<string | null>(null);
 
   timeSlots = signal<TimeSlot[]>([]);
+
+  employeAssigne = signal<Employe | null>(null);
+  loadingEmploye = signal<boolean>(false);
+  errorEmploye = signal<string | null>(null);
 
   rdvForm = this.fb.group({
     nom: ['', [Validators.required, Validators.minLength(2)]],
@@ -100,12 +118,15 @@ export class RendezVousComponent implements OnInit {
       this.montant.set(Number(montant));
       this.rdvForm.patchValue({ montant: Number(montant) });
     }
+
     if (type) {
       this.typeOperation.set(type);
     }
+
     if (numCompte) {
       this.numCompte.set(numCompte);
     }
+
     if (minMontant) {
       this.minMontant.set(Number(minMontant));
 
@@ -122,6 +143,58 @@ export class RendezVousComponent implements OnInit {
 
     this.generateCalendar();
     this.generateTimeSlots();
+
+    this.loadEmployeAleatoire();
+  }
+
+  private normalizeTypeOperation(): string {
+    return (this.typeOperation() || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  loadEmployeAleatoire() {
+    const type = this.normalizeTypeOperation();
+
+    let endpoint = '/api/employes/random';
+
+    if (type.includes('depot')) {
+      endpoint = '/api/employes/random/depot';
+    } else if (type.includes('retrait')) {
+      endpoint = '/api/employes/random/retrait';
+    }
+
+    this.loadingEmploye.set(true);
+    this.errorEmploye.set(null);
+
+    this.http.get<Employe>(endpoint).subscribe({
+      next: (employe) => {
+        console.log('[RDV] Employé assigné:', employe);
+        this.employeAssigne.set(employe);
+        this.loadingEmploye.set(false);
+      },
+      error: (err) => {
+        console.error('[RDV] Erreur chargement employé:', err);
+        this.employeAssigne.set(null);
+        this.errorEmploye.set('Aucun conseiller disponible');
+        this.loadingEmploye.set(false);
+      }
+    });
+  }
+
+  changerEmploye() {
+    this.loadEmployeAleatoire();
+  }
+
+  getNomEmploye(): string {
+    const e = this.employeAssigne();
+
+    if (!e) {
+      return 'Non assigné';
+    }
+
+    return `${e.prenom} ${e.nom}`;
   }
 
   generateCalendar() {
@@ -142,11 +215,15 @@ export class RendezVousComponent implements OnInit {
     today.setHours(0, 0, 0, 0);
 
     const current = new Date(startDate);
+
     while (current <= endDate) {
       const dayDate = new Date(current);
       dayDate.setHours(0, 0, 0, 0);
 
-      const isSelected = this.selectedDate() ? dayDate.getTime() === this.selectedDate()!.getTime() : false;
+      const isSelected = this.selectedDate()
+        ? dayDate.getTime() === this.selectedDate()!.getTime()
+        : false;
+
       const isWeekend = current.getDay() === 0 || current.getDay() === 6;
 
       days.push({
@@ -155,8 +232,8 @@ export class RendezVousComponent implements OnInit {
         isCurrentMonth: current.getMonth() === month,
         isToday: dayDate.getTime() === today.getTime(),
         isPast: dayDate < today,
-        isSelected: isSelected,
-        isWeekend: isWeekend
+        isSelected,
+        isWeekend
       });
 
       current.setDate(current.getDate() + 1);
@@ -167,13 +244,16 @@ export class RendezVousComponent implements OnInit {
 
   generateTimeSlots() {
     const slots: TimeSlot[] = [];
+
     const morningSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30'];
     const afternoonSlots = ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30'];
 
     const now = new Date();
     const selectedDate = this.selectedDate();
-    const isToday = selectedDate &&
-                    selectedDate.toDateString() === now.toDateString();
+
+    const isToday =
+      selectedDate &&
+      selectedDate.toDateString() === now.toDateString();
 
     [...morningSlots, ...afternoonSlots].forEach(time => {
       let available = Math.random() > 0.3;
@@ -217,13 +297,14 @@ export class RendezVousComponent implements OnInit {
 
   selectTime(slot: TimeSlot) {
     if (!slot.available) return;
+
     this.selectedTime.set(slot.time);
   }
 
   canSubmit(): boolean {
     return this.rdvForm.valid &&
-           this.selectedDate() !== null &&
-           this.selectedTime() !== null;
+      this.selectedDate() !== null &&
+      this.selectedTime() !== null;
   }
 
   submitRDV() {
@@ -232,12 +313,15 @@ export class RendezVousComponent implements OnInit {
       return;
     }
 
+    const employe = this.employeAssigne();
+
     const rdvData = {
       ...this.rdvForm.value,
       date: this.selectedDate(),
       heure: this.selectedTime(),
       typeOperation: this.typeOperation(),
-      numCompte: this.numCompte()
+      numCompte: this.numCompte(),
+      employe
     };
 
     console.log('[RDV] Rendez-vous demandé:', rdvData);
@@ -246,14 +330,17 @@ export class RendezVousComponent implements OnInit {
     const numCompte = this.numCompte();
     const typeOp = this.typeOperation();
 
-    // Construire la date complète du RDV (date + heure)
     const dateRDV = new Date(this.selectedDate()!);
     const [heures, minutes] = this.selectedTime()!.split(':');
     dateRDV.setHours(parseInt(heures), parseInt(minutes), 0, 0);
 
-    const description = `${typeOp} en agence - ${rdvData.agence} - RDV le ${this.formatSelectedDate()} à ${this.selectedTime()}`;
+    const conseillerText = employe
+      ? `${employe.prenom} ${employe.nom} (${employe.matricule || 'N/A'})`
+      : 'Non assigné';
 
-    // EFFECTUER L'OPÉRATION BANCAIRE
+    const description =
+      `${typeOp} en agence - ${rdvData.agence} - RDV le ${this.formatSelectedDate()} à ${this.selectedTime()} - Conseiller: ${conseillerText}`;
+
     let operationObservable;
 
     if (typeOp === 'DÉPÔT') {
@@ -275,7 +362,6 @@ export class RendezVousComponent implements OnInit {
         next: (response) => {
           console.log('[RDV] Opération bancaire réussie:', response);
 
-          // ENREGISTRER DANS LE STORE LOCAL
           if (typeOp === 'DÉPÔT') {
             this.operationsStore.addDepotWithDate(
               numCompte,
@@ -292,7 +378,6 @@ export class RendezVousComponent implements OnInit {
             );
           }
 
-          // ENVOI DE LA NOTIFICATION
           this.notificationService.addRDVNotification(
             this.formatSelectedDate(),
             this.selectedTime()!,
@@ -329,14 +414,29 @@ export class RendezVousComponent implements OnInit {
   }
 
   getMonthYear(): string {
-    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const months = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre'
+    ];
+
     return `${months[this.currentMonth().getMonth()]} ${this.currentMonth().getFullYear()}`;
   }
 
   formatSelectedDate(): string {
     if (!this.selectedDate()) return '';
+
     const date = this.selectedDate()!;
+
     return date.toLocaleDateString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
@@ -356,31 +456,39 @@ export class RendezVousComponent implements OnInit {
       'Uccle - Altitude 100': 'Chaussée de Waterloo 1485, 1180 Uccle',
       'Schaerbeek - Place Colignon': 'Place Colignon 1, 1030 Schaerbeek'
     };
+
     return addresses[agence] || 'Adresse non disponible';
   }
 
   get montantErrorMessage(): string {
     const control = this.rdvForm.get('montant');
+
     if (control?.hasError('required')) {
       return 'Le montant est requis';
     }
+
     if (control?.hasError('min')) {
       return `Le montant minimum pour un ${this.typeOperation()} est de ${this.formatMontant(this.minMontant())}`;
     }
+
     return '';
   }
 
   get motifErrorMessage(): string {
     const control = this.rdvForm.get('motif');
+
     if (control?.hasError('required')) {
       return 'Le motif est requis';
     }
+
     if (control?.hasError('minlength')) {
       return 'Le motif doit contenir au moins 10 caractères';
     }
+
     if (control?.hasError('pattern')) {
       return 'Veuillez décrire votre motif en quelques mots';
     }
+
     return '';
   }
 }

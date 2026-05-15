@@ -28,7 +28,7 @@ public class CarteBancaireController {
     }
 
     /** Émettre une nouvelle carte pour un compte (ADMIN) */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("/{numCompte}/issue")
     public ResponseEntity<CarteBancaireResponse> issue(@PathVariable String numCompte) {
         CarteBancaire carte = compteService.issueCard(numCompte);
@@ -36,7 +36,7 @@ public class CarteBancaireController {
     }
 
     /** Bloquer une carte (ADMIN) */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("/{numCompte}/bloquer")
     public ResponseEntity<CarteBancaireResponse> bloquer(@PathVariable String numCompte,
                                                          @RequestParam(required = false) String raison) {
@@ -45,7 +45,7 @@ public class CarteBancaireController {
     }
 
     /** Débloquer une carte (ADMIN) */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PostMapping("/{numCompte}/debloquer")
     public ResponseEntity<CarteBancaireResponse> debloquer(@PathVariable String numCompte) {
         CarteBancaire carte = compteService.unblockCard(numCompte);
@@ -53,7 +53,7 @@ public class CarteBancaireController {
     }
 
     /** Mettre à jour les plafonds (ADMIN) */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     @PatchMapping("/{numCompte}/plafonds")
     public ResponseEntity<CarteBancaireResponse> updatePlafonds(@PathVariable String numCompte,
                                                                 @RequestBody PlafondsRequest req) {

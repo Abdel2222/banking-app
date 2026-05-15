@@ -1,0 +1,150 @@
+<div class="investments-page">
+  <header class="investments-header">
+    <div>
+      <button class="btn-back" type="button" (click)="retourDashboard()">
+        ← Retour dashboard
+      </button>
+
+      <h1>Fonds & Placements</h1>
+      <p>
+        Sélectionnez un fonds disponible et investissez depuis votre compte bancaire.
+      </p>
+    </div>
+
+    <button class="btn-history" type="button" (click)="goToHistory()">
+      Voir mes placements
+    </button>
+  </header>
+
+  <section class="account-box">
+    <div>
+      <span class="label">Compte sélectionné</span>
+      <strong>{{ numCompte() || 'Aucun compte sélectionné' }}</strong>
+    </div>
+
+    <div>
+      <span class="label">ID compte</span>
+      <strong>{{ compteId() || 'N/A' }}</strong>
+    </div>
+  </section>
+
+  <div *ngIf="loading()" class="state loading">
+    Chargement des fonds...
+  </div>
+
+  <div *ngIf="error()" class="state error">
+    {{ error() }}
+  </div>
+
+  <div *ngIf="success()" class="state success">
+    {{ success() }}
+  </div>
+
+  <section class="content-grid" *ngIf="!loading()">
+    <div class="fonds-list">
+      <h2>Fonds disponibles</h2>
+
+      <div *ngIf="fondsActifs().length === 0" class="empty">
+        Aucun fonds actif disponible.
+      </div>
+
+      <button
+        type="button"
+        class="fonds-card"
+        *ngFor="let f of fondsActifs()"
+        [class.active]="selectedFonds()?.id === f.id"
+        (click)="selectFonds(f)">
+
+        <div class="fonds-top">
+          <div>
+            <h3>{{ f.nomFonds }}</h3>
+            <span class="code">{{ getCodeFonds(f) }}</span>
+          </div>
+
+          <span class="risk" [ngClass]="getRiskClass(f.niveauRisque)">
+            {{ f.niveauRisque }}
+          </span>
+        </div>
+
+        <p class="description">
+          {{ f.description || 'Fonds de placement Techno-Bank.' }}
+        </p>
+
+        <div class="fonds-stats">
+          <div>
+            <span>Rendement</span>
+            <strong>{{ f.rendement | number:'1.2-2' }}%</strong>
+          </div>
+
+          <div>
+            <span>Minimum</span>
+            <strong>{{ f.montantMinimum | currency:'EUR':'symbol':'1.2-2':'fr' }}</strong>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <aside class="investment-panel">
+      <h2>Créer un placement</h2>
+
+      <ng-container *ngIf="selectedFonds(); else noFondsSelected">
+        <div class="selected-box">
+          <span>Fonds choisi</span>
+          <strong>{{ selectedFonds()?.nomFonds }}</strong>
+        </div>
+
+        <label class="form-field">
+          <span>Montant à investir</span>
+          <input
+            type="number"
+            min="1"
+            step="0.01"
+            [value]="montant() || ''"
+            (input)="updateMontant($event)"
+            placeholder="Ex: 100">
+        </label>
+
+        <div class="preview" *ngIf="montant()">
+          <div>
+            <span>Capital investi</span>
+            <strong>{{ montant() | currency:'EUR':'symbol':'1.2-2':'fr' }}</strong>
+          </div>
+
+          <div>
+            <span>Gain prévu</span>
+            <strong>
+              {{
+                ((montant() || 0) * ((selectedFonds()?.rendement || 0) / 100))
+                  | currency:'EUR':'symbol':'1.2-2':'fr'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Valeur estimée</span>
+            <strong>
+              {{
+                ((montant() || 0) + ((montant() || 0) * ((selectedFonds()?.rendement || 0) / 100)))
+                  | currency:'EUR':'symbol':'1.2-2':'fr'
+              }}
+            </strong>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="btn-invest"
+          [disabled]="investing() || !compteId()"
+          (click)="investir()">
+          {{ investing() ? 'Placement en cours...' : 'Investir maintenant' }}
+        </button>
+      </ng-container>
+
+      <ng-template #noFondsSelected>
+        <div class="empty selected-empty">
+          Sélectionnez un fonds à gauche pour investir.
+        </div>
+      </ng-template>
+    </aside>
+  </section>
+</div>

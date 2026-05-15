@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Table(name = "personnes")
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "type_personne", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue("PERSONNE")
 public class Personne {
 
     @Id
@@ -42,13 +43,19 @@ public class Personne {
     @Column(name = "role", nullable = false)
     private Role role;
 
+    // Utilisé seulement quand role = EMPLOYE
+    @Column(name = "matricule", unique = true, length = 50)
+    private String matricule;
+
+    // Utilisé seulement quand role = EMPLOYE
+    @Column(name = "poste", length = 100)
+    private String poste;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    // ==== Constructeurs ====
 
     public Personne() {}
 
@@ -60,7 +67,15 @@ public class Personne {
         this.role = role;
     }
 
-    // ==== Hooks JPA ====
+    public Personne(String prenom, String nom, String email, String motDePasse, Role role, String matricule, String poste) {
+        this.prenom = prenom;
+        this.nom = nom;
+        this.email = email;
+        this.motDePasse = motDePasse;
+        this.role = role;
+        this.matricule = matricule;
+        this.poste = poste;
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -72,8 +87,6 @@ public class Personne {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    // ==== Getters et Setters ====
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -93,13 +106,17 @@ public class Personne {
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
 
+    public String getMatricule() { return matricule; }
+    public void setMatricule(String matricule) { this.matricule = matricule; }
+
+    public String getPoste() { return poste; }
+    public void setPoste(String poste) { this.poste = poste; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    // ==== Utilitaires ====
 
     public String getNomComplet() {
         return prenom + " " + nom;

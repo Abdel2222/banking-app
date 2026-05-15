@@ -8,8 +8,9 @@ import com.banking.exceptions.ResourceNotFoundException;
 import com.banking.exceptions.UnauthorizedAccessException;
 import com.banking.repositories.CompteBancaireRepository;
 import com.banking.services.CompteBancaireService;
-import com.banking.services.FraisDeGestionService; // ⬅️ AJOUT
+import com.banking.services.FraisDeGestionService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-import jakarta.validation.Valid;
+
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -35,27 +35,30 @@ public class CompteBancaireController {
     private static final Logger log = LoggerFactory.getLogger(CompteBancaireController.class);
 
     private final CompteBancaireService compteService;
-    private final FraisDeGestionService fraisDeGestionService; // ⬅️ AJOUT
-
+    private final FraisDeGestionService fraisDeGestionService;
     private final CompteBancaireRepository compteRepo;
 
-    /** Récupérer MES comptes */
     @GetMapping
     public ResponseEntity<List<AccountResponse>> getMyAccounts(Authentication authentication) {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             throw new UnauthorizedAccessException("Utilisateur non connecté");
         }
+
         List<CompteBancaire> comptes = compteService.getAccountsForPrincipal(authentication);
+
         List<AccountResponse> result = comptes.stream()
                 .map(AccountResponse::fromEntity)
                 .collect(Collectors.toList());
+
         return ResponseEntity.ok(result);
     }
+
     @GetMapping("/by-id/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<Map<String,Object>> getById(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getById(@PathVariable Long id) {
         CompteBancaire cb = compteRepo.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Compte id introuvable: " + id));
+
         return ResponseEntity.ok(Map.of(
                 "id", cb.getId(),
                 "numCompte", cb.getNumCompte(),
@@ -66,9 +69,10 @@ public class CompteBancaireController {
 
     @GetMapping("/by-num/{numCompte}")
     @Transactional(readOnly = true)
-    public ResponseEntity<Map<String,Object>> getByNum(@PathVariable String numCompte) {
+    public ResponseEntity<Map<String, Object>> getByNum(@PathVariable String numCompte) {
         CompteBancaire cb = compteRepo.findByNumCompte(numCompte)
                 .orElseThrow(() -> new EntityNotFoundException("Compte introuvable: " + numCompte));
+
         return ResponseEntity.ok(Map.of(
                 "id", cb.getId(),
                 "numCompte", cb.getNumCompte(),
@@ -78,20 +82,11 @@ public class CompteBancaireController {
                 "createdAt", cb.getCreatedAt()
         ));
     }
-    @RestControllerAdvice
-    class GlobalErrors {
-        @ExceptionHandler(EntityNotFoundException.class)
-        ResponseEntity<Map<String,Object>> notFound(EntityNotFoundException ex){
-            return ResponseEntity.status(404).body(Map.of("success", false, "message", ex.getMessage()));
-        }
-    }
 
-
-    /** Créer un compte (idempotent) + appliquer automatiquement le frais d'ouverture */
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(
             Authentication authentication,
-            @RequestBody(required = false) CreateAccountRequest request
+            @Valid @RequestBody(required = false) CreateAccountRequest request
     ) {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             throw new UnauthorizedAccessException("Utilisateur non connecté");
@@ -99,8 +94,6 @@ public class CompteBancaireController {
 
         CompteBancaire created = compteService.createForPrincipal(authentication, request);
 
-        // ⬇️ Déclenche le frais d’ouverture juste après la création
-        // (la méthode du service fait déjà le check: balance >= 20€ avant de débiter 2€)
         try {
             fraisDeGestionService.appliquerFraisOuverture(created.getNumCompte());
         } catch (Exception e) {
@@ -110,7 +103,6 @@ public class CompteBancaireController {
         return ResponseEntity.ok(AccountResponse.fromEntity(created));
     }
 
-    /** Activer un compte (ADMIN) par numéro */
     @PostMapping("/{numCompte}/activer")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<AccountResponse> activerCompte(@PathVariable String numCompte) {
@@ -118,7 +110,6 @@ public class CompteBancaireController {
         return ResponseEntity.ok(AccountResponse.fromEntity(actif));
     }
 
-    /** Suspendre un compte (ADMIN) par numéro */
     @PostMapping("/{numCompte}/bloquer")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<AccountResponse> bloquerCompte(@PathVariable String numCompte) {
@@ -126,16 +117,29 @@ public class CompteBancaireController {
         return ResponseEntity.ok(AccountResponse.fromEntity(bloque));
     }
 
-    /** Virement – version Map souple (inchangé si tu as déjà intégré) */
     @PostMapping("/virement")
     public ResponseEntity<?> effectuerVirement(@RequestBody Map<String, Object> body, Authentication auth) {
         try {
-            String src = pickString(body,
-                    "sourceAccount", "fromAccount", "from",
-                    "numCompteSource", "compteSource", "source_account");
-            String dst = pickString(body,
-                    "destinationAccount", "toAccount", "to",
-                    "numCompteDestination", "compteDestination", "destination_account");
+            String src = pickString(
+                    body,
+                    "sourceAccount",
+                    "fromAccount",
+                    "from",
+                    "numCompteSource",
+                    "compteSource",
+                    "source_account"
+            );
+
+            String dst = pickString(
+                    body,
+                    "destinationAccount",
+                    "toAccount",
+                    "to",
+                    "numCompteDestination",
+                    "compteDestination",
+                    "destination_account"
+            );
+
             BigDecimal amount = pickBigDecimal(body, "montant", "amount", "value", "somme");
             String description = pickString(body, "description", "libelle", "label");
 
@@ -150,34 +154,39 @@ public class CompteBancaireController {
                 ));
             }
 
-            log.info("🔄 Virement: {} € de [{}] vers [{}] (desc='{}')", amount, src, dst, description);
+            log.info("Virement: {} de [{}] vers [{}] description='{}'", amount, src, dst, description);
+
             Operation op = compteService.transfer(src, dst, amount, description);
-            log.info("✅ Virement OK. Operation ID={}", op.getId());
+
             return ResponseEntity.ok(op);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("❌ Erreur métier virement : {}", e.getMessage());
+            log.warn("Erreur métier virement : {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (ResourceNotFoundException e) {
-            log.error("❌ Ressource non trouvée : {}", e.getMessage());
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            log.error("Ressource non trouvée : {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            log.error("❌ Erreur inattendue lors du virement", e);
-            return ResponseEntity.status(500).body(Map.of("error", "Erreur interne du serveur"));
+            log.error("Erreur inattendue lors du virement", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur interne du serveur"));
         }
     }
+
     @PostMapping("/{numCompte}/apply-opening-fee")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> applyOpeningFee(@PathVariable String numCompte) {
         try {
             fraisDeGestionService.appliquerFraisOuverture(numCompte);
+
             return ResponseEntity.ok(Map.of(
                     "numCompte", numCompte,
                     "applied", true,
-                    "message", "Frais d'ouverture tenté (seulement si balance ≥ 20€)."
+                    "message", "Frais d'ouverture tenté seulement si balance >= 20."
             ));
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "numCompte", numCompte,
                     "applied", false,
                     "error", e.getMessage()
@@ -185,30 +194,6 @@ public class CompteBancaireController {
         }
     }
 
-    // -------- helpers parsing --------
-    private static String pickString(Map<String, Object> body, String... keys) {
-        for (String k : keys) {
-            Object v = body.get(k);
-            if (v != null) {
-                String s = v.toString().trim();
-                if (!s.isEmpty()) return s;
-            }
-        }
-        return null;
-    }
-    private static BigDecimal pickBigDecimal(Map<String, Object> body, String... keys) {
-        for (String k : keys) {
-            Object v = body.get(k);
-            if (v == null) continue;
-            if (v instanceof Number n) return new BigDecimal(n.toString());
-            try {
-                String s = v.toString().trim().replace(',', '.');
-                if (!s.isEmpty()) return new BigDecimal(s);
-            } catch (Exception ignored) { }
-        }
-        return null;
-    }
-    /** Récupérer les comptes d'un client spécifique (pour virements) */
     @GetMapping("/client/{clientId}")
     public ResponseEntity<List<AccountResponse>> getComptesClient(@PathVariable Long clientId) {
         try {
@@ -229,5 +214,37 @@ public class CompteBancaireController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.emptyList());
         }
+    }
+
+    private static String pickString(Map<String, Object> body, String... keys) {
+        for (String k : keys) {
+            Object v = body.get(k);
+            if (v != null) {
+                String s = v.toString().trim();
+                if (!s.isEmpty()) return s;
+            }
+        }
+        return null;
+    }
+
+    private static BigDecimal pickBigDecimal(Map<String, Object> body, String... keys) {
+        for (String k : keys) {
+            Object v = body.get(k);
+            if (v == null) continue;
+
+            if (v instanceof Number n) {
+                return new BigDecimal(n.toString());
+            }
+
+            try {
+                String s = v.toString().trim().replace(',', '.');
+                if (!s.isEmpty()) {
+                    return new BigDecimal(s);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return null;
     }
 }

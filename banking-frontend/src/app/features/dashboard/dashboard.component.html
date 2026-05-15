@@ -77,11 +77,16 @@
     </div>
 
     <div class="user">
+      <div class="admin-badge-top" *ngIf="isAdmin()">
+        <span class="admin-crown-mini">👑</span>
+        <span>ADMIN</span>
+      </div>
+
       <div class="hello-card">
         <span class="hello-wave">👋</span>
         <div class="hello-text">
           <small class="hello-label">Bienvenue</small>
-          <span class="hello-name">{{ userName() || 'Client' }}</span>
+          <span class="hello-name">{{ displayName() }}</span>
         </div>
       </div>
 
@@ -107,6 +112,7 @@
         <button *ngFor="let a of (accounts() || [])"
                 (click)="select(a)"
                 [class.active]="selected() && a.numCompte === selected()?.numCompte"
+                [class.suspended-account]="a.status === 'SUSPENDED'"
                 class="account-card">
           <div class="account-icon">
             <ng-container *ngIf="(a.intitule?.toLowerCase() || '').includes('épargne'); else bankIcon">
@@ -151,10 +157,13 @@
             <div class="account-label">{{ a.intitule || 'Compte' }}</div>
             <div class="num">{{ a.numCompte }}</div>
             <div class="bal">{{ (a.balance ?? a.solde) | money }}</div>
-            <div class="st">{{ a.status }}</div>
+            <div class="st">
+              {{ a.status === 'SUSPENDED' ? '⛔ SUSPENDED' : a.status }}
+            </div>
           </div>
         </button>
       </div>
+
       <ng-template #noacc>
         <p class="muted">Aucun compte.</p>
       </ng-template>
@@ -184,10 +193,12 @@
               Tout effacer
             </button>
           </div>
+
           <div class="panel-content">
             <div *ngIf="notifications().length === 0" class="empty-state">
               <p>Aucune notification</p>
             </div>
+
             <div *ngFor="let notif of notifications()" class="notification-item" [class.unread]="!notif.read">
               <div class="notif-icon">
                 <span *ngIf="notif.type === 'rdv'">📅</span>
@@ -195,11 +206,13 @@
                 <span *ngIf="notif.type === 'info'">ℹ️</span>
                 <span *ngIf="notif.type === 'error'">❌</span>
               </div>
+
               <div class="notif-content" (click)="markAsRead(notif.id)">
                 <h4>{{ notif.title }}</h4>
                 <p>{{ notif.message }}</p>
                 <span class="notif-time">{{ notif.timestamp | date:'dd/MM/yyyy HH:mm' }}</span>
               </div>
+
               <div class="notif-actions">
                 <button class="delete-btn" (click)="deleteNotification(notif.id); $event.stopPropagation()" title="Effacer">🗑️</button>
               </div>
@@ -207,10 +220,74 @@
           </div>
         </div>
       </div>
-    </section>
+      <!-- ===== Frais de gestion (sidebar) ===== -->
+<div class="frais-wrapper-sidebar">
+  <button class="frais-btn-sidebar" (click)="toggleFraisPanel()">
+    <span class="frais-icon-sidebar">
+      <svg viewBox="0 0 32 32" fill="none">
+        <defs>
+          <linearGradient id="fraisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ffd700"/>
+            <stop offset="100%" stop-color="#ff8c00"/>
+          </linearGradient>
+        </defs>
+        <circle cx="16" cy="16" r="12" fill="url(#fraisGrad)" stroke="#fff" stroke-width="1.5"/>
+        <text x="16" y="21" text-anchor="middle" font-size="14" fill="#1a1a2e" font-weight="bold">€</text>
+      </svg>
+    </span>
+    <span class="frais-text-sidebar">Frais de gestion</span>
+    <span class="badge" *ngIf="(frais()?.length || 0) > 0">{{ frais()?.length }}</span>
+  </button>
 
-    <section class="panel span2">
+  <div class="frais-panel-sidebar" *ngIf="showFraisPanel()">
+    <div class="panel-header">
+      <h3>💰 Mes frais ({{ frais()?.length || 0 }})</h3>
+      <button class="clear-btn" (click)="showFraisPanel.set(false)">✕</button>
+    </div>
+
+    <div class="panel-content">
+      <div *ngIf="(frais()?.length || 0) === 0" class="empty-state">
+        <span class="empty-icon">✨</span>
+        <p>Aucun frais de gestion actif</p>
+      </div>
+
+      <div *ngFor="let f of frais()" class="frais-panel-item"
+           [class.frais-echu]="f.estEchu"
+           [class.frais-encours]="f.estEnCours">
+
+        <div class="frais-panel-row">
+          <span class="frais-type-badge">{{ f.typeFraisLibelle || f.typeFrais }}</span>
+          <span class="frais-panel-amount">-{{ f.montant | money }}</span>
+        </div>
+
+        <div class="frais-panel-desc">{{ f.description }}</div>
+
+        <div class="frais-panel-meta">
+          <span class="meta-item">🔄 {{ f.periodicite }}</span>
+          <span class="meta-item" *ngIf="f.estEnCours">
+            ⏱ {{ f.joursRestants }} j restants
+          </span>
+          <span class="meta-item meta-echu" *ngIf="f.estEchu">⛔ Échu</span>
+        </div>
+
+        <div class="frais-panel-period" *ngIf="f.dateDebut">
+          📅 {{ f.dateDebut | date:'dd/MM' }} → {{ f.dateFin | date:'dd/MM/yy' }}
+        </div>
+      </div>
+
+      <button class="btn-voir-detail" (click)="scrollToFraisSection()" *ngIf="(frais()?.length || 0) > 0">
+        Voir le détail complet →
+      </button>
+    </div>
+  </div>
+</div>
+    </section>
+        <section class="panel span2">
       <ng-container *ngIf="selected(); else noSelection">
+        <div class="suspended-banner" *ngIf="isSelectedSuspended()">
+          ⛔ Ce compte est SUSPENDU. Les virements, dépôts et retraits sont temporairement bloqués.
+        </div>
+
         <div class="cards">
           <div class="card">
             <div class="label">Solde - {{ selected()?.intitule }}</div>
@@ -218,7 +295,7 @@
           </div>
 
           <ng-container *ngIf="card(); else nocard">
-            <div class="card card-clickable" (click)="goToCardDetails()">
+            <div class="card card-clickable" [class.card-blocked]="isCardBlocked()" (click)="goToCardDetails()">
               <div class="label">
                 <span class="label-icon">
                   <svg class="icon-3d icon-card-mini" viewBox="0 0 32 24" fill="none">
@@ -237,6 +314,7 @@
                 </span>
                 Ma Carte Bancaire
               </div>
+
               <div class="value">
                 <div class="card-preview">
                   <div class="card-icon-large">
@@ -256,6 +334,7 @@
                       <rect x="10" y="14" width="14" height="10" rx="1.5" fill="url(#chipGrad)" stroke="#fff" stroke-width="0.5"/>
                     </svg>
                   </div>
+
                   <div class="card-info-preview">
                     <div class="card-number-preview">
                       •••• •••• •••• {{ card()?.numeroCarte?.slice(-4) || '••••' }}
@@ -263,20 +342,24 @@
                     <small>Expire: {{ formatCardExpiry(card()?.dateExpiration) }}</small>
                   </div>
                 </div>
+
                 <div class="card-status-row">
                   <div class="status" [class.ok]="card()?.estActive" [class.ko]="!card()?.estActive">
-                    {{ card()?.estActive ? '✓ Active' : '✗ Bloquée' }}
+                    {{ card()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}
                   </div>
                 </div>
+
                 <div class="view-details-btn">→ Voir ma carte complète</div>
               </div>
-              <div class="actions mt">
-                <button (click)="toggleCard(); $event.stopPropagation()" class="btn-secondary">
-                  {{ card()?.estActive ? 'Bloquer' : 'Débloquer' }}
-                </button>
-              </div>
+
+             <div class="actions mt" *ngIf="isAdmin()">
+  <button (click)="toggleCard(); $event.stopPropagation()" class="btn-secondary">
+    {{ card()?.estActive ? '🔒 Bloquer' : '🔓 Débloquer' }}
+  </button>
+</div>
             </div>
           </ng-container>
+
           <ng-template #nocard>
             <div class="card muted">
               <div class="label">💳 Carte</div>
@@ -286,7 +369,7 @@
         </div>
 
         <div class="rdv-actions">
-          <div class="rdv-card depot-card">
+          <div class="rdv-card depot-card" [class.rdv-disabled]="isSelectedSuspended()">
             <div class="rdv-icon">
               <svg class="icon-3d icon-deposit" viewBox="0 0 80 80" fill="none">
                 <defs>
@@ -302,12 +385,15 @@
                 <text x="40" y="56" text-anchor="middle" font-size="20" fill="#1a1a2e" font-weight="bold">$</text>
               </svg>
             </div>
+
             <h4>Dépôt en espèces</h4>
             <p>Déposez vos espèces en toute sécurité dans l'une de nos agences à Bruxelles</p>
-            <button class="btn-rdv-primary" (click)="goToRDVDepot()">📅 Prendre rendez-vous</button>
+            <button class="btn-rdv-primary" (click)="goToRDVDepot()">
+              {{ isSelectedSuspended() ? '🔒 Dépôt bloqué' : '📅 Prendre rendez-vous' }}
+            </button>
           </div>
 
-          <div class="rdv-card retrait-card">
+          <div class="rdv-card retrait-card" [class.rdv-disabled]="isSelectedSuspended()">
             <div class="rdv-icon">
               <svg class="icon-3d icon-withdraw" viewBox="0 0 80 80" fill="none">
                 <defs>
@@ -330,21 +416,191 @@
                 </g>
               </svg>
             </div>
+
             <h4>Retrait en espèces</h4>
             <p>Retirez des espèces à l'agence de votre choix sur rendez-vous (minimum 3000€)</p>
-            <button class="btn-rdv-primary" (click)="goToRDVRetrait()">📅 Prendre rendez-vous</button>
+            <button class="btn-rdv-primary" (click)="goToRDVRetrait()">
+              {{ isSelectedSuspended() ? '🔒 Retrait bloqué' : '📅 Prendre rendez-vous' }}
+            </button>
           </div>
         </div>
 
         <div class="virement-box">
           <h4>Virement</h4>
-          <button class="btn-virement-gold" (click)="goToVirement()">
+          <button class="btn-virement-gold" [class.btn-locked]="isSelectedSuspended()" (click)="goToVirement()">
             <span class="btn-content">
               <span class="btn-icon btn-icon-left">💎</span>
-              <span class="btn-text">Effectuer un Virement</span>
+              <span class="btn-text">
+                {{ isSelectedSuspended() ? '🔒 Virement bloqué' : 'Effectuer un Virement' }}
+              </span>
               <span class="btn-icon btn-icon-right">💎</span>
             </span>
           </button>
+        </div>
+        <div class="virement-box">
+  <h4>Fonds & Placements</h4>
+
+  <button
+    class="btn-virement-gold"
+    [class.btn-locked]="isSelectedSuspended() || !selected()"
+    [disabled]="isSelectedSuspended() || !selected()"
+    (click)="goToInvestments()">
+
+    <span class="btn-content">
+      <span class="btn-icon btn-icon-left">📈</span>
+
+      <span class="btn-text">
+        {{ isSelectedSuspended() ? '🔒 Placement bloqué' : 'Investir dans un fonds' }}
+      </span>
+
+      <span class="btn-icon btn-icon-right">💎</span>
+    </span>
+  </button>
+
+  <button
+    class="btn-virement-gold mt"
+    [class.btn-locked]="!selected()"
+    [disabled]="!selected()"
+    (click)="goToInvestmentsHistory()">
+
+    <span class="btn-content">
+      <span class="btn-icon btn-icon-left">📊</span>
+
+      <span class="btn-text">
+        Voir mes placements
+      </span>
+
+      <span class="btn-icon btn-icon-right">🏦</span>
+    </span>
+  </button>
+</div>
+
+        <div class="frais-section" *ngIf="frais()?.length || isAdmin()">
+          <div class="frais-header">
+            <h4 class="frais-title">
+              <span class="frais-title-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </span>
+              <span class="frais-title-text">Mes frais de gestion</span>
+            </h4>
+
+            <div class="frais-actions">
+              <span class="frais-count" *ngIf="frais()?.length">{{ frais()?.length }} actif(s)</span>
+              <button *ngIf="isAdmin()" class="btn-admin-add" (click)="openFraisModal()">
+                <span>➕</span>
+                <span>Ajouter frais</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="frais-list" *ngIf="frais()?.length; else noFrais">
+            <div class="frais-item" *ngFor="let f of frais()">
+              <div class="frais-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+              </div>
+
+              <div class="frais-details">
+                <div class="frais-type-row">
+                  <span class="frais-type-badge">{{ f.typeFrais }}</span>
+                  <span class="frais-periodicite">{{ f.periodicite }}</span>
+                </div>
+                <div class="frais-description">{{ f.description }}</div>
+                <div class="frais-period" *ngIf="f.dateDebut">
+                  {{ f.dateDebut | date:'dd MMM' }} → {{ f.dateFin | date:'dd MMM yyyy' }}
+                </div>
+              </div>
+
+              <div class="frais-amount">-{{ f.montant | money }}</div>
+            </div>
+          </div>
+
+          <ng-template #noFrais>
+            <div class="frais-empty">
+              <span class="empty-icon">✨</span>
+              <p>Aucun frais de gestion actif</p>
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="epargne-section" *ngIf="savingsInfo()" [class.readonly-section]="isSelectedSuspended()">
+          <div class="epargne-header">
+            <h4 class="epargne-title">
+              <span class="epargne-title-icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                  <polyline points="17 6 23 6 23 12"/>
+                </svg>
+              </span>
+              <span class="epargne-title-text">Mon épargne & intérêts</span>
+            </h4>
+
+            <button *ngIf="isAdmin()" class="btn-admin-add" (click)="capitaliserInterets()" [disabled]="busy() || isSelectedSuspended()">
+              <span>⚡</span>
+              <span>{{ busy() ? '...' : 'Capitaliser' }}</span>
+            </button>
+          </div>
+
+          <div class="epargne-grid">
+            <div class="epargne-card epargne-solde">
+              <div class="epargne-card-icon">💰</div>
+              <div class="epargne-card-label">Solde épargne</div>
+              <div class="epargne-card-value">{{ savingsInfo()?.soldeEpargne | money }}</div>
+            </div>
+
+            <div class="epargne-card epargne-taux">
+              <div class="epargne-card-icon">📊</div>
+              <div class="epargne-card-label">Taux d'intérêt annuel</div>
+              <div class="epargne-card-value">{{ ((savingsInfo()?.tauxInteret || 0) * 100) | number:'1.2-2' }}%</div>
+              <small class="epargne-badge">⭐ Taux concurrentiel</small>
+            </div>
+
+            <div class="epargne-card epargne-interets">
+              <div class="epargne-card-icon">✨</div>
+              <div class="epargne-card-label">Intérêts cumulés</div>
+              <div class="epargne-card-value epargne-positive">+{{ savingsInfo()?.taxationVirtuelle | money }}</div>
+              <small class="epargne-info">≈ {{ savingsInfo()?.interetsAnnuelsEstimes | money }}/an</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-zone" *ngIf="isAdmin()">
+          <div class="admin-zone-header">
+            <span class="admin-zone-icon">🛠️</span>
+            <span class="admin-zone-title">ZONE ADMIN</span>
+            <span class="admin-zone-subtitle">Actions super-utilisateur</span>
+          </div>
+
+          <div class="admin-actions-grid">
+            <button class="btn-admin-action btn-suspend" (click)="toggleSuspendCompte()" [disabled]="busy()">
+              <span class="action-icon">{{ selected()?.status === 'SUSPENDED' ? '▶️' : '⏸️' }}</span>
+              <div class="action-text">
+                <strong>{{ selected()?.status === 'SUSPENDED' ? 'RÉACTIVER' : 'SUSPENDRE' }}</strong>
+                <small>compte client</small>
+              </div>
+            </button>
+
+            <button class="btn-admin-action btn-pdf-admin" (click)="telechargerReleve()" [disabled]="busy()">
+              <span class="action-icon">📄</span>
+              <div class="action-text">
+                <strong>Relevé PDF</strong>
+                <small>Télécharger l'extrait</small>
+              </div>
+            </button>
+            <button class="btn-admin-action btn-facturer" (click)="facturerFraisManuellement()" [disabled]="busy()">
+  <span class="action-icon">💸</span>
+  <div class="action-text">
+    <strong>FACTURER FRAIS</strong>
+    <small>Déclencher maintenant</small>
+  </div>
+</button>
+
+          </div>
         </div>
 
         <div class="ops">
@@ -358,6 +614,7 @@
               </span>
               <span class="ops-title-text">Mes opérations</span>
             </h4>
+
             <button class="btn-voir-tout" (click)="goToOperations()">
               <svg class="voir-tout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"/>
@@ -382,10 +639,12 @@
                   </ng-template>
                 </svg>
               </div>
+
               <div class="op-details">
                 <div class="op-description">{{ o.description }}</div>
                 <div class="op-date">{{ o.date | date:'dd MMM yyyy, HH:mm' }}</div>
               </div>
+
               <div class="op-amount" [class.op-positive]="o.montant >= 0" [class.op-negative]="o.montant < 0">
                 {{ o.montant >= 0 ? '+' : '' }}{{ o.montant | money }}
               </div>
@@ -404,6 +663,62 @@
       </ng-template>
     </section>
   </main>
+
+  <div class="modal-overlay" *ngIf="showFraisModal()" (click)="closeFraisModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>➕ Ajouter un frais de gestion</h3>
+        <button class="modal-close" (click)="closeFraisModal()">✕</button>
+      </div>
+
+      <form [formGroup]="fraisForm" (ngSubmit)="submitFrais()" class="modal-form">
+        <div class="form-row">
+          <label class="form-label">
+            <span>💰 Montant (€)</span>
+            <input type="number" step="0.01" formControlName="montant" min="0">
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">
+            <span>📝 Description</span>
+            <input type="text" formControlName="description" placeholder="Ex: Frais de gestion mensuel">
+          </label>
+        </div>
+
+        <div class="form-row form-row-2cols">
+          <label class="form-label">
+            <span>🏷️ Type de frais</span>
+            <select formControlName="typeFrais">
+              <option value="TENUE_COMPTE">Tenue de compte</option>
+              <option value="CARTE">Carte bancaire</option>
+              <option value="VIREMENT">Virement</option>
+              <option value="DECOUVERT">Découvert</option>
+            </select>
+          </label>
+
+          <label class="form-label">
+            <span>🔄 Périodicité</span>
+            <select formControlName="periodicite">
+              <option value="MENSUEL">Mensuel</option>
+              <option value="TRIMESTRIEL">Trimestriel</option>
+              <option value="ANNUEL">Annuel</option>
+              <option value="UNIQUE">Unique</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" (click)="closeFraisModal()">
+            Annuler
+          </button>
+          <button type="submit" class="btn-modal-submit" [disabled]="fraisForm.invalid || busy()">
+            {{ busy() ? '⏳ Envoi...' : '✓ Ajouter le frais' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <app-chatbot
     [selectedAccount]="selected()"
