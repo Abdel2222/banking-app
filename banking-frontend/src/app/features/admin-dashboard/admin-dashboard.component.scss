@@ -1221,3 +1221,108 @@
   background: linear-gradient(135deg, #047857, #22c55e);
   color: white;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FIX LISIBILITÉ : numéros de comptes en clair et net
+   ═══════════════════════════════════════════════════════════ */
+
+/* Police numéros de comptes : forcer une couleur claire et lisible */
+.admin-table .mono,
+.account-mini-num .mono,
+.info-row .mono {
+  font-family: 'Courier New', 'Consolas', monospace !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.5px !important;
+  text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Mode strong : numéro de compte dans "Compte sélectionné" */
+.info-row .mono.strong {
+  color: var(--techno-cyan) !important;
+  font-size: 1rem !important;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+/* Mini cartes des clients - numéros en clair */
+.account-mini-card .mono {
+  color: #00d4ff !important;
+  font-size: 0.9rem !important;
+  text-shadow: 0 0 6px rgba(0, 212, 255, 0.5);
+}
+
+/* Page comptes : numéros bien visibles dans le tableau */
+.admin-table td.mono {
+  color: #00d4ff !important;
+  text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+}
+/* ═══════════════════════════════════════════════════════════
+   BOOST LISIBILITÉ MAX - chiffres très contrastés
+   ═══════════════════════════════════════════════════════════ */
+
+.stat-value,
+.stat-value-small {
+  font-size: 2.4rem !important;
+  font-weight: 900 !important;
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-shadow:
+    0 0 12px rgba(0, 255, 136, 0.9),
+    0 2px 4px rgba(0, 0, 0, 1);
+  letter-spacing: 2px;
+}
+
+.stat-value-small {
+  font-size: 1.5rem !important;
+}
+
+/* Numéros de compte : ultra-lisibles */
+.admin-table .mono,
+.info-row .mono {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 1rem !important;
+  letter-spacing: 1px !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 1);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  display: inline-block;
+}
+
+/* Soldes (montants) en gros et bien visibles */
+.admin-table .balance {
+  color: #00ff88 !important;
+  font-weight: 900 !important;
+  font-size: 1.05rem !important;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.6), 0 2px 3px rgba(0,0,0,1);
+}
+
+.balance-big {
+  font-size: 1.5rem !important;
+  color: #00ff88 !important;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 2px 4px rgba(0,0,0,1);
+}
+
+/* Réduire les effets de flou/glow qui rendent ça moins net */
+.admin-brand-text {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 1) !important;
+  filter: none !important;
+}
+
+/* Augmenter le contraste général du fond */
+.admin-wrap {
+  background:
+    radial-gradient(ellipse at top, rgba(55, 66, 250, 0.08), transparent 60%),
+    radial-gradient(ellipse at bottom, rgba(255, 107, 107, 0.05), transparent 60%),
+    #0a0e27 !important;
+}

@@ -220,69 +220,73 @@
           </div>
         </div>
       </div>
-      <!-- ===== Frais de gestion (sidebar) ===== -->
-<div class="frais-wrapper-sidebar">
-  <button class="frais-btn-sidebar" (click)="toggleFraisPanel()">
-    <span class="frais-icon-sidebar">
-      <svg viewBox="0 0 32 32" fill="none">
-        <defs>
-          <linearGradient id="fraisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#ffd700"/>
-            <stop offset="100%" stop-color="#ff8c00"/>
-          </linearGradient>
-        </defs>
-        <circle cx="16" cy="16" r="12" fill="url(#fraisGrad)" stroke="#fff" stroke-width="1.5"/>
-        <text x="16" y="21" text-anchor="middle" font-size="14" fill="#1a1a2e" font-weight="bold">€</text>
-      </svg>
-    </span>
-    <span class="frais-text-sidebar">Frais de gestion</span>
-    <span class="badge" *ngIf="(frais()?.length || 0) > 0">{{ frais()?.length }}</span>
-  </button>
 
-  <div class="frais-panel-sidebar" *ngIf="showFraisPanel()">
-    <div class="panel-header">
-      <h3>💰 Mes frais ({{ frais()?.length || 0 }})</h3>
-      <button class="clear-btn" (click)="showFraisPanel.set(false)">✕</button>
-    </div>
-
-    <div class="panel-content">
-      <div *ngIf="(frais()?.length || 0) === 0" class="empty-state">
-        <span class="empty-icon">✨</span>
-        <p>Aucun frais de gestion actif</p>
-      </div>
-
-      <div *ngFor="let f of frais()" class="frais-panel-item"
-           [class.frais-echu]="f.estEchu"
-           [class.frais-encours]="f.estEnCours">
-
-        <div class="frais-panel-row">
-          <span class="frais-type-badge">{{ f.typeFraisLibelle || f.typeFrais }}</span>
-          <span class="frais-panel-amount">-{{ f.montant | money }}</span>
-        </div>
-
-        <div class="frais-panel-desc">{{ f.description }}</div>
-
-        <div class="frais-panel-meta">
-          <span class="meta-item">🔄 {{ f.periodicite }}</span>
-          <span class="meta-item" *ngIf="f.estEnCours">
-            ⏱ {{ f.joursRestants }} j restants
+      <!-- ============================================ -->
+      <!-- NOUVEAU : Frais de gestion (sidebar)         -->
+      <!-- ============================================ -->
+      <div class="frais-wrapper-sidebar">
+        <button class="frais-btn-sidebar" (click)="toggleFraisPanel()">
+          <span class="frais-icon-sidebar">
+            <svg viewBox="0 0 32 32" fill="none">
+              <defs>
+                <linearGradient id="fraisGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd700"/>
+                  <stop offset="100%" stop-color="#ff8c00"/>
+                </linearGradient>
+              </defs>
+              <circle cx="16" cy="16" r="12" fill="url(#fraisGrad)" stroke="#fff" stroke-width="1.5"/>
+              <text x="16" y="21" text-anchor="middle" font-size="14" fill="#1a1a2e" font-weight="bold">€</text>
+            </svg>
           </span>
-          <span class="meta-item meta-echu" *ngIf="f.estEchu">⛔ Échu</span>
-        </div>
+          <span class="frais-text-sidebar">Frais de gestion</span>
+          <span class="badge" *ngIf="(frais()?.length || 0) > 0">{{ frais()?.length }}</span>
+        </button>
 
-        <div class="frais-panel-period" *ngIf="f.dateDebut">
-          📅 {{ f.dateDebut | date:'dd/MM' }} → {{ f.dateFin | date:'dd/MM/yy' }}
+        <div class="frais-panel-sidebar" *ngIf="showFraisPanel()">
+          <div class="panel-header">
+            <h3>💰 Mes frais ({{ frais()?.length || 0 }})</h3>
+            <button class="clear-btn" (click)="showFraisPanel.set(false)">✕</button>
+          </div>
+
+          <div class="panel-content">
+            <div *ngIf="(frais()?.length || 0) === 0" class="empty-state">
+              <span class="empty-icon">✨</span>
+              <p>Aucun frais de gestion actif</p>
+            </div>
+
+            <div *ngFor="let f of frais()" class="frais-panel-item"
+                 [class.frais-echu]="f.estEchu"
+                 [class.frais-encours]="f.estEnCours">
+
+              <div class="frais-panel-row">
+                <span class="frais-type-badge">{{ f.typeFraisLibelle || f.typeFrais }}</span>
+                <span class="frais-panel-amount">-{{ f.montant | money }}</span>
+              </div>
+
+              <div class="frais-panel-desc">{{ f.description }}</div>
+
+              <div class="frais-panel-meta">
+                <span class="meta-item">🔄 {{ f.periodicite }}</span>
+                <span class="meta-item" *ngIf="f.estEnCours && f.joursRestants > 0">
+                  ⏱ {{ f.joursRestants }} j restants
+                </span>
+                <span class="meta-item meta-echu" *ngIf="f.estEchu">⛔ Échu</span>
+              </div>
+
+              <div class="frais-panel-period" *ngIf="f.dateDebut">
+                📅 {{ f.dateDebut | date:'dd/MM' }} → {{ f.dateFin | date:'dd/MM/yy' }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      <!-- ============================================ -->
+      <!-- FIN nouveau bloc                              -->
+      <!-- ============================================ -->
 
-      <button class="btn-voir-detail" (click)="scrollToFraisSection()" *ngIf="(frais()?.length || 0) > 0">
-        Voir le détail complet →
-      </button>
-    </div>
-  </div>
-</div>
     </section>
-        <section class="panel span2">
+
+    <section class="panel span2">
       <ng-container *ngIf="selected(); else noSelection">
         <div class="suspended-banner" *ngIf="isSelectedSuspended()">
           ⛔ Ce compte est SUSPENDU. Les virements, dépôts et retraits sont temporairement bloqués.
@@ -352,11 +356,11 @@
                 <div class="view-details-btn">→ Voir ma carte complète</div>
               </div>
 
-             <div class="actions mt" *ngIf="isAdmin()">
-  <button (click)="toggleCard(); $event.stopPropagation()" class="btn-secondary">
-    {{ card()?.estActive ? '🔒 Bloquer' : '🔓 Débloquer' }}
-  </button>
-</div>
+              <div class="actions mt" *ngIf="isAdmin()">
+                <button (click)="toggleCard(); $event.stopPropagation()" class="btn-secondary">
+                  {{ card()?.estActive ? '🔒 Bloquer' : '🔓 Débloquer' }}
+                </button>
+              </div>
             </div>
           </ng-container>
 
@@ -437,45 +441,39 @@
             </span>
           </button>
         </div>
+
         <div class="virement-box">
-  <h4>Fonds & Placements</h4>
+          <h4>Fonds & Placements</h4>
 
-  <button
-    class="btn-virement-gold"
-    [class.btn-locked]="isSelectedSuspended() || !selected()"
-    [disabled]="isSelectedSuspended() || !selected()"
-    (click)="goToInvestments()">
+          <button
+            class="btn-virement-gold"
+            [class.btn-locked]="isSelectedSuspended() || !selected()"
+            [disabled]="isSelectedSuspended() || !selected()"
+            (click)="goToInvestments()">
 
-    <span class="btn-content">
-      <span class="btn-icon btn-icon-left">📈</span>
+            <span class="btn-content">
+              <span class="btn-icon btn-icon-left">📈</span>
+              <span class="btn-text">
+                {{ isSelectedSuspended() ? '🔒 Placement bloqué' : 'Investir dans un fonds' }}
+              </span>
+              <span class="btn-icon btn-icon-right">💎</span>
+            </span>
+          </button>
 
-      <span class="btn-text">
-        {{ isSelectedSuspended() ? '🔒 Placement bloqué' : 'Investir dans un fonds' }}
-      </span>
+          <button
+            class="btn-virement-gold mt"
+            [class.btn-locked]="!selected()"
+            [disabled]="!selected()"
+            (click)="goToInvestmentsHistory()">
 
-      <span class="btn-icon btn-icon-right">💎</span>
-    </span>
-  </button>
-
-  <button
-    class="btn-virement-gold mt"
-    [class.btn-locked]="!selected()"
-    [disabled]="!selected()"
-    (click)="goToInvestmentsHistory()">
-
-    <span class="btn-content">
-      <span class="btn-icon btn-icon-left">📊</span>
-
-      <span class="btn-text">
-        Voir mes placements
-      </span>
-
-      <span class="btn-icon btn-icon-right">🏦</span>
-    </span>
-  </button>
-</div>
-
-        <div class="frais-section" *ngIf="frais()?.length || isAdmin()">
+            <span class="btn-content">
+              <span class="btn-icon btn-icon-left">📊</span>
+              <span class="btn-text">Voir mes placements</span>
+              <span class="btn-icon btn-icon-right">🏦</span>
+            </span>
+          </button>
+        </div>
+<div class="frais-section" *ngIf="showFraisPanel()">
           <div class="frais-header">
             <h4 class="frais-title">
               <span class="frais-title-icon-wrapper">
@@ -488,37 +486,51 @@
             </h4>
 
             <div class="frais-actions">
-              <span class="frais-count" *ngIf="frais()?.length">{{ frais()?.length }} actif(s)</span>
+              <span class="frais-count" *ngIf="(frais()?.length ?? 0) > 0">{{ frais()?.length ?? 0 }} actif(s)</span>
               <button *ngIf="isAdmin()" class="btn-admin-add" (click)="openFraisModal()">
                 <span>➕</span>
                 <span>Ajouter frais</span>
               </button>
             </div>
           </div>
+<div class="frais-table-wrapper" *ngIf="frais()?.length; else noFrais">
+  <table class="frais-table-client">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Montant</th>
+        <th>Périodicité</th>
+        <th>Période</th>
+      </tr>
+    </thead>
 
-          <div class="frais-list" *ngIf="frais()?.length; else noFrais">
-            <div class="frais-item" *ngFor="let f of frais()">
-              <div class="frais-icon-wrapper">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="5" width="20" height="14" rx="2"/>
-                  <line x1="2" y1="10" x2="22" y2="10"/>
-                </svg>
-              </div>
+    <tbody>
+      <tr *ngFor="let f of frais()">
+        <td>
+          <span class="frais-type-badge">
+            {{ f.typeFraisLibelle || f.typeFrais }}
+          </span>
+        </td>
 
-              <div class="frais-details">
-                <div class="frais-type-row">
-                  <span class="frais-type-badge">{{ f.typeFrais }}</span>
-                  <span class="frais-periodicite">{{ f.periodicite }}</span>
-                </div>
-                <div class="frais-description">{{ f.description }}</div>
-                <div class="frais-period" *ngIf="f.dateDebut">
-                  {{ f.dateDebut | date:'dd MMM' }} → {{ f.dateFin | date:'dd MMM yyyy' }}
-                </div>
-              </div>
+        <td>{{ f.description }}</td>
 
-              <div class="frais-amount">-{{ f.montant | money }}</div>
-            </div>
-          </div>
+        <td class="frais-amount-cell">
+          -{{ f.montant | money }}
+        </td>
+
+        <td>{{ f.periodicite }}</td>
+
+        <td>
+          <span *ngIf="f.dateDebut && f.dateFin; else noPeriod">
+            {{ f.dateDebut | date:'dd/MM/yyyy' }} → {{ f.dateFin | date:'dd/MM/yyyy' }}
+          </span>
+          <ng-template #noPeriod>-</ng-template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
           <ng-template #noFrais>
             <div class="frais-empty">
@@ -592,14 +604,6 @@
                 <small>Télécharger l'extrait</small>
               </div>
             </button>
-            <button class="btn-admin-action btn-facturer" (click)="facturerFraisManuellement()" [disabled]="busy()">
-  <span class="action-icon">💸</span>
-  <div class="action-text">
-    <strong>FACTURER FRAIS</strong>
-    <small>Déclencher maintenant</small>
-  </div>
-</button>
-
           </div>
         </div>
 
@@ -691,9 +695,14 @@
             <span>🏷️ Type de frais</span>
             <select formControlName="typeFrais">
               <option value="TENUE_COMPTE">Tenue de compte</option>
-              <option value="CARTE">Carte bancaire</option>
-              <option value="VIREMENT">Virement</option>
-              <option value="DECOUVERT">Découvert</option>
+              <option value="CARTE_BANCAIRE">Carte bancaire</option>
+              <option value="VIREMENT_INTERNATIONAL">Virement international</option>
+              <option value="AGIOS">Agios / Découvert</option>
+              <option value="ASSURANCE">Assurance</option>
+              <option value="COMMISSION_INTERVENTION">Commission d'intervention</option>
+              <option value="INCIDENT_PAIEMENT">Incident de paiement</option>
+              <option value="PACKAGE_BANCAIRE">Package bancaire</option>
+              <option value="AUTRE">Autre</option>
             </select>
           </label>
 
@@ -702,8 +711,11 @@
             <select formControlName="periodicite">
               <option value="MENSUEL">Mensuel</option>
               <option value="TRIMESTRIEL">Trimestriel</option>
+              <option value="SEMESTRIEL">Semestriel</option>
               <option value="ANNUEL">Annuel</option>
-              <option value="UNIQUE">Unique</option>
+              <option value="HEBDOMADAIRE">Hebdomadaire</option>
+              <option value="QUOTIDIEN">Quotidien</option>
+              <option value="PONCTUEL">Ponctuel</option>
             </select>
           </label>
         </div>

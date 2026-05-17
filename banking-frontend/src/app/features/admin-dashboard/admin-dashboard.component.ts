@@ -3,7 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 
 import { AuthService } from '../../core/services/auth.service';
 import { AccountsService, BankAccount } from '../../core/services/accounts.service';
@@ -298,22 +298,43 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  private normalizeOp(o: any): Operation {
-    return {
-      id: o?.id ?? 0,
-      montant: Number(o?.montant ?? 0),
-      date: o?.date ?? o?.dateOperation ?? null,
-      description: o?.description ?? o?.libelle ?? o?.type ?? ''
-    };
+private normalizeOp(o: any): Operation {
+  let montant = Number(o?.montant ?? 0);
+  const description = o?.description ?? o?.libelle ?? o?.type ?? 'Opération';
+  const commentaire = o?.commentaire ?? '';
+  const rawType = (o?.type ?? '').toString().toUpperCase();
+
+  // Détection frais → forcer signe négatif
+  const isFrais =
+    description.toLowerCase().includes('frais') ||
+    commentaire.toUpperCase().includes('FRAIS_GESTION') ||
+    rawType === 'FRAIS' ||
+    rawType === 'FRAIS_GESTION';
+
+  if (isFrais && montant > 0) {
+    montant = -montant;
   }
 
+  return {
+    id: o?.id ?? 0,
+    montant: montant,
+    date: o?.date ?? o?.dateOperation ?? o?.createdAt ?? null,
+    description: description
+  };
+}
   private loadOps(num: string) {
-    this.opsApi.recent(num, 5).subscribe({
-      next: (rows) => this.ops.set((rows ?? []).map(r => this.normalizeOp(r))),
-      error: () => this.ops.set([])
-    });
-  }
-
+  console.log('[ADMIN] Chargement opérations pour:', num);
+  this.opsApi.recent(num, 20).subscribe({
+    next: (rows) => {
+      console.log('[ADMIN] Backend retourne', rows?.length || 0, 'opérations');
+      this.ops.set((rows ?? []).map(r => this.normalizeOp(r)));
+    },
+    error: (e) => {
+      console.error('[ADMIN] Erreur chargement opérations:', e);
+      this.ops.set([]);
+    }
+  });
+}
   private loadFraisForSelected() {
     const clientId = this.selected()?.clientId;
     if (!clientId) {
@@ -737,15 +758,32 @@ export class AdminDashboardComponent implements OnInit {
     if (intitule?.toLowerCase().includes('épargne')) return '💰';
     return '🏦';
   }
+logout() {
+  console.log('[ADMIN] Déconnexion demandée');
 
-  logout() {
+  // 1) Nettoyer le service auth
+  try {
     this.auth.logout();
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    sessionStorage.clear();
-    window.location.replace('/auth');
+  } catch (e) {
+    console.warn('auth.logout() erreur:', e);
   }
+
+  // 2) Vider TOUT le localStorage (au cas où)
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn('clear storage erreur:', e);
+  }
+
+  // 3) Forcer la navigation propre Angular (au lieu de window.location.replace)
+  this.router.navigate(['/auth'], { replaceUrl: true }).then(() => {
+    // 4) Si pour une raison X le router ne navigue pas, fallback brut
+    setTimeout(() => {
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth';
+      }
+    }, 200);
+  });
+}
 }

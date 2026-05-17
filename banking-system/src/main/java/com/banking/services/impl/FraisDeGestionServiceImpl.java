@@ -37,14 +37,11 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     @Autowired
     private ClientService clientService;
 
-    // AJOUTS pour débiter un compte et journaliser l'opération
     @Autowired
     private OperationRepository operationRepository;
 
     @Autowired
     private CompteBancaireRepository compteBancaireRepository;
-
-    // ==================== CRUD DE BASE ====================
 
     @Override
     public FraisDeGestion creerFrais(FraisDeGestion frais) {
@@ -115,8 +112,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
         logger.info("Frais supprimé avec succès");
     }
 
-    // ==================== GESTION PAR CLIENT ====================
-
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> obtenirFraisClient(Long clientId) {
@@ -153,8 +148,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
         return creerFrais(frais);
     }
 
-    // ==================== GESTION DE LA FACTURATION ====================
-
     @Override
     public List<FraisDeGestion> obtenirFraisAFacturer() {
         return fraisRepository.findAll().stream()
@@ -172,10 +165,8 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
             throw new BusinessException("Ce frais ne peut pas être facturé maintenant");
         }
 
-        // 1) Débiter un compte du client (transactionnel) + journaliser
         debiterCompteClientPourFrais(frais);
 
-        // 2) Marquer comme facturé via la logique métier de l'entité
         frais.facturer();
         fraisRepository.save(frais);
 
@@ -211,7 +202,7 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     }
 
     @Override
-    @Scheduled(cron = "0 0 6 * * *") // Tous les jours à 6h du matin
+    @Scheduled(cron = "0 0 6 * * *")
     public void facturationAutomatique() {
         logger.info("Début de la facturation automatique");
 
@@ -236,8 +227,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
                 nombreFacturations, nombreEchecs, montantTotal);
     }
 
-    // ==================== GESTION DU CYCLE DE VIE ====================
-
     @Override
     public void activerFrais(Long fraisId) {
         logger.info("Activation du frais ID: {}", fraisId);
@@ -257,7 +246,7 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     }
 
     @Override
-    @Scheduled(cron = "0 30 6 * * *") // Tous les jours à 6h30
+    @Scheduled(cron = "0 30 6 * * *")
     public void desactiverFraisExpires() {
         logger.info("Désactivation automatique des frais expirés");
 
@@ -274,8 +263,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
 
         logger.info("{} frais expirés ont été désactivés automatiquement", nombreDesactives);
     }
-
-    // ==================== STATISTIQUES ====================
 
     @Override
     @Transactional(readOnly = true)
@@ -312,8 +299,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
                 .count();
     }
 
-    // ==================== RECHERCHES AVANCÉES ====================
-
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> rechercherFrais(FraisDeGestion.TypeFrais typeFrais,
@@ -344,49 +329,38 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
                 .toList();
     }
 
-    // ==================== FRAIS D'OUVERTURE (NOUVEAU) ====================
-
     @Override
     public void appliquerFraisOuverture(String numCompte) {
         final BigDecimal FEE = new BigDecimal("2.00");
         final String COMMENT = "FRAIS_OUVERTURE_COMPTE";
 
-        // 0) Idempotence : si déjà facturé, on stoppe
         if (operationRepository.countByCompteBancaire_NumCompteAndCommentaire(numCompte, COMMENT) > 0) {
             logger.info("Frais d'ouverture déjà appliqué pour {}", numCompte);
             return;
         }
 
-        // 1) Charger le compte
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte introuvable: " + numCompte));
 
-        // 2) Seuil : appliquer seulement si solde >= 20,00 €
         BigDecimal balance = compte.getBalance() == null ? BigDecimal.ZERO : compte.getBalance();
         if (balance.compareTo(new BigDecimal("20.00")) < 0) {
             logger.info("Frais d'ouverture non appliqué (solde < 20€) pour {}", numCompte);
             return;
         }
 
-        // 3) Débiter 2,00 €
         compte.debiter(FEE);
         compteBancaireRepository.save(compte);
 
-        // 4) Journaliser l’opération (montant POSITIF, le type = FRAIS)
         Operation op = new Operation();
         op.setCompteBancaire(compte);
-
-        // ⚠️ selon ton entité Operation :
-        // - si le champ s’appelle 'typeOperation', utilise setTypeOperation(...)
-        // - si c’est 'type', utilise setType(...)
+        op.setNumeroCompte(compte.getNumCompte());
         op.setTypeOperation(TypeOperation.FRAIS);
-
-        op.setMontant(FEE);
+        op.setMontant(FEE.negate());
+        op.setDescription("Frais d'ouverture de compte");
         op.setCommentaire(COMMENT);
         op.setDateOperation(LocalDateTime.now());
         operationRepository.save(op);
 
-        // 5) Tracer aussi dans 'frais_de_gestion' (non bloquant)
         try {
             FraisDeGestion fg = new FraisDeGestion();
             fg.setClient(compte.getClient());
@@ -406,9 +380,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
 
         logger.info("Frais d'ouverture appliqué sur {}", numCompte);
     }
-
-
-    // ==================== MÉTHODES PRIVÉES ====================
 
     private void validerFrais(FraisDeGestion frais) {
         if (frais.getDateDebut().isAfter(frais.getDateFin())) {
@@ -439,11 +410,6 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
                 !b.getDateFin().isBefore(a.getDateDebut());
     }
 
-    /**
-     * Débite un compte du client et enregistre une Operation de type FRAIS.
-     * Stratégie simple : on prend le premier compte du client.
-     * Tu peux affiner (compte principal, le plus approvisionné, etc.).
-     */
     private void debiterCompteClientPourFrais(FraisDeGestion frais) {
         Client client = frais.getClient();
         if (client == null || client.getComptes() == null || client.getComptes().isEmpty()) {
@@ -457,14 +423,17 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
             throw new BusinessException("Montant de frais invalide");
         }
 
-        // Utilise ta logique métier (actif + solde suffisant)
         compte.debiter(montant);
 
         Operation op = new Operation();
-        op.setCompteBancaire(compte); // mapping correct
-        op.setType(TypeOperation.FRAIS); // si pas de FRAIS, utilise RETRAIT
-        op.setMontant(montant); // montant POSITIF (le type indique le débit)
-        op.setCommentaire("Frais: " + (frais.getDescription() != null ? frais.getDescription() : String.valueOf(frais.getTypeFrais())));
+        op.setCompteBancaire(compte);
+        op.setNumeroCompte(compte.getNumCompte());
+        op.setTypeOperation(TypeOperation.FRAIS);
+        op.setMontant(montant.negate());
+        op.setDescription("Frais: " + (frais.getDescription() != null
+                ? frais.getDescription()
+                : String.valueOf(frais.getTypeFrais())));
+        op.setCommentaire("FACTURATION_FRAIS");
         op.setDateOperation(LocalDateTime.now());
 
         compteBancaireRepository.save(compte);

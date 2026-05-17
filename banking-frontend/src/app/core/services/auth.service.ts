@@ -18,11 +18,11 @@ export interface AuthResponse {
 }
 
 interface JwtPayload {
-  id?: number | string;
+  sub?: string; // id client réel dans ton JWT
   email?: string;
   nomComplet?: string;
-  role?: string;           // "CLIENT" | "ADMIN" | etc.
-  roles?: string[];        // parfois un tableau
+  role?: string;
+  roles?: string[];
   exp?: number;
   iat?: number;
 }
@@ -32,7 +32,6 @@ const TOKEN_KEY = 'auth_token';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // URL directe car le proxy ne fonctionne pas
   private readonly base = 'http://localhost:8084/api/auth';
 
   constructor(private http: HttpClient) {
@@ -40,7 +39,6 @@ export class AuthService {
     this.checkTokenExpiration();
   }
 
-  // --- REGISTER: accepte un objet complet OU (email, motDePasse, nom?, prenom?) ---
   register(body: AuthPayload): Observable<Api<AuthResponse>>;
   register(email: string, motDePasse: string, nom?: string, prenom?: string): Observable<Api<AuthResponse>>;
   register(a: any, b?: any, c?: any, d?: any): Observable<Api<AuthResponse>> {
@@ -51,14 +49,20 @@ export class AuthService {
 
     console.log('[AUTH_SERVICE] Register attempt for:', payload.email);
 
-    return this.http.post<Api<AuthResponse>>(`${this.base}/register`, payload)
+    return this.http.post<any>(`${this.base}/register`, payload)
       .pipe(
         tap(res => {
-          console.log('[AUTH_SERVICE] Register response:', {
-            success: res?.success,
-            hasToken: !!res?.data?.token
-          });
-          this.maybeStoreToken(res?.data?.token);
+          const token =
+            res?.data?.token ||
+            res?.token ||
+            res?.accessToken ||
+            res?.data?.accessToken ||
+            null;
+
+          console.log('[AUTH_SERVICE] Register response:', res);
+          console.log('[AUTH_SERVICE] TOKEN EXTRAIT REGISTER =', token);
+
+          this.maybeStoreToken(token || undefined);
         }),
         catchError(error => {
           console.error('[AUTH_SERVICE] Register error:', error);
@@ -67,7 +71,6 @@ export class AuthService {
       );
   }
 
-  // --- LOGIN: accepte un objet {email,motDePasse} OU (email, motDePasse) ---
   login(body: { email: string; motDePasse: string }): Observable<Api<AuthResponse>>;
   login(email: string, motDePasse: string): Observable<Api<AuthResponse>>;
   login(a: any, b?: any): Observable<Api<AuthResponse>> {
@@ -75,14 +78,20 @@ export class AuthService {
 
     console.log('[AUTH_SERVICE] Login attempt for:', payload.email);
 
-    return this.http.post<Api<AuthResponse>>(`${this.base}/login`, payload)
+    return this.http.post<any>(`${this.base}/login`, payload)
       .pipe(
         tap(res => {
-          console.log('[AUTH_SERVICE] Login response:', {
-            success: res?.success,
-            hasToken: !!res?.data?.token
-          });
-          this.maybeStoreToken(res?.data?.token);
+          const token =
+            res?.data?.token ||
+            res?.token ||
+            res?.accessToken ||
+            res?.data?.accessToken ||
+            null;
+
+          console.log('[AUTH_SERVICE] FULL LOGIN RESPONSE =', res);
+          console.log('[AUTH_SERVICE] TOKEN EXTRAIT =', token);
+
+          this.maybeStoreToken(token || undefined);
         }),
         catchError(error => {
           console.error('[AUTH_SERVICE] Login error:', error);
@@ -125,7 +134,6 @@ export class AuthService {
     return isBrowser ? localStorage.getItem(TOKEN_KEY) : null;
   }
 
-  /** Décoder le JWT présent dans le localStorage. Retourne null si absent/invalid. */
   currentUser(): JwtPayload | null {
     const token = this.token;
     if (!token) {
@@ -135,7 +143,6 @@ export class AuthService {
     try {
       const decoded = jwtDecode<JwtPayload>(token);
 
-      // Vérifier l'expiration
       if (decoded.exp && decoded.exp * 1000 < Date.now()) {
         console.log('[AUTH_SERVICE] Token expired, removing');
         this.logout();
@@ -145,12 +152,19 @@ export class AuthService {
       return decoded;
     } catch (error) {
       console.error('[AUTH_SERVICE] Error decoding token:', error);
-      this.logout(); // Token invalide, nettoyer
+      this.logout();
       return null;
     }
   }
 
-  /** Récupère le rôle principal depuis le token (role ou roles[0]) */
+  get clientIdFromToken(): number | null {
+    const u = this.currentUser();
+    if (!u?.sub) return null;
+
+    const n = Number(u.sub);
+    return isNaN(n) ? null : n;
+  }
+
   role(): string | null {
     const u = this.currentUser();
     if (!u) return null;
@@ -158,7 +172,6 @@ export class AuthService {
     return r ?? null;
   }
 
-  /** True si connecté avec un token valide */
   isLoggedIn(): boolean {
     const user = this.currentUser();
     const isLoggedIn = !!user;
@@ -166,7 +179,6 @@ export class AuthService {
     return isLoggedIn;
   }
 
-  /** True si ADMIN / ROLE_ADMIN / SUPER_ADMIN (robuste aux variantes) */
   isAdmin(): boolean {
     const r = (this.role() || '').toUpperCase();
     const isAdmin = r === 'ADMIN' || r === 'ROLE_ADMIN' || r === 'SUPER_ADMIN' || r.includes('ADMIN');
@@ -174,7 +186,6 @@ export class AuthService {
     return isAdmin;
   }
 
-  /** Stocker le token si présent dans la réponse. */
   private maybeStoreToken(token?: string): void {
     if (token) {
       const isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
@@ -184,16 +195,15 @@ export class AuthService {
       }
     }
   }
-    getToken(): string | null {
-    return localStorage.getItem('auth_token');
+
+  getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
   }
 
-  // ✅ OPTIONNEL : méthodes utiles supplémentaires
   setToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    localStorage.setItem(TOKEN_KEY, token);
   }
 
-  /** Vérifier l'expiration du token au démarrage */
   private checkTokenExpiration(): void {
     const user = this.currentUser();
     if (!user) {

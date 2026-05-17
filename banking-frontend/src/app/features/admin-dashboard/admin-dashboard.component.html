@@ -31,25 +31,28 @@
         <span class="star star-4">✦</span>
       </div>
     </div>
-
-    <div class="admin-actions">
-      <div class="admin-hello-card" *ngIf="me() as admin">
-        <span class="admin-crown">👑</span>
-        <div class="admin-hello-text">
-          <small class="admin-hello-label">SUPER ADMIN</small>
-          <span class="admin-hello-name">{{ admin?.nomComplet || admin?.email || 'Administrateur' }}</span>
-        </div>
-      </div>
-
-      <button type="button" class="btn-admin-logout" (click)="logout(); $event.stopPropagation()">
-        <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        <span>Déconnexion</span>
-      </button>
+<div class="admin-actions" style="position: relative; z-index: 100;">
+  <div class="admin-hello-card" *ngIf="me() as admin" style="pointer-events: none;">
+    <span class="admin-crown">👑</span>
+    <div class="admin-hello-text">
+      <small class="admin-hello-label">SUPER ADMIN</small>
+      <span class="admin-hello-name">{{ admin?.nomComplet || admin?.email || 'Administrateur' }}</span>
     </div>
+  </div>
+
+  <button
+    type="button"
+    class="btn-admin-logout"
+    (click)="logout()"
+    style="position: relative; z-index: 9999; cursor: pointer !important; pointer-events: auto !important;">
+    <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+    <span style="pointer-events: none;">Déconnexion</span>
+  </button>
+</div>
   </header>
 
   <section class="stats-grid">
