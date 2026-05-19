@@ -7,7 +7,6 @@ import com.banking.mappers.CompteEpargneMapper;
 import com.banking.repositories.CompteBancaireRepository;
 import com.banking.repositories.CompteEpargneRepository;
 import com.banking.services.CompteEpargneService;
-import com.banking.services.SavingsNumberService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,160 +19,109 @@ import java.math.BigDecimal;
 public class CompteEpargneServiceImpl implements CompteEpargneService {
 
     private final CompteBancaireRepository compteRepo;
-    private final CompteEpargneRepository epargneRepo;
-    private final SavingsNumberService numberService;
-    private final CompteEpargneMapper mapper;
+    private final CompteEpargneRepository  epargneRepo;
+    private final CompteEpargneMapper      mapper;
 
-    /* ====== Helpers ====== */
+    /* ====== Helper ====== */
 
-    private CompteEpargne getOrThrow(String numCompteBancaire) {
-        return epargneRepo.findByCompteBancaire_NumCompte(numCompteBancaire)
-                .orElseThrow(() -> new EntityNotFoundException("Épargne introuvable pour le compte " + numCompteBancaire));
+    private CompteBancaire getCompteOrThrow(String numCompte) {
+        return compteRepo.findByNumCompte(numCompte)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Compte bancaire introuvable: " + numCompte));
     }
 
-    private static BigDecimal computeTax(BigDecimal balance) {
-        if (balance == null) return BigDecimal.ZERO;
-        if (balance.compareTo(new BigDecimal("100")) > 0) return new BigDecimal("30.00");
-        if (balance.compareTo(new BigDecimal("50"))  < 0) return new BigDecimal("10.00");
-        return BigDecimal.ZERO;
+    private CompteEpargne getEpargneOrThrow(String numCompte) {
+        return epargneRepo.findByNumCompte(numCompte)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Compte épargne introuvable pour: " + numCompte));
     }
 
-    /* ====== API ====== */
+    /* ====== Créer un compte épargne ====== */
 
     @Override
     @Transactional
-    public CompteEpargneResponse convertirDepuisCompte(String numCompteBancaire, BigDecimal tauxInteret) {
-        CompteBancaire cb = compteRepo.findByNumCompte(numCompteBancaire)
-                .orElseThrow(() -> new EntityNotFoundException("Compte bancaire introuvable: " + numCompteBancaire));
+    public CompteEpargneResponse convertirDepuisCompte(String numCompteBancaire, BigDecimal premierMontant) {
 
-        if (epargneRepo.findByCompteBancaire_NumCompte(numCompteBancaire).isPresent())
-            throw new IllegalStateException("Épargne déjà existante pour ce compte");
+        // Vérifier que le compte bancaire existe
+        CompteBancaire cb = getCompteOrThrow(numCompteBancaire);
 
-        CompteEpargne ce = CompteEpargne.builder()
-                .compteBancaire(cb)
-                .numCompteEpargne(numberService.fromBase(cb.getNumCompte())) // 3 chiffres + aléatoire
-                .tauxInteret(tauxInteret != null ? tauxInteret : new BigDecimal("0.010000"))
-                .soldeEpargne(BigDecimal.ZERO)
-                .build();
+        // Vérifier qu'il n'y a pas déjà un compte épargne
+        if (epargneRepo.findByNumCompte(numCompteBancaire).isPresent())
+            throw new IllegalStateException("Un compte épargne existe déjà pour ce compte");
+
+        // Vérifier que le solde du compte bancaire est suffisant
+        BigDecimal montant = (premierMontant != null && premierMontant.signum() > 0)
+                ? premierMontant
+                : BigDecimal.ZERO;
+
+        // Créer le CompteEpargne — hérite de CompteBancaire via JOINED
+        CompteEpargne ce = new CompteEpargne();
+        ce.setNumCompte(CompteBancaire.generateAccountNumber()); // numéro propre
+        ce.setClient(cb.getClient());
+        ce.setDevise(cb.getDevise());
+        ce.setIntitule("Compte épargne");
+        ce.setBalance(montant);
+        ce.setPremierMontant(montant);
+        ce.activate();
 
         ce = epargneRepo.save(ce);
         return mapper.toResponse(ce);
     }
 
-    // Pour coller à l'interface utilisée par le contrôleur: convertir(...)
     @Override
     @Transactional
-    public CompteEpargneResponse convertir(String numCompte, BigDecimal tauxInteret) {
-        return convertirDepuisCompte(numCompte, tauxInteret);
+    public CompteEpargneResponse convertir(String numCompte, BigDecimal premierMontant) {
+        return convertirDepuisCompte(numCompte, premierMontant);
     }
+
+    /* ====== Alimenter ====== */
 
     @Override
     @Transactional
-    public CompteEpargneResponse alimenter(String numCompteBancaire, BigDecimal montant) {
-        if (montant == null || montant.signum() <= 0) throw new IllegalArgumentException("Montant invalide");
-        CompteEpargne ce = getOrThrow(numCompteBancaire);
-        ce.alimenter(montant); // n’impacte pas le compte bancaire de base (comme demandé)
+    public CompteEpargneResponse alimenter(String numCompte, BigDecimal montant) {
+        if (montant == null || montant.signum() <= 0)
+            throw new IllegalArgumentException("Montant invalide");
+
+        CompteEpargne ce = getEpargneOrThrow(numCompte);
+        ce.crediter(montant); // méthode héritée de CompteBancaire
         epargneRepo.save(ce);
         return mapper.toResponse(ce);
     }
 
+    /* ====== Retirer ====== */
+
     @Override
     @Transactional
-    public CompteEpargneResponse retirer(String numCompteBancaire, BigDecimal montant) {
-        if (montant == null || montant.signum() <= 0) throw new IllegalArgumentException("Montant invalide");
-        CompteEpargne ce = getOrThrow(numCompteBancaire);
-        ce.retirer(montant);
+    public CompteEpargneResponse retirer(String numCompte, BigDecimal montant) {
+        if (montant == null || montant.signum() <= 0)
+            throw new IllegalArgumentException("Montant invalide");
+
+        CompteEpargne ce = getEpargneOrThrow(numCompte);
+        ce.debiter(montant); // méthode héritée de CompteBancaire
         epargneRepo.save(ce);
         return mapper.toResponse(ce);
     }
+
+    /* ====== Consulter ====== */
 
     @Override
     @Transactional(readOnly = true)
-    public BigDecimal getTaxationVirtuelle(String numCompteBancaire) {
-        CompteEpargne ce = getOrThrow(numCompteBancaire);
-
-        // 1) Si @Formula a rempli la valeur, on renvoie
-        if (ce.getTaxationVirtuelle() != null) return ce.getTaxationVirtuelle();
-
-        // 2) Sinon, calcule en Java à partir du solde du compte bancaire lié
-        BigDecimal balance = (ce.getCompteBancaire() != null) ? ce.getCompteBancaire().getBalance() : null;
-        return computeTax(balance);
+    public CompteEpargneResponse getDetails(String numCompte) {
+        return mapper.toResponse(getEpargneOrThrow(numCompte));
     }
-
-    @Override
-    @org.springframework.transaction.annotation.Transactional
-    public CompteEpargneResponse capitaliser(String numCompteBancaire) {
-        // Récupère (ou 404) le compte épargne lié au numéro de compte bancaire
-        CompteEpargne ce = getOrThrow(numCompteBancaire);
-
-
-
-        // Capitalise les intérêts et met à jour la date de capitalisation
-        ce.capitaliserInterets();
-
-        // Persiste les changements
-        epargneRepo.save(ce);
-
-        // Retourne le DTO
-        return mapper.toResponse(ce);
-    }
-
 
     @Override
     @Transactional(readOnly = true)
     public CompteEpargneResponse findByCompteId(Long compteId) {
-        var ce = epargneRepo.findByCompteBancaire_Id(compteId)
-                .orElseThrow(() -> new EntityNotFoundException("Épargne introuvable pour compteId=" + compteId));
+        CompteEpargne ce = epargneRepo.findById(compteId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Compte épargne introuvable pour id=" + compteId));
         return mapper.toResponse(ce);
     }
 
-    // Compatibilité si l'interface historique expose encore cette méthode (entité brute).
-    // Si inutile chez toi, supprime-la de l'interface et d'ici.
     @Override
     @Transactional(readOnly = true)
     public CompteEpargne findByNumCompte(String numCompte) {
-        return getOrThrow(numCompte);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal calculerInterets(String numCompte) {
-        CompteEpargne ce = getOrThrow(numCompte);
-        return ce.calculerInteretsAnnuels();
-    }
-
-    @Override
-    @Transactional
-    public CompteEpargneResponse capitaliserInterets(String numCompte) {
-        CompteEpargne ce = getOrThrow(numCompte);
-        if (ce.doitCapitaliser()) {
-            ce.capitaliserInterets();
-            epargneRepo.save(ce);
-        }
-        return mapper.toResponse(ce);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean doitCapitaliser(String numCompte) {
-        return getOrThrow(numCompte).doitCapitaliser();
-    }
-
-    @Override
-    @Transactional
-    public CompteEpargneResponse updateTaux(String numCompte, BigDecimal tauxInteret) {
-        if (tauxInteret == null || tauxInteret.signum() < 0) {
-            throw new IllegalArgumentException("Taux invalide");
-        }
-        CompteEpargne ce = getOrThrow(numCompte);
-        ce.setTauxInteret(tauxInteret);
-        epargneRepo.save(ce);
-        return mapper.toResponse(ce);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CompteEpargneResponse getDetails(String numCompteBancaire) {
-        return mapper.toResponse(getOrThrow(numCompteBancaire));
+        return getEpargneOrThrow(numCompte);
     }
 }

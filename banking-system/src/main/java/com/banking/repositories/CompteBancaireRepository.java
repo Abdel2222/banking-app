@@ -33,7 +33,7 @@ public interface CompteBancaireRepository extends JpaRepository<CompteBancaire, 
     List<CompteBancaire> findByStatus(AccountStatus status);
     Optional<CompteBancaire> findByIdAndStatus(Long id, AccountStatus status);
 
-    // Garde si tu veux l’appel direct via JPQL, sinon utilise findByStatus(AccountStatus.ACTIVATED)
+    // Garde si tu veux l'appel direct via JPQL, sinon utilise findByStatus(AccountStatus.ACTIVATED)
     @Query("SELECT c FROM CompteBancaire c WHERE c.status = com.banking.entity.enums.AccountStatus.ACTIVATED")
     List<CompteBancaire> findActiveAccounts();
 
@@ -41,7 +41,7 @@ public interface CompteBancaireRepository extends JpaRepository<CompteBancaire, 
     List<CompteBancaire> findByBalanceGreaterThan(BigDecimal balance);
     List<CompteBancaire> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
-    // --- Comptes ayant une carte (nécessite l’entité CarteBancaire mappée vers CompteBancaire) ---
+    // --- Comptes ayant une carte (nécessite l'entité CarteBancaire mappée vers CompteBancaire) ---
     @Query("""
            SELECT c
            FROM CarteBancaire cb
@@ -49,12 +49,8 @@ public interface CompteBancaireRepository extends JpaRepository<CompteBancaire, 
            """)
     List<CompteBancaire> findAccountsWithCard();
 
-    // --- Comptes épargne (nécessite l’entité CompteEpargne mappée vers CompteBancaire) ---
-    @Query("""
-           SELECT c
-           FROM CompteEpargne e
-           JOIN e.compteBancaire c
-           """)
+    // --- Comptes épargne (CompteEpargne hérite de CompteBancaire) ---
+    @Query("SELECT e FROM CompteEpargne e")
     List<CompteBancaire> findSavingsAccounts();
 
     // --- Stats ---

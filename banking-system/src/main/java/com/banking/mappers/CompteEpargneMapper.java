@@ -6,15 +6,17 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CompteEpargneMapper {
+
     public CompteEpargneResponse toResponse(CompteEpargne ce) {
         return CompteEpargneResponse.builder()
                 .id(ce.getId())
-                .numCompteBancaire(ce.getCompteBancaire()!=null ? ce.getCompteBancaire().getNumCompte() : null)
-                .numCompteEpargne(ce.getNumCompteEpargne())
-                .soldeEpargne(ce.getSoldeEpargne())
-                .tauxInteret(ce.getTauxInteret())
-                .taxationVirtuelle(ce.getTaxationVirtuelle())
-                .derniereCapitalisation(ce.getDateDerniereCapitalisation())
+                .numCompte(ce.getNumCompte())
+                .premierMontant(ce.getPremierMontant())
+                .solde(ce.getBalance())
+                .statut(ce.getStatus())
+                .devise(ce.getDevise())
+                .clientId(ce.getClient() != null ? ce.getClient().getId() : null)
+                .createdAt(ce.getCreatedAt())
                 .build();
     }
 }

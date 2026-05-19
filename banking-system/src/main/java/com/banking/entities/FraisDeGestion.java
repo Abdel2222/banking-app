@@ -60,12 +60,22 @@ public class FraisDeGestion {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Relations
+    /* ===================== Relations ===================== */
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
-    // Enums internes
+    // ✅ AJOUT — relation vers CompteBancaire
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "compte_bancaire_id", nullable = false)
+    private CompteBancaire compteBancaire;
+
+    public void setCompteBancaire(CompteBancaire compteBancaire) {
+    }
+
+    /* ===================== Enums internes ===================== */
+
     public enum TypeFrais {
         TENUE_COMPTE("Frais de tenue de compte"),
         CARTE_BANCAIRE("Frais de carte bancaire"),
@@ -78,7 +88,7 @@ public class FraisDeGestion {
         AUTRE("Autres frais");
 
         private final String libelle;
-        public static final java.math.BigDecimal MONTANT_FRAIS_OUVERTURE = new java.math.BigDecimal("2.00");
+        public static final BigDecimal MONTANT_FRAIS_OUVERTURE = new BigDecimal("2.00");
 
         TypeFrais(String libelle) {
             this.libelle = libelle;
@@ -109,7 +119,8 @@ public class FraisDeGestion {
         }
     }
 
-    // Constructeurs
+    /* ===================== Constructeurs ===================== */
+
     public FraisDeGestion() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -118,43 +129,41 @@ public class FraisDeGestion {
     }
 
     public FraisDeGestion(BigDecimal montant, String description, TypeFrais typeFrais,
-                          LocalDate dateFin, Client client) {
+                          LocalDate dateFin, Client client, CompteBancaire compteBancaire) {
         this();
         this.montant = montant;
         this.description = description;
         this.typeFrais = typeFrais;
         this.dateFin = dateFin;
         this.client = client;
+        this.compteBancaire = compteBancaire;  // ✅ ajouté
     }
-    /**
-     * Crée un frais d'ouverture de compte (2,00 €, ponctuel, facturé immédiatement).
-     * Usage: FraisDeGestion fg = FraisDeGestion.creerFraisOuverture(compte.getClient());
-     */
-    public static FraisDeGestion creerFraisOuverture(Client client) {
+
+    /* ===================== Factory ===================== */
+
+    public static FraisDeGestion creerFraisOuverture(Client client, CompteBancaire compte) {
         FraisDeGestion f = new FraisDeGestion();
         f.setClient(client);
+        f.setCompteBancaire(compte);                      // ✅ ajouté
         f.setMontant(MONTANT_FRAIS_OUVERTURE);
         f.setDescription("Frais d'ouverture de compte");
-        f.setTypeFrais(TypeFrais.TENUE_COMPTE);           // adapte si tu préfères AUTRE/CARTE_BANCAIRE
-        f.setPeriodicite(Periodicite.PONCTUEL);           // frais one-shot
-        f.setDateDebut(java.time.LocalDate.now());
-        f.setDateFin(java.time.LocalDate.now());          // même jour = ponctuel
-        f.setEstActif(false);                             // déjà facturé, pas “actif” en continu
+        f.setTypeFrais(TypeFrais.TENUE_COMPTE);
+        f.setPeriodicite(Periodicite.PONCTUEL);
+        f.setDateDebut(LocalDate.now());
+        f.setDateFin(LocalDate.now());
+        f.setEstActif(false);
         f.setMontantTotalFacture(MONTANT_FRAIS_OUVERTURE);
-        f.setDerniereFacturation(java.time.LocalDate.now());
+        f.setDerniereFacturation(LocalDate.now());
         return f;
     }
 
+    /* ===================== Hooks JPA ===================== */
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
+        if (createdAt == null) createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (dateDebut == null) {
-            dateDebut = LocalDate.now();
-        }
+        if (dateDebut == null) dateDebut = LocalDate.now();
     }
 
     @PreUpdate
@@ -162,7 +171,8 @@ public class FraisDeGestion {
         updatedAt = LocalDateTime.now();
     }
 
-    // Méthodes métier
+    /* ===================== Méthodes métier ===================== */
+
     public boolean estEchu() {
         return LocalDate.now().isAfter(dateFin);
     }
@@ -173,9 +183,7 @@ public class FraisDeGestion {
     }
 
     public int joursRestants() {
-        if (estEchu()) {
-            return 0;
-        }
+        if (estEchu()) return 0;
         return (int) java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), dateFin);
     }
 
@@ -184,34 +192,22 @@ public class FraisDeGestion {
     }
 
     public BigDecimal calculerMontantPeriode() {
-        if (periodicite == Periodicite.PONCTUEL) {
-            return montant;
-        }
-
+        if (periodicite == Periodicite.PONCTUEL) return montant;
         int nombrePeriodes = dureeEnJours() / periodicite.getJours();
         return montant.multiply(new BigDecimal(nombrePeriodes));
     }
 
     public boolean doitEtreFacture() {
-        if (!estEnCours() || periodicite == Periodicite.PONCTUEL) {
-            return false;
-        }
-
-        if (derniereFacturation == null) {
-            return true;
-        }
-
-        int joursDepuisDerniereFacturation =
-                (int) java.time.temporal.ChronoUnit.DAYS.between(derniereFacturation, LocalDate.now());
-
-        return joursDepuisDerniereFacturation >= periodicite.getJours();
+        if (!estEnCours() || periodicite == Periodicite.PONCTUEL) return false;
+        if (derniereFacturation == null) return true;
+        int jours = (int) java.time.temporal.ChronoUnit.DAYS
+                .between(derniereFacturation, LocalDate.now());
+        return jours >= periodicite.getJours();
     }
 
     public void facturer() {
-        if (!doitEtreFacture()) {
+        if (!doitEtreFacture())
             throw new IllegalStateException("Ces frais ne peuvent pas être facturés maintenant");
-        }
-
         this.montantTotalFacture = this.montantTotalFacture.add(montant);
         this.derniereFacturation = LocalDate.now();
     }
@@ -221,20 +217,17 @@ public class FraisDeGestion {
     }
 
     public void reactiver() {
-        if (!estEchu()) {
-            this.estActif = true;
-        } else {
-            throw new IllegalStateException("Impossible de réactiver des frais échus");
-        }
+        if (!estEchu()) this.estActif = true;
+        else throw new IllegalStateException("Impossible de réactiver des frais échus");
     }
 
-    // equals, hashCode et toString
+    /* ===================== equals / hashCode / toString ===================== */
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof FraisDeGestion)) return false;
-        FraisDeGestion that = (FraisDeGestion) o;
-        return Objects.equals(id, that.id);
+        return Objects.equals(id, ((FraisDeGestion) o).id);
     }
 
     @Override
@@ -256,7 +249,8 @@ public class FraisDeGestion {
                 '}';
     }
 
-    // Getters et Setters
+    /* ===================== Getters & Setters ===================== */
+
     public Long getId() {
         return id;
     }
@@ -360,5 +354,6 @@ public class FraisDeGestion {
     public void setClient(Client client) {
         this.client = client;
     }
-
 }
+
+    

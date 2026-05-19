@@ -18,14 +18,16 @@ public class SavingsController {
 
     private final CompteEpargneService service;
 
+    // ✅ Créer/convertir un compte épargne
     @PostMapping("/{numCompte}/convertir")
     public ResponseEntity<CompteEpargneResponse> convertir(
             @PathVariable String numCompte,
             @RequestBody(required = false) EpargneConvertRequest body) {
-        BigDecimal taux = body != null ? body.getTauxInteret() : null;
-        return ResponseEntity.ok(service.convertirDepuisCompte(numCompte, taux));
+        BigDecimal premierMontant = body != null ? body.getPremierMontant() : null;
+        return ResponseEntity.ok(service.convertirDepuisCompte(numCompte, premierMontant));
     }
 
+    // ✅ Alimenter
     @PostMapping("/{numCompte}/alimenter")
     public ResponseEntity<CompteEpargneResponse> alimenter(
             @PathVariable String numCompte,
@@ -33,6 +35,7 @@ public class SavingsController {
         return ResponseEntity.ok(service.alimenter(numCompte, body.getMontant()));
     }
 
+    // ✅ Retirer
     @PostMapping("/{numCompte}/retirer")
     public ResponseEntity<CompteEpargneResponse> retirer(
             @PathVariable String numCompte,
@@ -40,19 +43,26 @@ public class SavingsController {
         return ResponseEntity.ok(service.retirer(numCompte, body.getMontant()));
     }
 
-    @GetMapping("/{numCompte}/taxation")
-    public Map<String, Object> taxation(@PathVariable String numCompte) {
-        return Map.of("numCompte", numCompte, "taxationVirtuelle", service.getTaxationVirtuelle(numCompte));
-    }
-
-    @PostMapping("/{numCompte}/capitaliser")
-    public ResponseEntity<CompteEpargneResponse> capitaliser(@PathVariable String numCompte) {
-        return ResponseEntity.ok((CompteEpargneResponse) service.capitaliser(numCompte));
-    }
-
+    // ✅ Détails
     @GetMapping("/{numCompte}")
     public ResponseEntity<CompteEpargneResponse> details(@PathVariable String numCompte) {
         return ResponseEntity.ok(service.getDetails(numCompte));
     }
-}
 
+    // ❌ SUPPRIMÉ — taxation virtuelle n'existe plus
+    @GetMapping("/{numCompte}/taxation")
+    public ResponseEntity<Map<String, String>> taxation(@PathVariable String numCompte) {
+        return ResponseEntity.status(410).body(Map.of(
+                "message", "La taxation virtuelle a été supprimée",
+                "alternative", "Les intérêts sont gérés via /api/interets"
+        ));
+    }
+
+    // ❌ SUPPRIMÉ — capitalisation déplacée dans InteretService
+    @PostMapping("/{numCompte}/capitaliser")
+    public ResponseEntity<Map<String, String>> capitaliser(@PathVariable String numCompte) {
+        return ResponseEntity.status(410).body(Map.of(
+                "message", "La capitalisation est gérée via /api/interets/" + numCompte + "/capitaliser"
+        ));
+    }
+}
