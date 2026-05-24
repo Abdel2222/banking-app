@@ -22,7 +22,7 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
     private final CompteEpargneRepository  epargneRepo;
     private final CompteEpargneMapper      mapper;
 
-    /* ====== Helper ====== */
+    /* ====== Helpers ====== */
 
     private CompteBancaire getCompteOrThrow(String numCompte) {
         return compteRepo.findByNumCompte(numCompte)
@@ -36,27 +36,21 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
                         "Compte épargne introuvable pour: " + numCompte));
     }
 
-    /* ====== Créer un compte épargne ====== */
+    /* ====== Convertir ====== */
 
     @Override
     @Transactional
     public CompteEpargneResponse convertirDepuisCompte(String numCompteBancaire, BigDecimal premierMontant) {
-
-        // Vérifier que le compte bancaire existe
         CompteBancaire cb = getCompteOrThrow(numCompteBancaire);
 
-        // Vérifier qu'il n'y a pas déjà un compte épargne
         if (epargneRepo.findByNumCompte(numCompteBancaire).isPresent())
             throw new IllegalStateException("Un compte épargne existe déjà pour ce compte");
 
-        // Vérifier que le solde du compte bancaire est suffisant
         BigDecimal montant = (premierMontant != null && premierMontant.signum() > 0)
-                ? premierMontant
-                : BigDecimal.ZERO;
+                ? premierMontant : BigDecimal.ZERO;
 
-        // Créer le CompteEpargne — hérite de CompteBancaire via JOINED
         CompteEpargne ce = new CompteEpargne();
-        ce.setNumCompte(CompteBancaire.generateAccountNumber()); // numéro propre
+        ce.setNumCompte(CompteBancaire.generateAccountNumber());
         ce.setClient(cb.getClient());
         ce.setDevise(cb.getDevise());
         ce.setIntitule("Compte épargne");
@@ -64,8 +58,7 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
         ce.setPremierMontant(montant);
         ce.activate();
 
-        ce = epargneRepo.save(ce);
-        return mapper.toResponse(ce);
+        return mapper.toResponse(epargneRepo.save(ce));
     }
 
     @Override
@@ -74,7 +67,7 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
         return convertirDepuisCompte(numCompte, premierMontant);
     }
 
-    /* ====== Alimenter ====== */
+    /* ====== Alimenter simple (crédit direct) ====== */
 
     @Override
     @Transactional
@@ -83,9 +76,40 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
             throw new IllegalArgumentException("Montant invalide");
 
         CompteEpargne ce = getEpargneOrThrow(numCompte);
-        ce.crediter(montant); // méthode héritée de CompteBancaire
+        ce.crediter(montant);
         epargneRepo.save(ce);
         return mapper.toResponse(ce);
+    }
+
+    /* ====== Alimenter depuis un compte courant (virement interne) ====== */
+
+    @Override
+    @Transactional
+    public CompteEpargneResponse alimenterDepuis(
+            String numCompteEpargne,
+            BigDecimal montant,
+            String numCompteSource) {
+
+        if (montant == null || montant.signum() <= 0)
+            throw new IllegalArgumentException("Montant invalide");
+
+        // Compte épargne destinataire
+        CompteEpargne epargne = getEpargneOrThrow(numCompteEpargne);
+
+        // Compte courant source
+        CompteBancaire source = getCompteOrThrow(numCompteSource);
+
+        if (source.getBalance().compareTo(montant) < 0)
+            throw new IllegalStateException("Solde insuffisant sur le compte source");
+
+        // Débiter la source, créditer l'épargne
+        source.debiter(montant);
+        epargne.crediter(montant);
+
+        compteRepo.save(source);
+        epargneRepo.save(epargne);
+
+        return mapper.toResponse(epargne);
     }
 
     /* ====== Retirer ====== */
@@ -97,7 +121,7 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
             throw new IllegalArgumentException("Montant invalide");
 
         CompteEpargne ce = getEpargneOrThrow(numCompte);
-        ce.debiter(montant); // méthode héritée de CompteBancaire
+        ce.debiter(montant);
         epargneRepo.save(ce);
         return mapper.toResponse(ce);
     }
@@ -113,10 +137,10 @@ public class CompteEpargneServiceImpl implements CompteEpargneService {
     @Override
     @Transactional(readOnly = true)
     public CompteEpargneResponse findByCompteId(Long compteId) {
-        CompteEpargne ce = epargneRepo.findById(compteId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Compte épargne introuvable pour id=" + compteId));
-        return mapper.toResponse(ce);
+        return mapper.toResponse(
+                epargneRepo.findById(compteId)
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Compte épargne introuvable pour id=" + compteId)));
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.banking.entities;
 
-import com.banking.entity.enums.NiveauRisque;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -8,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,17 +36,10 @@ public class Fonds {
     @Column(name = "rendement", nullable = false, precision = 5, scale = 2)
     private BigDecimal rendement;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "niveau_risque", length = 30)
-    private NiveauRisque niveauRisque;
-
-    @NotNull(message = "Le montant minimum est obligatoire")
-    @DecimalMin(value = "0.00", message = "Le montant minimum doit être positif ou nul")
-    @Column(name = "montant_minimum", nullable = false, precision = 15, scale = 2)
-    private BigDecimal montantMinimum;
-
-    @Column(name = "est_actif", nullable = false)
-    private Boolean estActif = true;
+    @NotNull(message = "Le montant est obligatoire")
+    @DecimalMin(value = "0.00", message = "Le montant doit être positif ou nul")
+    @Column(name = "montant", nullable = false, precision = 15, scale = 2)
+    private BigDecimal montant;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -60,14 +53,11 @@ public class Fonds {
     public Fonds() {
     }
 
-    public Fonds(String nomFonds, String codeIdentification, BigDecimal rendement,
-                 NiveauRisque niveauRisque, BigDecimal montantMinimum) {
+    public Fonds(String nomFonds, String codeIdentification, BigDecimal rendement, BigDecimal montant) {
         this.nomFonds = nomFonds;
         this.codeIdentification = codeIdentification;
         this.rendement = rendement;
-        this.niveauRisque = niveauRisque;
-        this.montantMinimum = montantMinimum;
-        this.estActif = true;
+        this.montant = montant;
     }
 
     @PrePersist
@@ -81,111 +71,51 @@ public class Fonds {
         updatedAt = LocalDateTime.now();
     }
 
-    public boolean estDisponible() {
-        return Boolean.TRUE.equals(estActif);
+    public boolean montantRespecteMinimum(BigDecimal montantPlacement) {
+        if (montantPlacement == null || montant == null) return false;
+        return montantPlacement.compareTo(montant) >= 0;
     }
 
-    public boolean montantRespecteMinimum(BigDecimal montant) {
-        if (montant == null || montantMinimum == null) return false;
-        return montant.compareTo(montantMinimum) >= 0;
+    public BigDecimal calculerGainPrevu(BigDecimal montantPlacement) {
+        if (montantPlacement == null || rendement == null) return BigDecimal.ZERO;
+        return montantPlacement.multiply(rendement).divide(BigDecimal.valueOf(100));
     }
 
-    public BigDecimal calculerGainPrevu(BigDecimal montant) {
-        if (montant == null || rendement == null) return BigDecimal.ZERO;
-        return montant.multiply(rendement).divide(BigDecimal.valueOf(100));
+    public BigDecimal calculerGainJournalier(BigDecimal montantPlacement) {
+        if (montantPlacement == null || rendement == null) return BigDecimal.ZERO;
+        return montantPlacement.multiply(rendement)
+                .divide(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(365), 6, RoundingMode.HALF_UP);
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getNomFonds() { return nomFonds; }
+    public void setNomFonds(String nomFonds) { this.nomFonds = nomFonds; }
 
-    public String getNomFonds() {
-        return nomFonds;
-    }
+    public String getCodeIdentification() { return codeIdentification; }
+    public void setCodeIdentification(String codeIdentification) { this.codeIdentification = codeIdentification; }
 
-    public void setNomFonds(String nomFonds) {
-        this.nomFonds = nomFonds;
-    }
+    public BigDecimal getRendement() { return rendement; }
+    public void setRendement(BigDecimal rendement) { this.rendement = rendement; }
 
-    public String getCodeIdentification() {
-        return codeIdentification;
-    }
+    public BigDecimal getMontant() { return montant; }
+    public void setMontant(BigDecimal montant) { this.montant = montant; }
 
-    public void setCodeIdentification(String codeIdentification) {
-        this.codeIdentification = codeIdentification;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public BigDecimal getRendement() {
-        return rendement;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public void setRendement(BigDecimal rendement) {
-        this.rendement = rendement;
-    }
-
-    public NiveauRisque getNiveauRisque() {
-        return niveauRisque;
-    }
-
-    public void setNiveauRisque(NiveauRisque niveauRisque) {
-        this.niveauRisque = niveauRisque;
-    }
-
-    public BigDecimal getMontantMinimum() {
-        return montantMinimum;
-    }
-
-    public void setMontantMinimum(BigDecimal montantMinimum) {
-        this.montantMinimum = montantMinimum;
-    }
-
-    public Boolean getEstActif() {
-        return estActif;
-    }
-
-    public void setEstActif(Boolean estActif) {
-        this.estActif = estActif;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<Placement> getPlacements() {
-        return placements;
-    }
-
-    public void setPlacements(List<Placement> placements) {
-        this.placements = placements;
-    }
+    public List<Placement> getPlacements() { return placements; }
+    public void setPlacements(List<Placement> placements) { this.placements = placements; }
 
     @Override
     public String toString() {
-        return "Fonds{" +
-                "id=" + id +
-                ", nomFonds='" + nomFonds + '\'' +
-                ", codeIdentification='" + codeIdentification + '\'' +
-                ", rendement=" + rendement +
-                ", niveauRisque=" + niveauRisque +
-                ", montantMinimum=" + montantMinimum +
-                ", estActif=" + estActif +
-                '}';
+        return "Fonds{id=" + id + ", nomFonds='" + nomFonds + "', code='" + codeIdentification +
+                "', rendement=" + rendement + ", montant=" + montant + '}';
     }
 
     @Override

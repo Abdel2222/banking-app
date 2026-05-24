@@ -1,18 +1,23 @@
 package com.banking.controllers;
 
+import com.banking.dto.request.AdminChatActionRequest;
 import com.banking.dto.request.ChatCreateRequest;
 import com.banking.dto.request.ChatReplyRequest;
 import com.banking.dto.response.ChatResponse;
-import com.banking.dto.response.ApiResponse;
 import com.banking.services.ChatService;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chats")
+@CrossOrigin(origins = "http://localhost:4200")
 public class ChatController {
 
     private final ChatService chatService;
@@ -21,67 +26,91 @@ public class ChatController {
         this.chatService = chatService;
     }
 
-    // Créer un chat
+    // ============ CLIENT ============
+
     @PostMapping
-    public ResponseEntity<ApiResponse<ChatResponse>> create(@Valid @RequestBody ChatCreateRequest req) {
-        return ResponseEntity.ok(ApiResponse.success(chatService.create(req)));
+    @ResponseStatus(HttpStatus.CREATED)
+    public ChatResponse create(@Valid @RequestBody ChatCreateRequest req) {
+        return chatService.create(req);
     }
 
-    // Tous les chats où un compte est impliqué (source OU destinataire)
-    // GET /api/chats?compteId=11
+    @PutMapping("/{id}/reply")
+    public ChatResponse reply(@PathVariable Long id,
+                              @Valid @RequestBody ChatReplyRequest req) {
+        return chatService.reply(id, req);
+    }
+
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ChatResponse>>> forAccount(@RequestParam(name = "compteId", required = false) Long compteId) {
-        if (compteId == null) {
-            // si pas de filtre envoyé, on peut retourner une liste vide ou tout (selon ton besoin)
-            return ResponseEntity.ok(ApiResponse.success(List.of()));
+    public List<ChatResponse> getAll() {
+        return chatService.getAll();
+    }
+
+    @GetMapping("/{id}")
+    public ChatResponse get(@PathVariable Long id) {
+        return chatService.get(id);
+    }
+
+    /** Récupère l'historique d'un client (pour la persistance côté frontend) */
+    @GetMapping("/client/{clientId}")
+    public List<ChatResponse> getByClient(@PathVariable Long clientId) {
+        return chatService.getByClient(clientId);
+    }
+
+    // ============ ADMIN ============
+
+    /** Liste des demandes en attente */
+    @GetMapping("/admin/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<ChatResponse> getPending() {
+        return chatService.getPendingForAdmin();
+    }
+
+    /** Compteur des demandes en attente (pour le badge) */
+    @GetMapping("/admin/pending/count")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Map<String, Long> countPending() {
+        return Map.of("count", chatService.countPending());
+    }
+
+    /** Admin répond à une demande */
+    @PostMapping("/admin/{id}/respond")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ChatResponse respond(@PathVariable Long id,
+                                @Valid @RequestBody AdminChatActionRequest req,
+                                @AuthenticationPrincipal UserDetails admin) {
+        Long adminId = extractAdminId(admin);
+        return chatService.respondAsAdmin(id, req.getMessage(), adminId);
+    }
+
+    /** Admin marque comme traité sans message particulier */
+    @PostMapping("/admin/{id}/mark-treated")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ChatResponse markTreated(@PathVariable Long id,
+                                    @AuthenticationPrincipal UserDetails admin) {
+        Long adminId = extractAdminId(admin);
+        return chatService.markTreated(id, adminId);
+    }
+
+    /** Admin refuse la demande avec un motif */
+    @PostMapping("/admin/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ChatResponse reject(@PathVariable Long id,
+                               @Valid @RequestBody AdminChatActionRequest req,
+                               @AuthenticationPrincipal UserDetails admin) {
+        Long adminId = extractAdminId(admin);
+        return chatService.rejectAsAdmin(id, req.getMessage(), adminId);
+    }
+
+    /**
+     * Extrait l'ID admin depuis le principal.
+     * Adapte cette méthode si ton UserDetails a un champ id différent.
+     */
+    private Long extractAdminId(UserDetails admin) {
+        if (admin == null) return null;
+        try {
+            return Long.parseLong(admin.getUsername());
+        } catch (NumberFormatException e) {
+            return null; // Username n'est pas un ID numérique → laisser null
         }
-        return ResponseEntity.ok(ApiResponse.success(chatService.forAccount(compteId)));
-    }
-
-    // Inbox (messages reçus) d’un compte
-    @GetMapping("/inbox/{compteId}")
-    public ResponseEntity<ApiResponse<List<ChatResponse>>> inbox(@PathVariable Long compteId) {
-        return ResponseEntity.ok(ApiResponse.success(chatService.inbox(compteId)));
-    }
-
-    // Messages envoyés par un compte
-    @GetMapping("/sent/{compteId}")
-    public ResponseEntity<ApiResponse<List<ChatResponse>>> sent(@PathVariable Long compteId) {
-        return ResponseEntity.ok(ApiResponse.success(chatService.sent(compteId)));
-    }
-
-    // Marquer un chat comme lu par un compte (lecteur)
-    // PATCH /api/chats/{chatId}/read?lecteurCompteId=2
-    @PatchMapping("/{chatId}/read")
-    public ResponseEntity<ApiResponse<ChatResponse>> markRead(@PathVariable Long chatId,
-                                                              @RequestParam("lecteurCompteId") Long lecteurCompteId) {
-        return ResponseEntity.ok(ApiResponse.success(chatService.markRead(chatId, lecteurCompteId)));
-    }
-
-    // Répondre à un chat
-    @PostMapping("/{chatId}/reply")
-    public ResponseEntity<ApiResponse<ChatResponse>> reply(@PathVariable Long chatId,
-                                                           @RequestBody(required = false) ChatReplyRequest req,
-                                                           @RequestParam(value = "reponse", required = false) String reponse) {
-        // On récupère la réponse depuis le body JSON ou le paramètre URL
-        String payload = (req != null ? req.getReponse() : null);
-        if (payload == null) payload = reponse;
-
-        // Vérification basique
-        if (payload == null || payload.trim().isEmpty()) {
-            throw new IllegalArgumentException("La réponse ne peut pas être vide");
-        }
-
-        ChatReplyRequest effective = new ChatReplyRequest();
-        effective.setReponse(payload);
-
-        return ResponseEntity.ok(ApiResponse.success(chatService.reply(chatId, effective)));
-    }
-
-
-    // Récupérer un chat par id
-    @GetMapping("/{chatId}")
-    public ResponseEntity<ApiResponse<ChatResponse>> get(@PathVariable Long chatId) {
-        return ResponseEntity.ok(ApiResponse.success(chatService.get(chatId)));
     }
 }

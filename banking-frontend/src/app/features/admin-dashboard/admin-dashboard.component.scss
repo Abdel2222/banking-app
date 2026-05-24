@@ -761,7 +761,7 @@
     font-weight: 600;
   }
 
-  input {
+  input, select {
     background: rgba(15, 23, 42, 0.6);
     border: 1.5px solid #334155;
     border-radius: 8px;
@@ -1169,7 +1169,10 @@
   font-weight: 600;
   margin-top: 1rem;
 
-  &:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5); }
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
+  }
 }
 
 .err {
@@ -1197,6 +1200,7 @@
   .admin-actions { width: 100%; flex-direction: column; }
   .admin-hello-card { width: 100%; justify-content: center; }
 }
+
 .suspended-status {
   background: linear-gradient(135deg, #7f1d1d, #dc2626) !important;
   color: white !important;
@@ -1226,7 +1230,6 @@
    FIX LISIBILITÉ : numéros de comptes en clair et net
    ═══════════════════════════════════════════════════════════ */
 
-/* Police numéros de comptes : forcer une couleur claire et lisible */
 .admin-table .mono,
 .account-mini-num .mono,
 .info-row .mono {
@@ -1242,7 +1245,6 @@
   display: inline-block;
 }
 
-/* Mode strong : numéro de compte dans "Compte sélectionné" */
 .info-row .mono.strong {
   color: var(--techno-cyan) !important;
   font-size: 1rem !important;
@@ -1251,22 +1253,20 @@
   border: 1px solid rgba(0, 212, 255, 0.3);
 }
 
-/* Mini cartes des clients - numéros en clair */
 .account-mini-card .mono {
   color: #00d4ff !important;
   font-size: 0.9rem !important;
   text-shadow: 0 0 6px rgba(0, 212, 255, 0.5);
 }
 
-/* Page comptes : numéros bien visibles dans le tableau */
 .admin-table td.mono {
   color: #00d4ff !important;
   text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
 }
-/* ═══════════════════════════════════════════════════════════
-   BOOST LISIBILITÉ MAX - chiffres très contrastés
-   ═══════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════
+   BOOST LISIBILITÉ MAX
+   ═══════════════════════════════════════════════════════════ */
 .stat-value,
 .stat-value-small {
   font-size: 2.4rem !important;
@@ -1284,7 +1284,6 @@
   font-size: 1.5rem !important;
 }
 
-/* Numéros de compte : ultra-lisibles */
 .admin-table .mono,
 .info-row .mono {
   color: #ffffff !important;
@@ -1299,7 +1298,6 @@
   display: inline-block;
 }
 
-/* Soldes (montants) en gros et bien visibles */
 .admin-table .balance {
   color: #00ff88 !important;
   font-weight: 900 !important;
@@ -1313,13 +1311,11 @@
   text-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 2px 4px rgba(0,0,0,1);
 }
 
-/* Réduire les effets de flou/glow qui rendent ça moins net */
 .admin-brand-text {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 1) !important;
   filter: none !important;
 }
 
-/* Augmenter le contraste général du fond */
 .admin-wrap {
   background:
     radial-gradient(ellipse at top, rgba(55, 66, 250, 0.08), transparent 60%),

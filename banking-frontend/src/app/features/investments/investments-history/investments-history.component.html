@@ -1,15 +1,11 @@
 <div class="history-page">
-  <header class="history-header">
-    <button class="back-btn" type="button" (click)="retour()">
-      ← Retour
-    </button>
 
+  <header class="history-header">
+    <button class="back-btn" type="button" (click)="retour()">← Retour</button>
     <div>
       <p class="eyebrow">BankInvest Manager</p>
       <h1>Historique des placements</h1>
-      <p class="subtitle">
-        Consultez, filtrez et clôturez les placements du client.
-      </p>
+      <p class="subtitle">Consultez, filtrez et clôturez les placements du client.</p>
     </div>
   </header>
 
@@ -18,12 +14,10 @@
       <span class="summary-label">Capital actif investi</span>
       <strong>{{ totalCapitalInvesti() | number:'1.2-2' }} €</strong>
     </article>
-
     <article class="summary-card">
       <span class="summary-label">Gain prévu actif</span>
       <strong class="positive">+{{ totalGainPrevu() | number:'1.2-2' }} €</strong>
     </article>
-
     <article class="summary-card">
       <span class="summary-label">Placements actifs</span>
       <strong>{{ activePlacementsCount() }}</strong>
@@ -40,32 +34,22 @@
         placeholder="Fonds, compte ou statut"
       />
     </label>
-
     <label class="filter-box">
       <span>Statut</span>
-      <select
-        [ngModel]="statusFilter()"
-        (ngModelChange)="updateStatusFilter($event)"
-      >
+      <select [ngModel]="statusFilter()" (ngModelChange)="updateStatusFilter($event)">
         <option value="TOUS">Tous</option>
         <option value="ACTIF">Actifs</option>
         <option value="CLOTURE">Clôturés</option>
         <option value="ANNULE">Annulés</option>
       </select>
     </label>
-
     <button class="refresh-btn" type="button" (click)="loadPlacements()" [disabled]="loading()">
       {{ loading() ? 'Chargement...' : 'Actualiser' }}
     </button>
   </section>
 
-  <div class="alert error" *ngIf="error()">
-    {{ error() }}
-  </div>
-
-  <div class="alert success" *ngIf="success()">
-    {{ success() }}
-  </div>
+  <div class="alert error"   *ngIf="error()">{{ error() }}</div>
+  <div class="alert success" *ngIf="success()">{{ success() }}</div>
 
   <section class="table-card">
     <div class="table-header">
@@ -73,9 +57,7 @@
       <span>{{ filteredPlacements().length }} résultat(s)</span>
     </div>
 
-    <div class="loading-state" *ngIf="loading()">
-      Chargement de l’historique...
-    </div>
+    <div class="loading-state" *ngIf="loading()">⏳ Chargement de l'historique...</div>
 
     <div class="empty-state" *ngIf="!loading() && filteredPlacements().length === 0">
       Aucun placement trouvé.
@@ -87,18 +69,20 @@
           <tr>
             <th>Fonds</th>
             <th>Montant investi</th>
-            <th>Rendement prévu</th>
+            <th>Rendement</th>
             <th>Gain prévu</th>
-            <th>Valeur estimée</th>
+            <th>Montant récupérable</th>
             <th>Date placement</th>
             <th>Date clôture</th>
+            <th>Date sortie</th>
+            <th>Frais sortie</th>
             <th>Statut</th>
             <th class="actions-col">Action</th>
           </tr>
         </thead>
-
         <tbody>
           <tr *ngFor="let placement of filteredPlacements()">
+
             <td>
               <div class="fund-cell">
                 <strong>{{ placement.nomFonds }}</strong>
@@ -107,12 +91,35 @@
             </td>
 
             <td>{{ placement.montant | number:'1.2-2' }} €</td>
-            <td>{{ placement.rendementPrevu | number:'1.2-2' }}%</td>
-            <td class="positive">+{{ placement.gainPrevu | number:'1.2-2' }} €</td>
-            <td>{{ placement.valeurEstimee | number:'1.2-2' }} €</td>
+
+            <td>{{ placement.rendement | number:'1.2-2' }} %</td>
+
+            <td class="positive">
+              +{{ placement.gainPrevu | number:'1.2-2' }} €
+            </td>
+
+            <td [ngClass]="(placement.fraisSortie ?? 0) > 0 ? 'negative' : 'positive'">
+              {{ getMontantRecuperable(placement) | number:'1.2-2' }} €
+            </td>
+
             <td>{{ placement.datePlacement | date:'dd/MM/yyyy HH:mm' }}</td>
+
             <td>
               {{ placement.dateCloture ? (placement.dateCloture | date:'dd/MM/yyyy HH:mm') : '—' }}
+            </td>
+
+            <td>
+              <span *ngIf="placement.dateSortie" class="badge-sortie">
+                {{ placement.dateSortie | date:'dd/MM/yyyy HH:mm' }}
+              </span>
+              <span *ngIf="!placement.dateSortie" class="muted">—</span>
+            </td>
+
+            <td>
+              <span *ngIf="(placement.fraisSortie ?? 0) > 0" class="negative">
+                -{{ placement.fraisSortie | number:'1.2-2' }} €
+              </span>
+              <span *ngIf="(placement.fraisSortie ?? 0) === 0" class="muted">—</span>
             </td>
 
             <td>
@@ -122,20 +129,20 @@
             </td>
 
             <td class="actions-col">
+
               <button
                 *ngIf="placement.statut === 'ACTIF'"
-                class="close-btn"
+                class="sortie-btn"
                 type="button"
-                [disabled]="closingId() === placement.id"
-                (click)="cloturerPlacement(placement)"
+                [disabled]="closingId() === placement.id || sortingId() === placement.id"
+                (click)="sortirAvantEcheance(placement)"
               >
-                {{ closingId() === placement.id ? 'Clôture...' : 'Clôturer' }}
+                {{ sortingId() === placement.id ? 'Sortie...' : 'Sortie anticipée' }}
               </button>
 
-              <span class="muted-action" *ngIf="placement.statut !== 'ACTIF'">
-                —
-              </span>
+              <span class="muted-action" *ngIf="placement.statut !== 'ACTIF'">—</span>
             </td>
+
           </tr>
         </tbody>
       </table>

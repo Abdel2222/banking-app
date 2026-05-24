@@ -1,337 +1,237 @@
-<div class="rdv-page">
-  <header class="topbar">
-    <button class="back-btn" (click)="goBack()">
-      ← Retour au dashboard
+<div class="agence">
+
+  <header class="agence__topbar">
+    <button class="back" (click)="goBack()" aria-label="Retour">
+      <span class="back__arrow">←</span>
+      <span class="back__label">Dashboard</span>
     </button>
-    <h1>Prendre Rendez-vous en Agence</h1>
+
+    <div class="brand">
+      <div class="brand__mark">TB</div>
+      <div class="brand__text">
+        <div class="brand__name">TECHNO·BANK</div>
+        <div class="brand__sub">{{ agence() }}</div>
+      </div>
+    </div>
+
+    <div class="clock">
+      <span class="clock__dot"></span>
+      <span class="clock__time">{{ currentTime() }}</span>
+    </div>
   </header>
 
-  <main class="content">
-    <div class="alert-box">
-      <div class="alert-icon">📅</div>
-      <div class="alert-content">
-        <h2>Rendez-vous pour {{ typeOperation() }}</h2>
+  @if (!success()) {
 
-        <p *ngIf="montant() > 0">
-          Vous souhaitez effectuer un <strong>{{ typeOperation() }}</strong> de
-          <strong>{{ formatMontant(montant()) }}</strong>.
-        </p>
-
-        <p *ngIf="montant() === 0">
-          Vous souhaitez effectuer un <strong>{{ typeOperation() }}</strong> en agence.
-        </p>
-
-        <p>
-          Veuillez choisir une date, un horaire et remplir vos informations ci-dessous.
-        </p>
+    <section class="ticket-machine">
+      <div class="ticket-machine__label">
+        <span class="ticket-machine__pin">●</span>
+        BORNE — FILE D'ATTENTE
       </div>
-    </div>
 
-    <div *ngIf="!success()" class="rdv-container">
-      <div class="calendar-section">
-        <h3>📅 Choisissez une date</h3>
-
-        <div class="calendar">
-          <div class="calendar-header">
-            <button class="nav-btn" (click)="previousMonth()">‹</button>
-            <span class="month-year">{{ getMonthYear() }}</span>
-            <button class="nav-btn" (click)="nextMonth()">›</button>
-          </div>
-
-          <div class="calendar-weekdays">
-            <div class="weekday">Dim</div>
-            <div class="weekday">Lun</div>
-            <div class="weekday">Mar</div>
-            <div class="weekday">Mer</div>
-            <div class="weekday">Jeu</div>
-            <div class="weekday">Ven</div>
-            <div class="weekday">Sam</div>
-          </div>
-
-          <div class="calendar-grid">
-            <div
-              *ngFor="let day of calendarDays()"
-              class="calendar-day"
-              [class.other-month]="!day.isCurrentMonth"
-              [class.today]="day.isToday"
-              [class.past]="day.isPast"
-              [class.selected]="day.isSelected"
-              (click)="selectDate(day)">
-              {{ day.day }}
-            </div>
-          </div>
-        </div>
-
-        <div *ngIf="selectedDate()" class="selected-date-display">
-          <span class="date-icon">📆</span>
-          <span class="date-text">{{ formatSelectedDate() }}</span>
+      <div class="ticket-machine__display">
+        <div class="led-screen">
+          <div class="led-screen__scanlines"></div>
+          <div class="led-screen__caption">VOTRE TICKET</div>
+          <div class="led-screen__number">{{ ticket() }}</div>
+          <div class="led-screen__caption">— PATIENTEZ —</div>
         </div>
       </div>
 
-      <div class="time-section">
-        <h3>🕐 Choisissez un horaire</h3>
-
-        <div *ngIf="!selectedDate()" class="time-placeholder">
-          Veuillez d'abord sélectionner une date
+      <div class="ticket-machine__meta">
+        <div class="meta__cell">
+          <div class="meta__k">Type</div>
+          <div class="meta__v">{{ typeOperation() }}</div>
         </div>
-
-        <div *ngIf="selectedDate()" class="time-slots-container">
-          <div class="time-period">
-            <h4>Matin</h4>
-
-            <div class="time-slots">
-              <button
-                *ngFor="let slot of timeSlots().slice(0, 6)"
-                class="time-slot"
-                [class.available]="slot.available"
-                [class.unavailable]="!slot.available"
-                [class.selected]="selectedTime() === slot.time"
-                [disabled]="!slot.available"
-                (click)="selectTime(slot)">
-                {{ slot.time }}
-              </button>
-            </div>
-          </div>
-
-          <div class="time-period">
-            <h4>Après-midi</h4>
-
-            <div class="time-slots">
-              <button
-                *ngFor="let slot of timeSlots().slice(6)"
-                class="time-slot"
-                [class.available]="slot.available"
-                [class.unavailable]="!slot.available"
-                [class.selected]="selectedTime() === slot.time"
-                [disabled]="!slot.available"
-                (click)="selectTime(slot)">
-                {{ slot.time }}
-              </button>
-            </div>
-          </div>
+        <div class="meta__divider"></div>
+        <div class="meta__cell">
+          <div class="meta__k">Compte</div>
+          <div class="meta__v">{{ numCompte() || '—' }}</div>
+        </div>
+        <div class="meta__divider"></div>
+        <div class="meta__cell">
+          <div class="meta__k">Montant</div>
+          <div class="meta__v">{{ formatMontant(rdvForm.get('montant')?.value ?? 0) }}</div>
         </div>
       </div>
+    </section>
 
-      <div class="form-section">
-        <h3>📝 Vos informations</h3>
+    <section class="block">
+      <h2 class="block__title">
+        <span class="block__num">01</span>
+        Choisissez votre opération
+      </h2>
 
-        <form [formGroup]="rdvForm">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Prénom *</label>
-              <input type="text" formControlName="prenom" placeholder="Votre prénom">
+      <div class="ops-grid">
+        <button type="button"
+                class="op-card"
+                [class.op-card--active]="typeOperation() === 'DÉPÔT'"
+                (click)="setTypeOperation('DÉPÔT')">
+          <div class="op-card__icon">↓</div>
+          <div class="op-card__title">DÉPÔT</div>
+          <div class="op-card__desc">Déposer des espèces sur votre compte</div>
+          <div class="op-card__check">✓ Sélectionné</div>
+        </button>
 
-              <span class="error" *ngIf="rdvForm.get('prenom')?.invalid && rdvForm.get('prenom')?.touched">
-                Prénom requis (min. 2 caractères)
-              </span>
-            </div>
-
-            <div class="form-group">
-              <label>Nom *</label>
-              <input type="text" formControlName="nom" placeholder="Votre nom">
-
-              <span class="error" *ngIf="rdvForm.get('nom')?.invalid && rdvForm.get('nom')?.touched">
-                Nom requis (min. 2 caractères)
-              </span>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Email *</label>
-              <input type="email" formControlName="email" placeholder="votre.email@example.com">
-
-              <span class="error" *ngIf="rdvForm.get('email')?.invalid && rdvForm.get('email')?.touched">
-                Email valide requis
-              </span>
-            </div>
-
-            <div class="form-group">
-              <label>Téléphone (optionnel)</label>
-              <input type="tel" formControlName="telephone" placeholder="0612345678 (optionnel)">
-              <span class="info-text">Le téléphone est optionnel mais recommandé pour confirmation</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Montant (€) *</label>
-            <input
-              type="number"
-              formControlName="montant"
-              placeholder="Montant de l'opération"
-              min="0.01"
-              step="0.01">
-
-            <span class="error" *ngIf="rdvForm.get('montant')?.invalid && rdvForm.get('montant')?.touched">
-              {{ montantErrorMessage }}
-            </span>
-
-            <span class="info-text" *ngIf="minMontant() > 0">
-              Montant minimum : {{ formatMontant(minMontant()) }}
-            </span>
-          </div>
-
-          <div class="form-group">
-            <label>Agence *</label>
-
-            <select formControlName="agence">
-              <option *ngFor="let agence of agences" [value]="agence">
-                {{ agence }}
-              </option>
-            </select>
-          </div>
-
-          <div class="agence-location" *ngIf="rdvForm.get('agence')?.value">
-            <h4>📍 Localisation de l'agence</h4>
-
-            <div class="location-card">
-              <div class="location-icon">🏦</div>
-
-              <div class="location-info">
-                <strong>{{ rdvForm.get('agence')?.value }}</strong>
-                <p>{{ getAgenceAddress(rdvForm.get('agence')?.value || '') }}</p>
-
-                <a
-                  [href]="'https://www.google.com/maps/search/?api=1&query=' + getAgenceAddress(rdvForm.get('agence')?.value || '')"
-                  target="_blank"
-                  class="maps-link">
-                  🗺️ Ouvrir dans Google Maps
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div class="agence-location employee-location">
-            <h4>👤 Conseiller assigné</h4>
-
-            <div class="location-card" *ngIf="loadingEmploye()">
-              <div class="location-icon">⏳</div>
-
-              <div class="location-info">
-                <strong>Recherche d’un conseiller disponible...</strong>
-                <p>Un employé sera choisi automatiquement pour votre {{ typeOperation() }}.</p>
-              </div>
-            </div>
-
-            <div class="location-card" *ngIf="!loadingEmploye() && employeAssigne()">
-              <div class="location-icon">👨‍💼</div>
-
-              <div class="location-info">
-                <strong>{{ employeAssigne()?.prenom }} {{ employeAssigne()?.nom }}</strong>
-                <p><b>Matricule :</b> {{ employeAssigne()?.matricule || 'N/A' }}</p>
-                <p><b>Poste :</b> {{ employeAssigne()?.poste || 'Conseiller bancaire' }}</p>
-                <p><b>Email :</b> {{ employeAssigne()?.email }}</p>
-
-                <button type="button" class="maps-link employee-btn" (click)="changerEmploye()">
-                  🔄 Changer de conseiller
-                </button>
-              </div>
-            </div>
-
-            <div class="location-card" *ngIf="!loadingEmploye() && !employeAssigne()">
-              <div class="location-icon">⚠️</div>
-
-              <div class="location-info">
-                <strong>{{ errorEmploye() || 'Aucun conseiller assigné' }}</strong>
-                <p>Veuillez réessayer ou contacter votre agence.</p>
-
-                <button type="button" class="maps-link employee-btn" (click)="changerEmploye()">
-                  Réessayer
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Motif du rendez-vous *</label>
-
-            <textarea
-              formControlName="motif"
-              rows="4"
-              placeholder="Décrivez brièvement le motif de votre rendez-vous..."></textarea>
-
-            <span class="error" *ngIf="rdvForm.get('motif')?.invalid && rdvForm.get('motif')?.touched">
-              {{ motifErrorMessage }}
-            </span>
-          </div>
-
-          <div class="rdv-summary" *ngIf="selectedDate() && selectedTime() && rdvForm.get('montant')?.valid">
-            <h4>📋 Récapitulatif de votre rendez-vous</h4>
-
-            <div class="summary-item">
-              <span class="label">Date :</span>
-              <span class="value">{{ formatSelectedDate() }}</span>
-            </div>
-
-            <div class="summary-item">
-              <span class="label">Heure :</span>
-              <span class="value">{{ selectedTime() }}</span>
-            </div>
-
-            <div class="summary-item">
-              <span class="label">Opération :</span>
-              <span class="value">{{ typeOperation() }}</span>
-            </div>
-
-            <div class="summary-item">
-              <span class="label">Montant :</span>
-              <span class="value">{{ formatMontant(rdvForm.get('montant')?.value || 0) }}</span>
-            </div>
-
-            <div class="summary-item">
-              <span class="label">Agence :</span>
-              <span class="value">{{ rdvForm.get('agence')?.value }}</span>
-            </div>
-
-            <div class="summary-item" *ngIf="employeAssigne()">
-              <span class="label">Conseiller :</span>
-              <span class="value">
-                {{ employeAssigne()?.prenom }} {{ employeAssigne()?.nom }}
-                - {{ employeAssigne()?.matricule }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-secondary" (click)="goBack()">
-              Annuler
-            </button>
-
-            <button
-              type="button"
-              class="btn-primary"
-              [disabled]="!canSubmit()"
-              (click)="submitRDV()">
-              ✅ Confirmer le rendez-vous
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div *ngIf="success()" class="success-box">
-      <div class="success-icon">✅</div>
-
-      <h2>Rendez-vous confirmé !</h2>
-
-      <p>Votre demande a été enregistrée avec succès.</p>
-      <p>Vous recevrez un email de confirmation à l'adresse indiquée.</p>
-
-      <div class="success-details">
-        <p><strong>Date :</strong> {{ formatSelectedDate() }}</p>
-        <p><strong>Heure :</strong> {{ selectedTime() }}</p>
-        <p><strong>Opération :</strong> {{ typeOperation() }} de {{ formatMontant(rdvForm.get('montant')?.value || 0) }}</p>
-        <p><strong>Agence :</strong> {{ rdvForm.get('agence')?.value }}</p>
-
-        <p *ngIf="employeAssigne()">
-          <strong>Conseiller :</strong>
-          {{ employeAssigne()?.prenom }} {{ employeAssigne()?.nom }}
-          - {{ employeAssigne()?.matricule }}
-          - {{ employeAssigne()?.poste }}
-        </p>
+        <button type="button"
+                class="op-card"
+                [class.op-card--active]="typeOperation() === 'RETRAIT'"
+                (click)="setTypeOperation('RETRAIT')">
+          <div class="op-card__icon">↑</div>
+          <div class="op-card__title">RETRAIT</div>
+          <div class="op-card__desc">Retirer des espèces de votre compte</div>
+          <div class="op-card__check">✓ Sélectionné</div>
+        </button>
       </div>
 
-      <p class="redirect-info">Redirection vers le dashboard dans quelques instants...</p>
-    </div>
-  </main>
+      @if (alerteRetraitGros()) {
+        <div class="rule rule--warning">
+          <div class="rule__icon">⚠</div>
+          <div class="rule__text">
+            <strong>Retrait important.</strong>
+            Tout retrait supérieur ou égal à <strong>{{ formatMontant(SEUIL_RETRAIT) }}</strong>
+            nécessite un passage physique au guichet pour vérification d'identité.
+          </div>
+        </div>
+      } @else if (typeOperation() === 'RETRAIT') {
+        <div class="rule rule--info">
+          <div class="rule__icon">ⓘ</div>
+          <div class="rule__text">
+            Les retraits ≥ {{ formatMontant(SEUIL_RETRAIT) }} requièrent un passage au guichet.
+          </div>
+        </div>
+      }
+    </section>
+
+    <section class="block">
+      <div class="block__head">
+        <h2 class="block__title">
+          <span class="block__num">02</span>
+          État des guichets
+        </h2>
+        <button type="button" class="ghost-btn" (click)="rafraichirGuichets()">
+          ↻ Actualiser
+        </button>
+      </div>
+
+      @if (loadingGuichets()) {
+        <div class="loading-strip">
+          <div class="loading-strip__bar"></div>
+          <span>Recherche d'un conseiller disponible…</span>
+        </div>
+      } @else if (errorGuichets()) {
+        <div class="rule rule--error">
+          <div class="rule__icon">✕</div>
+          <div class="rule__text">{{ errorGuichets() }}</div>
+        </div>
+      } @else {
+        <div class="counters">
+          @for (g of guichets(); track g.numero; let i = $index) {
+            <div class="counter"
+                 [class.counter--mine]="g.estLeMien"
+                 [class.counter--busy]="g.occupe"
+                 [style.--i]="i">
+
+              <div class="counter__head">
+                <div class="counter__num">
+                  <span class="counter__num-prefix">N°</span>
+                  <span class="counter__num-value">{{ g.numero.toString().padStart(2, '0') }}</span>
+                </div>
+                <div class="counter__led">
+                  <span class="led-dot"
+                        [class.led-dot--green]="g.estLeMien"
+                        [class.led-dot--red]="g.occupe"></span>
+                  <span class="counter__status">
+                    {{ g.estLeMien ? 'OUVERT' : 'OCCUPÉ' }}
+                  </span>
+                </div>
+              </div>
+
+              @if (g.estLeMien && g.employe) {
+                <div class="counter__body">
+                  <div class="avatar">{{ getInitiales(g) }}</div>
+                  <div class="conseiller">
+                    <div class="conseiller__nom">{{ getNomEmploye(g) }}</div>
+                    <div class="conseiller__poste">
+                      {{ g.employe.poste || 'Conseiller ' + g.typeOperation }}
+                    </div>
+                    @if (g.employe.matricule) {
+                      <div class="conseiller__mat">Matricule · {{ g.employe.matricule }}</div>
+                    }
+                  </div>
+                </div>
+                <div class="counter__call">
+                  → Présentez-vous à ce guichet
+                </div>
+              } @else {
+                <div class="counter__body counter__body--busy">
+                  <div class="busy-anim">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="conseiller">
+                    <div class="conseiller__nom muted">Client en cours</div>
+                    <div class="conseiller__poste muted">Veuillez patienter</div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="block">
+      <h2 class="block__title">
+        <span class="block__num">03</span>
+        Montant de l'opération
+      </h2>
+
+      <form [formGroup]="rdvForm" (ngSubmit)="submitOperation()" class="form">
+
+        <div class="field field--big">
+          <label>
+            Montant à {{ typeOperation() === 'DÉPÔT' ? 'déposer' : 'retirer' }}
+            @if (minMontant() > 0) {
+              <span class="optional">· min. {{ formatMontant(minMontant()) }}</span>
+            }
+          </label>
+          <div class="amount-input">
+            <input type="number" formControlName="montant" step="0.01" min="0.01" placeholder="0.00">
+            <span class="amount-input__currency">€</span>
+          </div>
+          @if (rdvForm.get('montant')?.touched && rdvForm.get('montant')?.invalid) {
+            <p class="err">{{ montantErrorMessage }}</p>
+          }
+        </div>
+
+        <button type="submit" class="cta" [disabled]="!canSubmit()">
+          @if (monGuichet()) {
+            <span class="cta__main">Confirmer mon passage</span>
+            <span class="cta__sub">Guichet {{ monGuichet()!.numero.toString().padStart(2, '0') }} · Ticket {{ ticket() }}</span>
+          } @else {
+            <span class="cta__main">En attente d'un guichet…</span>
+          }
+        </button>
+      </form>
+    </section>
+
+  } @else {
+
+    <section class="success">
+      <div class="success__check">✓</div>
+      <h2 class="success__title">Opération enregistrée</h2>
+      <p class="success__desc">
+        Votre {{ typeOperation() }} de
+        <strong>{{ formatMontant(rdvForm.value.montant ?? 0) }}</strong>
+        a été validé.
+      </p>
+      <div class="success__ticket">
+        <span>Ticket</span>
+        <strong>{{ ticket() }}</strong>
+        <span>·</span>
+        <span>Guichet</span>
+        <strong>{{ monGuichet()?.numero?.toString()?.padStart(2, '0') }}</strong>
+      </div>
+      <p class="success__redirect">Redirection vers le tableau de bord…</p>
+    </section>
+  }
 </div>

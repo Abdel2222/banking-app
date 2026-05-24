@@ -2403,3 +2403,254 @@
     min-width: 680px;
   }
 }
+.rdv-mini-section {
+  margin: 1rem 0;
+}
+
+.rdv-mini-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  .rdv-mini-bank {
+    font-size: 18px;
+  }
+
+  .rdv-mini-h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #fff;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .rdv-mini-loc {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-left: auto;
+  }
+}
+
+.rdv-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rdv-mini-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid;
+  cursor: pointer;
+  text-align: left;
+  color: #fff;
+  transition: all 0.2s ease;
+
+  &:hover:not(.rdv-mini-disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.15);
+  }
+
+  &.rdv-mini-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.rdv-mini-depot {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 140, 0, 0.05));
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.rdv-mini-retrait {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.12), rgba(34, 197, 94, 0.05));
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.rdv-mini-svg {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.rdv-mini-text {
+  flex: 1;
+  min-width: 0;
+
+  .rdv-mini-label {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .rdv-mini-sub {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+  }
+}
+
+.rdv-mini-arrow {
+  font-size: 18px;
+  font-weight: 600;
+
+  &.rdv-arrow-gold { color: #ffd700; }
+  &.rdv-arrow-green { color: #4ade80; }
+}
+.quick-actions {
+  margin: 32px 0;
+}
+
+.quick-actions-header {
+  margin-bottom: 20px;
+
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: -0.02em;
+  }
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.action-card {
+  background: #16161d;
+  border: 1px solid #22222b;
+  border-radius: 20px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  color: #fff;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 180px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, var(--glow, transparent) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #3a3a47;
+    background: #1a1a23;
+
+    &::before { opacity: 0.4; }
+
+    .arrow {
+      background: #fff;
+      color: #0a0a0f;
+      transform: translateX(2px);
+    }
+  }
+}
+
+.icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--icon-bg);
+  color: #fff;
+
+  svg { width: 22px; height: 22px; }
+}
+
+.card-body { flex: 1; }
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.card-subtitle {
+  font-size: 0.85rem;
+  color: #8b8b94;
+  line-height: 1.45;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-meta {
+  font-size: 0.72rem;
+  color: #5d5d68;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.badge {
+  font-size: 0.72rem;
+  background: var(--badge-bg, rgba(74, 222, 128, 0.15));
+  color: var(--badge-color, #4ade80);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #22222b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #fff;
+
+  svg { width: 14px; height: 14px; }
+}
+
+.card-invest {
+  --icon-bg: linear-gradient(135deg, #3b82f6, #6366f1);
+  --glow: rgba(99, 102, 241, 0.15);
+}
+
+.card-placements {
+  --icon-bg: linear-gradient(135deg, #f59e0b, #f97316);
+  --glow: rgba(249, 115, 22, 0.15);
+  --badge-bg: rgba(249, 115, 22, 0.15);
+  --badge-color: #fb923c;
+}
+
+.card-savings {
+  --icon-bg: linear-gradient(135deg, #10b981, #059669);
+  --glow: rgba(16, 185, 129, 0.15);
+}

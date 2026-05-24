@@ -1,5 +1,6 @@
 package com.banking.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,13 +28,13 @@ public class Interet {
     @Column(name = "montant_interet", precision = 19, scale = 4)
     private BigDecimal montantInteret = BigDecimal.ZERO;
 
-    // ✅ Déplacé depuis CompteEpargne
     @Column(name = "date_capitalisation")
     private LocalDate dateCapitalisation;
 
-    // ✅ Relation vers CompteEpargne uniquement
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "compte_epargne_id", nullable = false)
+    @JsonIgnoreProperties({"interets", "operations", "fraisDeGestions",
+            "carteBancaire", "hibernateLazyInitializer"})
     private CompteEpargne compteEpargne;
 
     /* ===================== Constructeurs ===================== */

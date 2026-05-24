@@ -1,6 +1,5 @@
 package com.banking.dto.request;
 
-import com.banking.entity.enums.NiveauRisque;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,50 +21,19 @@ public class CreateFondsRequest {
     @DecimalMin(value = "0.00")
     private BigDecimal rendement;
 
-    @NotNull(message = "Le niveau de risque est obligatoire")
-    private NiveauRisque niveauRisque;
-
-    @NotNull(message = "Le montant minimum est obligatoire")
+    @NotNull(message = "Le montant est obligatoire")
     @DecimalMin(value = "0.00")
-    private BigDecimal montantMinimum;
+    private BigDecimal montant;
 
-    public String getNomFonds() {
-        return nomFonds;
-    }
+    public String getNomFonds() { return nomFonds; }
+    public void setNomFonds(String nomFonds) { this.nomFonds = nomFonds; }
 
-    public void setNomFonds(String nomFonds) {
-        this.nomFonds = nomFonds;
-    }
+    public String getCodeIdentification() { return codeIdentification; }
+    public void setCodeIdentification(String codeIdentification) { this.codeIdentification = codeIdentification; }
 
-    public String getCodeIdentification() {
-        return codeIdentification;
-    }
+    public BigDecimal getRendement() { return rendement; }
+    public void setRendement(BigDecimal rendement) { this.rendement = rendement; }
 
-    public void setCodeIdentification(String codeIdentification) {
-        this.codeIdentification = codeIdentification;
-    }
-
-    public BigDecimal getRendement() {
-        return rendement;
-    }
-
-    public void setRendement(BigDecimal rendement) {
-        this.rendement = rendement;
-    }
-
-    public NiveauRisque getNiveauRisque() {
-        return niveauRisque;
-    }
-
-    public void setNiveauRisque(NiveauRisque niveauRisque) {
-        this.niveauRisque = niveauRisque;
-    }
-
-    public BigDecimal getMontantMinimum() {
-        return montantMinimum;
-    }
-
-    public void setMontantMinimum(BigDecimal montantMinimum) {
-        this.montantMinimum = montantMinimum;
-    }
+    public BigDecimal getMontant() { return montant; }
+    public void setMontant(BigDecimal montant) { this.montant = montant; }
 }

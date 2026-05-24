@@ -1,5 +1,7 @@
 package com.banking.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.banking.entity.enums.AccountStatus;
 import jakarta.persistence.*;
@@ -30,6 +32,7 @@ public class CompteBancaire {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "client_id", nullable = false)
+    @JsonBackReference("client-comptes")  // ✅ coupe la récursion côté enfant
     private Client client;
 
     @Enumerated(EnumType.STRING)
@@ -51,20 +54,20 @@ public class CompteBancaire {
     @Column(name = "updated_at", columnDefinition = "datetime(6)")
     private LocalDateTime updatedAt;
 
-    /* ===================== Relations ===================== */
+    // ===== Relations =====
 
     @OneToOne(mappedBy = "compteBancaire", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private CarteBancaire carteBancaire;
 
     @OneToMany(mappedBy = "compteBancaire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("compte-operations")  // ✅ coupe la récursion côté parent
     private List<Operation> operations = new ArrayList<>();
 
     @OneToMany(mappedBy = "compteBancaire", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("compte-frais")       // ✅ coupe la récursion côté parent
     private List<FraisDeGestion> fraisDeGestions = new ArrayList<>();
 
-    // ❌ interets SUPPRIMÉ — déplacé dans CompteEpargne
-
-    /* ===================== Constructeurs ===================== */
+    // ===== Constructeurs =====
 
     public CompteBancaire(String numCompte, Client client) {
         this.numCompte = Objects.requireNonNull(numCompte, "numCompte");
@@ -86,7 +89,7 @@ public class CompteBancaire {
         return c;
     }
 
-    /* ===================== Règles métier ===================== */
+    // ===== Règles métier =====
 
     public boolean isActive() {
         return this.status == AccountStatus.ACTIVATED;
@@ -112,7 +115,7 @@ public class CompteBancaire {
         this.balance = this.balance.subtract(montant);
     }
 
-    /* ===================== Helpers relations ===================== */
+    // ===== Helpers relations =====
 
     public void attacherCarte(CarteBancaire carte) {
         this.carteBancaire = carte;
@@ -129,15 +132,13 @@ public class CompteBancaire {
         frais.setCompteBancaire(this);
     }
 
-    // ❌ ajouterInteret() SUPPRIMÉ — déplacé dans CompteEpargne
-
-    /* ===================== Getters ===================== */
+    // ===== Getters =====
 
     public BigDecimal getBalance() {
         return balance == null ? BigDecimal.ZERO : balance;
     }
 
-    /* ===================== Hooks JPA ===================== */
+    // ===== Hooks JPA =====
 
     @PrePersist
     protected void onCreate() {
@@ -154,7 +155,7 @@ public class CompteBancaire {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /* ===================== Utils ===================== */
+    // ===== Utils =====
 
     private static void requirePositive(BigDecimal value, String field) {
         if (value == null || value.signum() <= 0)
@@ -168,7 +169,7 @@ public class CompteBancaire {
         return sb.toString();
     }
 
-    /* ===================== JSON helpers ===================== */
+    // ===== JSON helpers =====
 
     @Transient
     @JsonProperty("hasCard")

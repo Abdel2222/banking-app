@@ -7,11 +7,30 @@ import com.banking.dto.response.ChatResponse;
 import java.util.List;
 
 public interface ChatService {
+
+    // ===== CLIENT =====
     ChatResponse create(ChatCreateRequest req);
-    List<ChatResponse> inbox(Long compteId);
-    List<ChatResponse> sent(Long compteId);
-    List<ChatResponse> forAccount(Long compteId);
-    ChatResponse markRead(Long chatId, Long lecteurCompteId);
     ChatResponse reply(Long chatId, ChatReplyRequest req);
+    List<ChatResponse> getAll();
     ChatResponse get(Long chatId);
+
+    /** Historique des messages d'un client donné */
+    List<ChatResponse> getByClient(Long clientId);
+
+    // ===== ADMIN =====
+
+    /** Liste des demandes sensibles en attente de traitement */
+    List<ChatResponse> getPendingForAdmin();
+
+    /** Compteur des demandes en attente (pour le badge) */
+    long countPending();
+
+    /** Admin répond manuellement à une demande */
+    ChatResponse respondAsAdmin(Long chatId, String adminMessage, Long adminId);
+
+    /** Admin marque comme traité sans message particulier */
+    ChatResponse markTreated(Long chatId, Long adminId);
+
+    /** Admin refuse la demande */
+    ChatResponse rejectAsAdmin(Long chatId, String motif, Long adminId);
 }

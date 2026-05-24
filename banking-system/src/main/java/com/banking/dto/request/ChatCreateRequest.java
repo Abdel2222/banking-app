@@ -1,23 +1,32 @@
 package com.banking.dto.request;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
 
 public class ChatCreateRequest {
-    @NotNull private Long compteSourceId;
-    private Long compteDestinataireId; // null => message "support" (public)
-    private Long operationId;          // optionnel, peut rester null
 
-    @NotNull
-    @Size(min = 1, max = 1000)
-    private String content;
+    @NotBlank
+    private String contenu;
 
-    public Long getCompteSourceId() { return compteSourceId; }
-    public void setCompteSourceId(Long compteSourceId) { this.compteSourceId = compteSourceId; }
-    public Long getCompteDestinataireId() { return compteDestinataireId; }
-    public void setCompteDestinataireId(Long compteDestinataireId) { this.compteDestinataireId = compteDestinataireId; }
-    public Long getOperationId() { return operationId; }
-    public void setOperationId(Long operationId) { this.operationId = operationId; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    /** Optionnel : ID du client (sinon récupéré du JWT côté backend) */
+    private Long clientId;
+
+    /** Optionnel : nom du client (pour affichage admin) */
+    private String clientNom;
+
+    /** Optionnel : compte concerné par la demande */
+    private String numCompte;
+
+    public ChatCreateRequest() {}
+
+    public String getContenu() { return contenu; }
+    public void setContenu(String contenu) { this.contenu = contenu; }
+
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
+
+    public String getClientNom() { return clientNom; }
+    public void setClientNom(String clientNom) { this.clientNom = clientNom; }
+
+    public String getNumCompte() { return numCompte; }
+    public void setNumCompte(String numCompte) { this.numCompte = numCompte; }
 }

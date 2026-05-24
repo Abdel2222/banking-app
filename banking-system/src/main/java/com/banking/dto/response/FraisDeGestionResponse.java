@@ -1,14 +1,14 @@
 package com.banking.dto.response;
 
 import com.banking.entities.FraisDeGestion;
+import com.banking.entity.enums.Periodicite;  // ✅ corrigé
+import com.banking.entity.enums.TypeFrais;     // ✅ corrigé
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
-/**
- * DTO pour la réponse d'un frais de gestion
- */
 public class FraisDeGestionResponse {
 
     private Long id;
@@ -16,9 +16,9 @@ public class FraisDeGestionResponse {
     private String description;
     private LocalDate dateDebut;
     private LocalDate dateFin;
-    private FraisDeGestion.TypeFrais typeFrais;
+    private TypeFrais typeFrais;           // ✅ corrigé
     private String typeFraisLibelle;
-    private FraisDeGestion.Periodicite periodicite;
+    private Periodicite periodicite;       // ✅ corrigé
     private Boolean estActif;
     private BigDecimal montantTotalFacture;
     private LocalDate derniereFacturation;
@@ -28,49 +28,60 @@ public class FraisDeGestionResponse {
     // Informations calculées
     private boolean estEchu;
     private boolean estEnCours;
-    private int joursRestants;
+    private long joursRestants;            // ✅ long au lieu de int
     private boolean doitEtreFacture;
     private BigDecimal montantPeriode;
 
-    // Informations client (partielles)
+    // Informations client
     private Long clientId;
     private String clientNom;
     private String clientEmail;
 
-    // Constructeurs
+    // ===== Constructeurs =====
+
     public FraisDeGestionResponse() {}
 
     public FraisDeGestionResponse(FraisDeGestion frais) {
-        this.id = frais.getId();
-        this.montant = frais.getMontant();
-        this.description = frais.getDescription();
-        this.dateDebut = frais.getDateDebut();
-        this.dateFin = frais.getDateFin();
-        this.typeFrais = frais.getTypeFrais();
-        this.typeFraisLibelle = frais.getTypeFrais().getLibelle();
-        this.periodicite = frais.getPeriodicite();
-        this.estActif = frais.getEstActif();
+        this.id                  = frais.getId();
+        this.montant             = frais.getMontant();
+        this.description         = frais.getDescription();
+        this.dateDebut           = frais.getDateDebut();
+        this.dateFin             = frais.getDateFin();
+        this.typeFrais           = frais.getTypeFrais();
+        this.periodicite         = frais.getPeriodicite();
+        this.estActif            = frais.getEstActif();
         this.montantTotalFacture = frais.getMontantTotalFacture();
         this.derniereFacturation = frais.getDerniereFacturation();
-        this.createdAt = frais.getCreatedAt();
-        this.updatedAt = frais.getUpdatedAt();
+        this.createdAt           = frais.getCreatedAt();
+        this.updatedAt           = frais.getUpdatedAt();
 
-        // Informations calculées
-        this.estEchu = frais.estEchu();
-        this.estEnCours = frais.estEnCours();
-        this.joursRestants = frais.joursRestants();
+        // ✅ libelle — calculé ici au lieu d'une méthode inexistante dans l'entité
+        this.typeFraisLibelle = frais.getTypeFrais() != null
+                ? frais.getTypeFrais().name() : null;
+
+        // ✅ Informations calculées — méthodes existantes dans l'entité
+        this.estEchu        = frais.estEchu();
+        this.estEnCours     = frais.estEnCours();
         this.doitEtreFacture = frais.doitEtreFacture();
-        this.montantPeriode = frais.calculerMontantPeriode();
+
+        // ✅ joursRestants — calculé ici (pas de méthode dans l'entité)
+        this.joursRestants = frais.getDateFin() != null
+                ? ChronoUnit.DAYS.between(LocalDate.now(), frais.getDateFin())
+                : 0;
+
+        // ✅ montantPeriode — calculé ici (pas de méthode dans l'entité)
+        this.montantPeriode = frais.getMontant() != null ? frais.getMontant() : BigDecimal.ZERO;
 
         // Informations client
         if (frais.getClient() != null) {
-            this.clientId = frais.getClient().getId();
-            this.clientNom = frais.getClient().getNom() + " " + frais.getClient().getPrenom();
+            this.clientId    = frais.getClient().getId();
+            this.clientNom   = frais.getClient().getNom() + " " + frais.getClient().getPrenom();
             this.clientEmail = frais.getClient().getEmail();
         }
     }
 
-    // Getters et Setters
+    // ===== Getters / Setters =====
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -86,14 +97,14 @@ public class FraisDeGestionResponse {
     public LocalDate getDateFin() { return dateFin; }
     public void setDateFin(LocalDate dateFin) { this.dateFin = dateFin; }
 
-    public FraisDeGestion.TypeFrais getTypeFrais() { return typeFrais; }
-    public void setTypeFrais(FraisDeGestion.TypeFrais typeFrais) { this.typeFrais = typeFrais; }
+    public TypeFrais getTypeFrais() { return typeFrais; }
+    public void setTypeFrais(TypeFrais typeFrais) { this.typeFrais = typeFrais; }
 
     public String getTypeFraisLibelle() { return typeFraisLibelle; }
     public void setTypeFraisLibelle(String typeFraisLibelle) { this.typeFraisLibelle = typeFraisLibelle; }
 
-    public FraisDeGestion.Periodicite getPeriodicite() { return periodicite; }
-    public void setPeriodicite(FraisDeGestion.Periodicite periodicite) { this.periodicite = periodicite; }
+    public Periodicite getPeriodicite() { return periodicite; }
+    public void setPeriodicite(Periodicite periodicite) { this.periodicite = periodicite; }
 
     public Boolean getEstActif() { return estActif; }
     public void setEstActif(Boolean estActif) { this.estActif = estActif; }
@@ -116,8 +127,8 @@ public class FraisDeGestionResponse {
     public boolean isEstEnCours() { return estEnCours; }
     public void setEstEnCours(boolean estEnCours) { this.estEnCours = estEnCours; }
 
-    public int getJoursRestants() { return joursRestants; }
-    public void setJoursRestants(int joursRestants) { this.joursRestants = joursRestants; }
+    public long getJoursRestants() { return joursRestants; }
+    public void setJoursRestants(long joursRestants) { this.joursRestants = joursRestants; }
 
     public boolean isDoitEtreFacture() { return doitEtreFacture; }
     public void setDoitEtreFacture(boolean doitEtreFacture) { this.doitEtreFacture = doitEtreFacture; }

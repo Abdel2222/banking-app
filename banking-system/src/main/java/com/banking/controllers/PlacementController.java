@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -49,6 +50,19 @@ public class PlacementController {
     @PatchMapping("/{placementId}/cloturer")
     public ResponseEntity<PlacementResponse> cloturerPlacement(@PathVariable Long placementId) {
         return ResponseEntity.ok(placementService.cloturerPlacement(placementId));
+    }
+    // Sortie anticipée — frais calculés automatiquement (2%)
+    @PostMapping("/{id}/sortir")
+    public ResponseEntity<PlacementResponse> sortirAvantEcheance(@PathVariable Long id) {
+        return ResponseEntity.ok(placementService.sortirAvantEcheance(id));
+    }
+
+    // Sortie anticipée — frais personnalisés (optionnel)
+    @PostMapping("/{id}/sortir-avec-frais")
+    public ResponseEntity<PlacementResponse> sortirAvecFrais(
+            @PathVariable Long id,
+            @RequestParam BigDecimal frais) {
+        return ResponseEntity.ok(placementService.sortirAvantEcheance(id, frais));
     }
 
     @PatchMapping("/{placementId}/annuler")

@@ -27,11 +27,18 @@ public class SavingsController {
         return ResponseEntity.ok(service.convertirDepuisCompte(numCompte, premierMontant));
     }
 
-    // ✅ Alimenter
     @PostMapping("/{numCompte}/alimenter")
     public ResponseEntity<CompteEpargneResponse> alimenter(
             @PathVariable String numCompte,
             @RequestBody EpargneMontantRequest body) {
+
+        // Virement interne : débiter le source + créditer l'épargne
+        if (body.getNumCompteSource() != null && !body.getNumCompteSource().isBlank()) {
+            return ResponseEntity.ok(
+                    service.alimenterDepuis(numCompte, body.getMontant(), body.getNumCompteSource())
+            );
+        }
+        // Crédit direct sans débit source
         return ResponseEntity.ok(service.alimenter(numCompte, body.getMontant()));
     }
 

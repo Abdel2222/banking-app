@@ -1,16 +1,13 @@
 package com.banking.entities;
 
+import com.banking.entity.enums.Periodicite;
+import com.banking.entity.enums.TypeFrais;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
-
-import static com.banking.entities.FraisDeGestion.TypeFrais.MONTANT_FRAIS_OUVERTURE;
 
 @Entity
 @Table(name = "frais_de_gestion")
@@ -20,150 +17,74 @@ public class FraisDeGestion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "Le montant est obligatoire")
-    @DecimalMin(value = "0.0", message = "Le montant ne peut pas être négatif")
-    @Column(name = "montant", nullable = false, precision = 15, scale = 2)
+    @Column(name = "montant", precision = 19, scale = 4, nullable = false)
     private BigDecimal montant;
 
-    @NotBlank(message = "La description est obligatoire")
-    @Column(name = "description", nullable = false, length = 500)
+    @Column(name = "montant_total_facture", precision = 19, scale = 4)
+    private BigDecimal montantTotalFacture = BigDecimal.ZERO;
+
+    @Column(name = "description")
     private String description;
 
-    @NotNull(message = "La date de début est obligatoire")
     @Column(name = "date_debut", nullable = false)
     private LocalDate dateDebut;
 
-    @NotNull(message = "La date de fin est obligatoire")
-    @Column(name = "date_fin", nullable = false)
+    @Column(name = "date_fin")
     private LocalDate dateFin;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type_frais", nullable = false)
-    private TypeFrais typeFrais;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "periodicite", nullable = false)
-    private Periodicite periodicite = Periodicite.MENSUEL;
-
-    @Column(name = "est_actif", nullable = false)
-    private Boolean estActif = true;
-
-    @Column(name = "montant_total_facture", precision = 15, scale = 2)
-    private BigDecimal montantTotalFacture = BigDecimal.ZERO;
 
     @Column(name = "derniere_facturation")
     private LocalDate derniereFacturation;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "est_actif")
+    private Boolean estActif = true;
+
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /* ===================== Relations ===================== */
+    // ✅ Pas en DB — uniquement utilisés dans le code Java
+    @Transient
+    private TypeFrais typeFrais;
+
+    @Transient
+    private Periodicite periodicite;
+
+    // ===== Relations =====
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
+    @JsonBackReference("client-frais")
     private Client client;
 
-    // ✅ AJOUT — relation vers CompteBancaire
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "compte_bancaire_id", nullable = false)
+    @JoinColumn(name = "compte_bancaire_id")
+    @JsonBackReference("compte-frais")
     private CompteBancaire compteBancaire;
 
-    public void setCompteBancaire(CompteBancaire compteBancaire) {
+    // ===== Constructeurs =====
+
+    public FraisDeGestion() {}
+
+    public FraisDeGestion(BigDecimal montant, LocalDate dateDebut,
+                          Client client, CompteBancaire compte) {
+        this.montant             = montant;
+        this.dateDebut           = dateDebut;
+        this.client              = client;
+        this.compteBancaire      = compte;
+        this.estActif            = true;
+        this.montantTotalFacture = BigDecimal.ZERO;
     }
 
-    /* ===================== Enums internes ===================== */
-
-    public enum TypeFrais {
-        TENUE_COMPTE("Frais de tenue de compte"),
-        CARTE_BANCAIRE("Frais de carte bancaire"),
-        COMMISSION_INTERVENTION("Commission d'intervention"),
-        AGIOS("Agios"),
-        VIREMENT_INTERNATIONAL("Frais de virement international"),
-        ASSURANCE("Assurance"),
-        PACKAGE_BANCAIRE("Package bancaire"),
-        INCIDENT_PAIEMENT("Frais d'incident de paiement"),
-        AUTRE("Autres frais");
-
-        private final String libelle;
-        public static final BigDecimal MONTANT_FRAIS_OUVERTURE = new BigDecimal("2.00");
-
-        TypeFrais(String libelle) {
-            this.libelle = libelle;
-        }
-
-        public String getLibelle() {
-            return libelle;
-        }
-    }
-
-    public enum Periodicite {
-        QUOTIDIEN(1),
-        HEBDOMADAIRE(7),
-        MENSUEL(30),
-        TRIMESTRIEL(90),
-        SEMESTRIEL(180),
-        ANNUEL(365),
-        PONCTUEL(0);
-
-        private final int jours;
-
-        Periodicite(int jours) {
-            this.jours = jours;
-        }
-
-        public int getJours() {
-            return jours;
-        }
-    }
-
-    /* ===================== Constructeurs ===================== */
-
-    public FraisDeGestion() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        this.dateDebut = LocalDate.now();
-        this.estActif = true;
-    }
-
-    public FraisDeGestion(BigDecimal montant, String description, TypeFrais typeFrais,
-                          LocalDate dateFin, Client client, CompteBancaire compteBancaire) {
-        this();
-        this.montant = montant;
-        this.description = description;
-        this.typeFrais = typeFrais;
-        this.dateFin = dateFin;
-        this.client = client;
-        this.compteBancaire = compteBancaire;  // ✅ ajouté
-    }
-
-    /* ===================== Factory ===================== */
-
-    public static FraisDeGestion creerFraisOuverture(Client client, CompteBancaire compte) {
-        FraisDeGestion f = new FraisDeGestion();
-        f.setClient(client);
-        f.setCompteBancaire(compte);                      // ✅ ajouté
-        f.setMontant(MONTANT_FRAIS_OUVERTURE);
-        f.setDescription("Frais d'ouverture de compte");
-        f.setTypeFrais(TypeFrais.TENUE_COMPTE);
-        f.setPeriodicite(Periodicite.PONCTUEL);
-        f.setDateDebut(LocalDate.now());
-        f.setDateFin(LocalDate.now());
-        f.setEstActif(false);
-        f.setMontantTotalFacture(MONTANT_FRAIS_OUVERTURE);
-        f.setDerniereFacturation(LocalDate.now());
-        return f;
-    }
-
-    /* ===================== Hooks JPA ===================== */
+    // ===== Hooks JPA =====
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (dateDebut == null) dateDebut = LocalDate.now();
+        if (estActif            == null) estActif            = true;
+        if (montantTotalFacture == null) montantTotalFacture = BigDecimal.ZERO;
     }
 
     @PreUpdate
@@ -171,189 +92,103 @@ public class FraisDeGestion {
         updatedAt = LocalDateTime.now();
     }
 
-    /* ===================== Méthodes métier ===================== */
-
-    public boolean estEchu() {
-        return LocalDate.now().isAfter(dateFin);
-    }
+    // ===== Méthodes métier =====
 
     public boolean estEnCours() {
-        LocalDate now = LocalDate.now();
-        return !now.isBefore(dateDebut) && !now.isAfter(dateFin) && estActif;
+        LocalDate today = LocalDate.now();
+        return Boolean.TRUE.equals(estActif)
+                && dateDebut != null
+                && !today.isBefore(dateDebut)
+                && (dateFin == null || !today.isAfter(dateFin));
     }
 
-    public int joursRestants() {
-        if (estEchu()) return 0;
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), dateFin);
-    }
-
-    public int dureeEnJours() {
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(dateDebut, dateFin);
-    }
-
-    public BigDecimal calculerMontantPeriode() {
-        if (periodicite == Periodicite.PONCTUEL) return montant;
-        int nombrePeriodes = dureeEnJours() / periodicite.getJours();
-        return montant.multiply(new BigDecimal(nombrePeriodes));
+    public boolean estEchu() {
+        return dateFin != null && LocalDate.now().isAfter(dateFin);
     }
 
     public boolean doitEtreFacture() {
-        if (!estEnCours() || periodicite == Periodicite.PONCTUEL) return false;
-        if (derniereFacturation == null) return true;
-        int jours = (int) java.time.temporal.ChronoUnit.DAYS
-                .between(derniereFacturation, LocalDate.now());
-        return jours >= periodicite.getJours();
+        return Boolean.TRUE.equals(estActif) && !estEchu();
     }
 
     public void facturer() {
-        if (!doitEtreFacture())
-            throw new IllegalStateException("Ces frais ne peuvent pas être facturés maintenant");
-        this.montantTotalFacture = this.montantTotalFacture.add(montant);
+        this.montantTotalFacture = (this.montantTotalFacture == null ? BigDecimal.ZERO : this.montantTotalFacture)
+                .add(this.montant);
         this.derniereFacturation = LocalDate.now();
+    }
+
+    public void reactiver() {
+        this.estActif = true;
     }
 
     public void desactiver() {
         this.estActif = false;
     }
 
-    public void reactiver() {
-        if (!estEchu()) this.estActif = true;
-        else throw new IllegalStateException("Impossible de réactiver des frais échus");
-    }
+    // ===== Getters / Setters =====
 
-    /* ===================== equals / hashCode / toString ===================== */
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public BigDecimal getMontant() { return montant; }
+    public void setMontant(BigDecimal montant) { this.montant = montant; }
+
+    public BigDecimal getMontantTotalFacture() {
+        return montantTotalFacture == null ? BigDecimal.ZERO : montantTotalFacture;
+    }
+    public void setMontantTotalFacture(BigDecimal v) { this.montantTotalFacture = v; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public LocalDate getDateDebut() { return dateDebut; }
+    public void setDateDebut(LocalDate dateDebut) { this.dateDebut = dateDebut; }
+
+    public LocalDate getDateFin() { return dateFin; }
+    public void setDateFin(LocalDate dateFin) { this.dateFin = dateFin; }
+
+    public LocalDate getDerniereFacturation() { return derniereFacturation; }
+    public void setDerniereFacturation(LocalDate v) { this.derniereFacturation = v; }
+
+    public Boolean getEstActif() { return estActif; }
+    public void setEstActif(Boolean estActif) { this.estActif = estActif; }
+
+    public TypeFrais getTypeFrais() { return typeFrais; }
+    public void setTypeFrais(TypeFrais typeFrais) { this.typeFrais = typeFrais; }
+
+    public Periodicite getPeriodicite() { return periodicite; }
+    public void setPeriodicite(Periodicite periodicite) { this.periodicite = periodicite; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime v) { this.createdAt = v; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime v) { this.updatedAt = v; }
+
+    public Client getClient() { return client; }
+    public void setClient(Client client) { this.client = client; }
+
+    public CompteBancaire getCompteBancaire() { return compteBancaire; }
+    public void setCompteBancaire(CompteBancaire c) { this.compteBancaire = c; }
+
+    // ===== toString / equals / hashCode =====
+
+    @Override
+    public String toString() {
+        return "FraisDeGestion{id=" + id +
+                ", montant=" + montant +
+                ", description=" + description +
+                ", estActif=" + estActif + "}";
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof FraisDeGestion)) return false;
-        return Objects.equals(id, ((FraisDeGestion) o).id);
+        if (!(o instanceof FraisDeGestion other)) return false;
+        return id != null && id.equals(other.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return "FraisDeGestion{" +
-                "id=" + id +
-                ", montant=" + montant +
-                ", typeFrais=" + typeFrais.getLibelle() +
-                ", periodicite=" + periodicite +
-                ", dateDebut=" + dateDebut +
-                ", dateFin=" + dateFin +
-                ", estActif=" + estActif +
-                ", estEchu=" + estEchu() +
-                '}';
-    }
-
-    /* ===================== Getters & Setters ===================== */
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public BigDecimal getMontant() {
-        return montant;
-    }
-
-    public void setMontant(BigDecimal montant) {
-        this.montant = montant;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public LocalDate getDateDebut() {
-        return dateDebut;
-    }
-
-    public void setDateDebut(LocalDate dateDebut) {
-        this.dateDebut = dateDebut;
-    }
-
-    public LocalDate getDateFin() {
-        return dateFin;
-    }
-
-    public void setDateFin(LocalDate dateFin) {
-        this.dateFin = dateFin;
-    }
-
-    public TypeFrais getTypeFrais() {
-        return typeFrais;
-    }
-
-    public void setTypeFrais(TypeFrais typeFrais) {
-        this.typeFrais = typeFrais;
-    }
-
-    public Periodicite getPeriodicite() {
-        return periodicite;
-    }
-
-    public void setPeriodicite(Periodicite periodicite) {
-        this.periodicite = periodicite;
-    }
-
-    public Boolean getEstActif() {
-        return estActif;
-    }
-
-    public void setEstActif(Boolean estActif) {
-        this.estActif = estActif;
-    }
-
-    public BigDecimal getMontantTotalFacture() {
-        return montantTotalFacture;
-    }
-
-    public void setMontantTotalFacture(BigDecimal montantTotalFacture) {
-        this.montantTotalFacture = montantTotalFacture;
-    }
-
-    public LocalDate getDerniereFacturation() {
-        return derniereFacturation;
-    }
-
-    public void setDerniereFacturation(LocalDate derniereFacturation) {
-        this.derniereFacturation = derniereFacturation;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Client getClient() {
-        return client;
-    }
-
-    public void setClient(Client client) {
-        this.client = client;
+        return id != null ? id.hashCode() : 0;
     }
 }
-
-    

@@ -221,9 +221,7 @@
         </div>
       </div>
 
-      <!-- ============================================ -->
-      <!-- NOUVEAU : Frais de gestion (sidebar)         -->
-      <!-- ============================================ -->
+      <!-- Frais de gestion (sidebar) -->
       <div class="frais-wrapper-sidebar">
         <button class="frais-btn-sidebar" (click)="toggleFraisPanel()">
           <span class="frais-icon-sidebar">
@@ -280,9 +278,6 @@
           </div>
         </div>
       </div>
-      <!-- ============================================ -->
-      <!-- FIN nouveau bloc                              -->
-      <!-- ============================================ -->
 
     </section>
 
@@ -372,63 +367,82 @@
           </ng-template>
         </div>
 
-        <div class="rdv-actions">
-          <div class="rdv-card depot-card" [class.rdv-disabled]="isSelectedSuspended()">
-            <div class="rdv-icon">
-              <svg class="icon-3d icon-deposit" viewBox="0 0 80 80" fill="none">
+        <!-- ============================================ -->
+        <!-- Notre agence (compact, sans RDV)             -->
+        <!-- ============================================ -->
+        <div class="rdv-mini-section">
+          <div class="rdv-mini-header">
+            <span class="rdv-mini-bank">🏛️</span>
+            <h4 class="rdv-mini-h4">Notre agence</h4>
+            <span class="rdv-mini-loc">Bruxelles — sans rendez-vous</span>
+          </div>
+
+          <div class="rdv-mini-grid">
+
+            <!-- DÉPÔT -->
+            <button class="rdv-mini-card rdv-mini-depot"
+                    [class.rdv-mini-disabled]="isSelectedSuspended()"
+                    (click)="goToRDVDepot()">
+              <svg class="rdv-mini-svg" viewBox="0 0 80 80" fill="none">
                 <defs>
-                  <linearGradient id="bagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="bagGradMini" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#fff89c"/>
                     <stop offset="40%" stop-color="#ffd700"/>
                     <stop offset="100%" stop-color="#ff8c00"/>
                   </linearGradient>
                 </defs>
-                <path d="M 20 30 Q 15 70 40 72 Q 65 70 60 30 Z" fill="url(#bagGrad)" stroke="#fff" stroke-width="1.5"/>
+                <path d="M 20 30 Q 15 70 40 72 Q 65 70 60 30 Z" fill="url(#bagGradMini)" stroke="#fff" stroke-width="1.5"/>
                 <path d="M 24 30 Q 30 24 40 24 Q 50 24 56 30" stroke="#8b4513" stroke-width="3" fill="none"/>
                 <ellipse cx="40" cy="28" rx="14" ry="3" fill="#8b4513"/>
                 <text x="40" y="56" text-anchor="middle" font-size="20" fill="#1a1a2e" font-weight="bold">$</text>
               </svg>
-            </div>
-
-            <h4>Dépôt en espèces</h4>
-            <p>Déposez vos espèces en toute sécurité dans l'une de nos agences à Bruxelles</p>
-            <button class="btn-rdv-primary" (click)="goToRDVDepot()">
-              {{ isSelectedSuspended() ? '🔒 Dépôt bloqué' : '📅 Prendre rendez-vous' }}
+              <div class="rdv-mini-text">
+                <div class="rdv-mini-label">Dépôt en espèces</div>
+                <div class="rdv-mini-sub">
+                  {{ isSelectedSuspended() ? '🔒 Bloqué' : 'Passez quand vous voulez' }}
+                </div>
+              </div>
+              <span class="rdv-mini-arrow rdv-arrow-gold">→</span>
             </button>
-          </div>
 
-          <div class="rdv-card retrait-card" [class.rdv-disabled]="isSelectedSuspended()">
-            <div class="rdv-icon">
-              <svg class="icon-3d icon-withdraw" viewBox="0 0 80 80" fill="none">
+            <!-- RETRAIT -->
+            <button class="rdv-mini-card rdv-mini-retrait"
+                    [class.rdv-mini-disabled]="isSelectedSuspended()"
+                    (click)="goToRDVRetrait()">
+              <svg class="rdv-mini-svg" viewBox="0 0 80 80" fill="none">
                 <defs>
-                  <linearGradient id="billGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="billG1Mini" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#00ff88"/>
                     <stop offset="100%" stop-color="#00ccaa"/>
                   </linearGradient>
-                  <linearGradient id="billGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <linearGradient id="billG3Mini" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="#ffd700"/>
                     <stop offset="100%" stop-color="#ff8c00"/>
                   </linearGradient>
                 </defs>
                 <g transform="rotate(5 40 45)">
-                  <rect x="22" y="34" width="34" height="20" rx="2" fill="url(#billGrad3)" stroke="#fff" stroke-width="1"/>
+                  <rect x="22" y="34" width="34" height="20" rx="2" fill="url(#billG3Mini)" stroke="#fff" stroke-width="1"/>
                   <text x="39" y="48" text-anchor="middle" font-size="8" fill="#1a1a2e" font-weight="bold">€</text>
                 </g>
                 <g transform="rotate(20 50 35)">
-                  <rect x="32" y="22" width="36" height="22" rx="2" fill="url(#billGrad1)" stroke="#fff" stroke-width="1"/>
+                  <rect x="32" y="22" width="36" height="22" rx="2" fill="url(#billG1Mini)" stroke="#fff" stroke-width="1"/>
                   <text x="50" y="37" text-anchor="middle" font-size="10" fill="#1a1a2e" font-weight="bold">€</text>
                 </g>
               </svg>
-            </div>
-
-            <h4>Retrait en espèces</h4>
-            <p>Retirez des espèces à l'agence de votre choix sur rendez-vous (minimum 3000€)</p>
-            <button class="btn-rdv-primary" (click)="goToRDVRetrait()">
-              {{ isSelectedSuspended() ? '🔒 Retrait bloqué' : '📅 Prendre rendez-vous' }}
+              <div class="rdv-mini-text">
+                <div class="rdv-mini-label">Retrait en espèces</div>
+                <div class="rdv-mini-sub">
+                  {{ isSelectedSuspended() ? '🔒 Bloqué' : 'Minimum 3000 €' }}
+                </div>
+              </div>
+              <span class="rdv-mini-arrow rdv-arrow-green">→</span>
             </button>
+
           </div>
         </div>
+        <!-- FIN Notre agence -->
 
+        <!-- VIREMENT -->
         <div class="virement-box">
           <h4>Virement</h4>
           <button class="btn-virement-gold" [class.btn-locked]="isSelectedSuspended()" (click)="goToVirement()">
@@ -442,38 +456,115 @@
           </button>
         </div>
 
-        <div class="virement-box">
-          <h4>Fonds & Placements</h4>
+        <!-- ============================================ -->
+        <!-- ACTIONS RAPIDES — Style Revolut              -->
+        <!-- ============================================ -->
+        <section class="quick-actions">
+          <div class="quick-actions-header">
+            <h2>Actions rapides</h2>
+          </div>
 
-          <button
-            class="btn-virement-gold"
-            [class.btn-locked]="isSelectedSuspended() || !selected()"
-            [disabled]="isSelectedSuspended() || !selected()"
-            (click)="goToInvestments()">
+          <div class="actions-grid">
 
-            <span class="btn-content">
-              <span class="btn-icon btn-icon-left">📈</span>
-              <span class="btn-text">
-                {{ isSelectedSuspended() ? '🔒 Placement bloqué' : 'Investir dans un fonds' }}
-              </span>
-              <span class="btn-icon btn-icon-right">💎</span>
-            </span>
-          </button>
+            <!-- INVESTIR -->
+            <button
+              type="button"
+              class="action-card card-invest"
+              [disabled]="isSelectedSuspended() || !selected()"
+              [class.action-disabled]="isSelectedSuspended() || !selected()"
+              (click)="goToInvestments()">
 
-          <button
-            class="btn-virement-gold mt"
-            [class.btn-locked]="!selected()"
-            [disabled]="!selected()"
-            (click)="goToInvestmentsHistory()">
+              <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 17l6-6 4 4 8-8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14 7h7v7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
 
-            <span class="btn-content">
-              <span class="btn-icon btn-icon-left">📊</span>
-              <span class="btn-text">Voir mes placements</span>
-              <span class="btn-icon btn-icon-right">🏦</span>
-            </span>
-          </button>
-        </div>
-<div class="frais-section" *ngIf="showFraisPanel()">
+              <div class="card-body">
+                <div class="card-title">
+                  {{ isSelectedSuspended() ? '🔒 Investir bloqué' : 'Investir' }}
+                </div>
+                <div class="card-subtitle">Place ton argent dans nos fonds.</div>
+              </div>
+
+              <div class="card-footer">
+                <span class="card-meta">22 fonds dispo</span>
+                <span class="arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </button>
+
+            <!-- VOIR MES PLACEMENTS -->
+            <button
+              type="button"
+              class="action-card card-placements"
+              [disabled]="!selected()"
+              [class.action-disabled]="!selected()"
+              (click)="goToInvestmentsHistory()">
+
+              <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="12" width="4" height="8" rx="1" stroke-linejoin="round"/>
+                  <rect x="10" y="6" width="4" height="14" rx="1" stroke-linejoin="round"/>
+                  <rect x="17" y="9" width="4" height="11" rx="1" stroke-linejoin="round"/>
+                </svg>
+              </div>
+
+              <div class="card-body">
+                <div class="card-title">Mes placements</div>
+                <div class="card-subtitle">Suis l'évolution de ton portefeuille.</div>
+              </div>
+
+              <div class="card-footer">
+                <span class="badge">Performance</span>
+                <span class="arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </button>
+
+            <!-- ÉPARGNE -->
+            <button
+              type="button"
+              class="action-card card-savings"
+              [disabled]="!selected()"
+              [class.action-disabled]="!selected()"
+              (click)="goToSavings()">
+
+              <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 5H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z" stroke-linejoin="round"/>
+                  <circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+                  <path d="M3 10h18" stroke-linejoin="round"/>
+                </svg>
+              </div>
+
+              <div class="card-body">
+                <div class="card-title">Épargne & intérêts</div>
+                <div class="card-subtitle">Fais grossir ton capital chaque mois.</div>
+              </div>
+
+              <div class="card-footer">
+                <span class="card-meta">3,5 % / an</span>
+                <span class="arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </button>
+
+          </div>
+        </section>
+        <!-- FIN Actions rapides -->
+
+        <div class="frais-section" *ngIf="showFraisPanel()">
           <div class="frais-header">
             <h4 class="frais-title">
               <span class="frais-title-icon-wrapper">
@@ -493,44 +584,45 @@
               </button>
             </div>
           </div>
-<div class="frais-table-wrapper" *ngIf="frais()?.length; else noFrais">
-  <table class="frais-table-client">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Montant</th>
-        <th>Périodicité</th>
-        <th>Période</th>
-      </tr>
-    </thead>
 
-    <tbody>
-      <tr *ngFor="let f of frais()">
-        <td>
-          <span class="frais-type-badge">
-            {{ f.typeFraisLibelle || f.typeFrais }}
-          </span>
-        </td>
+          <div class="frais-table-wrapper" *ngIf="frais()?.length; else noFrais">
+            <table class="frais-table-client">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th>Montant</th>
+                  <th>Périodicité</th>
+                  <th>Période</th>
+                </tr>
+              </thead>
 
-        <td>{{ f.description }}</td>
+              <tbody>
+                <tr *ngFor="let f of frais()">
+                  <td>
+                    <span class="frais-type-badge">
+                      {{ f.typeFraisLibelle || f.typeFrais }}
+                    </span>
+                  </td>
 
-        <td class="frais-amount-cell">
-          -{{ f.montant | money }}
-        </td>
+                  <td>{{ f.description }}</td>
 
-        <td>{{ f.periodicite }}</td>
+                  <td class="frais-amount-cell">
+                    -{{ f.montant | money }}
+                  </td>
 
-        <td>
-          <span *ngIf="f.dateDebut && f.dateFin; else noPeriod">
-            {{ f.dateDebut | date:'dd/MM/yyyy' }} → {{ f.dateFin | date:'dd/MM/yyyy' }}
-          </span>
-          <ng-template #noPeriod>-</ng-template>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+                  <td>{{ f.periodicite }}</td>
+
+                  <td>
+                    <span *ngIf="f.dateDebut && f.dateFin; else noPeriod">
+                      {{ f.dateDebut | date:'dd/MM/yyyy' }} → {{ f.dateFin | date:'dd/MM/yyyy' }}
+                    </span>
+                    <ng-template #noPeriod>-</ng-template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <ng-template #noFrais>
             <div class="frais-empty">

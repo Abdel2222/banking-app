@@ -55,6 +55,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   unreadCount = computed(() => this.notificationService.getUnreadCount());
   showNotifications = signal(false);
 
+  // === SIGNAL pour le panneau frais ===
+  showFraisPanel = signal<boolean>(false);
+
   fraisForm = this.fb.group({
     montant: [2.89, [Validators.required, Validators.min(0)]],
     description: ['Frais de gestion mensuel', Validators.required],
@@ -246,89 +249,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  /** Nouveau helper pour récupérer le clientId depuis le JWT */
+  /** Helper pour récupérer le clientId depuis le JWT */
   private getClientId(): number | string | null {
-    const user: any = this.auth.currentUser();
+  // ✅ AuthService expose déjà clientIdFromToken qui lit le sub du JWT
+  const idFromToken = this.auth.clientIdFromToken;
+  if (idFromToken) return idFromToken;
 
-    console.log('[DASHBOARD] currentUser =', user);
+  // Fallback : lire sub manuellement
+  const user: any = this.auth.currentUser();
+  console.log('[getClientId] user JWT =', user);
 
-    return (
-      user?.clientId ??
-      user?.idClient ??
-      user?.client?.id ??
-      user?.id ??
-      null
-    );
+  const sub = user?.sub;
+  if (sub) {
+    const n = Number(sub);
+    return isNaN(n) ? sub : n;
   }
 
-  /** FRAIS — corrigé pour utiliser un vrai clientId */
- private loadFrais() {
-  const clientId = this.getClientId();
-
-  console.log('[FRAIS] clientId utilisé =', clientId);
-
-  if (!clientId) {
-    console.warn('[FRAIS] Aucun clientId trouvé, injection mock');
-    this.frais.set([
-      {
-        id: 1,
-        typeFrais: 'TENUE_COMPTE',
-        typeFraisLibelle: 'Tenue de compte',
-        description: 'Frais de gestion mensuel',
-        montant: 2.89,
-        periodicite: 'MENSUEL',
-        dateDebut: '2026-05-01',
-        dateFin: '2026-05-31',
-        estActif: true
-      }
-    ]);
-    return;
-  }
-
-  this.http.get<any>(`${this.API_BASE}/frais/client/${clientId}`).pipe(
-    takeUntil(this.destroy$)
-  ).subscribe({
-    next: (data) => {
-      console.log('[FRAIS] réponse backend =', data);
-      const fraisList = Array.isArray(data) ? data : (data?.data ?? []);
-
-      if (Array.isArray(fraisList) && fraisList.length > 0) {
-        this.frais.set(fraisList);
-      } else {
-        console.warn('[FRAIS] API vide, injection mock visuel');
-        this.frais.set([
-          {
-            id: 1,
-            typeFrais: 'TENUE_COMPTE',
-            typeFraisLibelle: 'Tenue de compte',
-            description: 'Frais de gestion mensuel',
-            montant: 2.89,
-            periodicite: 'MENSUEL',
-            dateDebut: '2026-05-01',
-            dateFin: '2026-05-31',
-            estActif: true
-          }
-        ]);
-      }
-    },
-    error: (e) => {
-      console.error('[FRAIS] erreur =', e);
-      this.frais.set([
-        {
-          id: 1,
-          typeFrais: 'TENUE_COMPTE',
-          typeFraisLibelle: 'Tenue de compte',
-          description: 'Frais de gestion mensuel',
-          montant: 2.89,
-          periodicite: 'MENSUEL',
-          dateDebut: '2026-05-01',
-          dateFin: '2026-05-31',
-          estActif: true
-        }
-      ]);
-    }
-  });
+  return null;
 }
+
+  /** FRAIS */
+  private loadFrais() {
+    const clientId = this.getClientId();
+
+    console.log('[FRAIS] clientId utilisé =', clientId);
+
+    if (!clientId) {
+      console.error('[FRAIS] Aucun clientId trouvé');
+      this.frais.set([]);
+      return;
+    }
+
+    this.http.get<any>(`${this.API_BASE}/frais/client/${clientId}`).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        console.log('[FRAIS] réponse backend =', data);
+        const fraisList = Array.isArray(data) ? data : (data?.data ?? []);
+        console.log('[FRAIS] fraisList =', fraisList);
+        this.frais.set(fraisList);
+      },
+      error: (e) => {
+        console.error('[FRAIS] erreur =', e);
+        this.frais.set([]);
+      }
+    });
+  }
+
   private loadSavings(numCompte: string) {
     const sel = this.selected();
     const isEpargne = sel?.intitule?.toLowerCase().includes('épargne');
@@ -495,7 +462,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.showFraisModal.set(false);
   }
 
-  /** submitFrais corrigé pour utiliser getClientId() */
   submitFrais() {
     const clientId = this.getClientId();
 
@@ -631,6 +597,77 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** ✨ NOUVEAU: aller vers la page épargne dédiée */
+  goToSavings() {
+    const clientId = this.getClientId();
+    if (!clientId) {
+      this.error.set('Impossible de récupérer votre identifiant client');
+      return;
+    }
+
+    // Cherche tous les comptes du client côté backend pour trouver l'épargne
+    this.http.get<any>(`${this.API_BASE}/comptes/client/${clientId}`).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        // La réponse peut être un objet unique ou un tableau
+        const comptes = Array.isArray(response) ? response : [response];
+
+        const epargne = comptes.find((c: any) =>
+          c?.savingsAccount === true ||
+          c?.intitule?.toLowerCase().includes('épargne')
+        );
+
+        // Essai sur la liste accounts() en plus
+        const epargneLocal = this.accounts().find(a =>
+          a.savingsAccount === true ||
+          a.intitule?.toLowerCase().includes('épargne')
+        );
+
+        const cible = epargne || epargneLocal;
+
+        if (!cible) {
+          const ok = confirm(
+            '💡 Vous n\'avez pas encore de compte épargne.\n\n' +
+            'Voulez-vous en créer un maintenant ?'
+          );
+          if (!ok) return;
+
+          const compteBase = this.selected() || this.accounts()[0];
+          if (!compteBase) {
+            alert('❌ Aucun compte trouvé pour créer une épargne');
+            return;
+          }
+
+          this.router.navigate(['/epargne'], {
+            queryParams: { mode: 'create', from: compteBase.numCompte }
+          });
+          return;
+        }
+
+        this.router.navigate(['/epargne'], {
+          queryParams: { numCompte: cible.numCompte }
+        });
+      },
+      error: (e) => {
+        console.error('Erreur récup comptes pour épargne:', e);
+        // Fallback: cherche dans accounts() seulement
+        const epargne = this.accounts().find(a =>
+          a.savingsAccount === true ||
+          a.intitule?.toLowerCase().includes('épargne')
+        );
+
+        if (epargne) {
+          this.router.navigate(['/epargne'], {
+            queryParams: { numCompte: epargne.numCompte }
+          });
+        } else {
+          this.error.set('Aucun compte épargne trouvé');
+        }
+      }
+    });
+  }
+
   toggleNotifications() {
     this.showNotifications.update(v => !v);
   }
@@ -646,7 +683,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   toggleCard() {
     if (!this.isAdmin()) {
-      alert('⛔ Action réservée à l’administrateur.');
+      alert('⛔ Action réservée à l\'administrateur.');
       return;
     }
 
@@ -759,10 +796,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.notificationService.notifications.set(updated);
   }
 
-  // === SIGNAL pour le panneau frais ===
-  showFraisPanel = signal<boolean>(false);
-
-  // === Méthodes ===
   toggleFraisPanel() {
     this.showFraisPanel.update(v => !v);
     if (this.showFraisPanel()) {

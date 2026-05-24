@@ -4,6 +4,8 @@ import com.banking.entities.Client;
 import com.banking.entities.CompteBancaire;
 import com.banking.entities.FraisDeGestion;
 import com.banking.entities.Operation;
+import com.banking.entity.enums.Periodicite;
+import com.banking.entity.enums.TypeFrais;
 import com.banking.entity.enums.TypeOperation;
 import com.banking.exceptions.BusinessException;
 import com.banking.exceptions.ResourceNotFoundException;
@@ -31,31 +33,22 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
 
     private static final Logger logger = LoggerFactory.getLogger(FraisDeGestionServiceImpl.class);
 
-    @Autowired
-    private FraisDeGestionRepository fraisRepository;
+    @Autowired private FraisDeGestionRepository fraisRepository;
+    @Autowired private ClientService            clientService;
+    @Autowired private OperationRepository      operationRepository;
+    @Autowired private CompteBancaireRepository compteBancaireRepository;
 
-    @Autowired
-    private ClientService clientService;
-
-    @Autowired
-    private OperationRepository operationRepository;
-
-    @Autowired
-    private CompteBancaireRepository compteBancaireRepository;
+    // ===================== CRUD =====================
 
     @Override
     public FraisDeGestion creerFrais(FraisDeGestion frais) {
-        logger.info("Création d'un nouveau frais de gestion pour le client ID: {}",
+        logger.info("Création frais client ID: {}",
                 frais.getClient() != null ? frais.getClient().getId() : null);
-
         validerFrais(frais);
-
-        if (verifierDoublon(frais)) {
+        if (verifierDoublon(frais))
             throw new BusinessException("Un frais de ce type existe déjà pour cette période");
-        }
-
         FraisDeGestion fraisCree = fraisRepository.save(frais);
-        logger.info("Frais créé avec succès, ID: {}", fraisCree.getId());
+        logger.info("Frais créé ID: {}", fraisCree.getId());
         return fraisCree;
     }
 
@@ -63,7 +56,7 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     @Transactional(readOnly = true)
     public FraisDeGestion obtenirFrais(Long id) {
         return fraisRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Frais non trouvé avec l'ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Frais non trouvé ID: " + id));
     }
 
     @Override
@@ -74,205 +67,121 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
 
     @Override
     public FraisDeGestion mettreAJourFrais(Long id, FraisDeGestion fraisModifie) {
-        logger.info("Mise à jour du frais ID: {}", id);
-
         FraisDeGestion fraisExistant = obtenirFrais(id);
-
-        if (fraisModifie.getMontant() != null) {
-            fraisExistant.setMontant(fraisModifie.getMontant());
-        }
-        if (fraisModifie.getDescription() != null) {
-            fraisExistant.setDescription(fraisModifie.getDescription());
-        }
-        if (fraisModifie.getDateFin() != null) {
-            fraisExistant.setDateFin(fraisModifie.getDateFin());
-        }
-        if (fraisModifie.getPeriodicite() != null) {
-            fraisExistant.setPeriodicite(fraisModifie.getPeriodicite());
-        }
-
+        if (fraisModifie.getMontant()     != null) fraisExistant.setMontant(fraisModifie.getMontant());
+        if (fraisModifie.getDescription() != null) fraisExistant.setDescription(fraisModifie.getDescription());
+        if (fraisModifie.getDateFin()     != null) fraisExistant.setDateFin(fraisModifie.getDateFin());
+        if (fraisModifie.getPeriodicite() != null) fraisExistant.setPeriodicite(fraisModifie.getPeriodicite());
         validerFrais(fraisExistant);
-
-        FraisDeGestion fraisMisAJour = fraisRepository.save(fraisExistant);
-        logger.info("Frais mis à jour avec succès");
-        return fraisMisAJour;
+        return fraisRepository.save(fraisExistant);
     }
 
     @Override
     public void supprimerFrais(Long id) {
-        logger.info("Suppression du frais ID: {}", id);
-
         FraisDeGestion frais = obtenirFrais(id);
-
-        if (frais.getMontantTotalFacture().compareTo(BigDecimal.ZERO) > 0) {
-            throw new BusinessException("Impossible de supprimer un frais déjà facturé. Désactivez-le plutôt.");
-        }
-
+        if (frais.getMontantTotalFacture().compareTo(BigDecimal.ZERO) > 0)
+            throw new BusinessException("Impossible de supprimer un frais déjà facturé.");
         fraisRepository.delete(frais);
-        logger.info("Frais supprimé avec succès");
     }
+
+    // ===================== Frais par client =====================
 
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> obtenirFraisClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-        return fraisRepository.findByClient(client);
+        return fraisRepository.findByClient(getClientOrThrow(clientId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> obtenirFraisActifsClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-        return fraisRepository.findByClient(client).stream()
-                .filter(FraisDeGestion::getEstActif)
-                .toList();
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
+                .filter(FraisDeGestion::getEstActif).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> obtenirFraisEnCoursClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-        return fraisRepository.findByClient(client).stream()
-                .filter(FraisDeGestion::estEnCours)
-                .toList();
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
+                .filter(FraisDeGestion::estEnCours).toList();
     }
 
     @Override
     public FraisDeGestion creerFraisClient(Long clientId, FraisDeGestion frais) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-        frais.setClient(client);
+        frais.setClient(getClientOrThrow(clientId));
         return creerFrais(frais);
     }
+
+    // ===================== Facturation =====================
 
     @Override
     public List<FraisDeGestion> obtenirFraisAFacturer() {
         return fraisRepository.findAll().stream()
-                .filter(FraisDeGestion::doitEtreFacture)
-                .toList();
+                .filter(FraisDeGestion::doitEtreFacture).toList();
     }
 
     @Override
     public void facturerFrais(Long fraisId) {
-        logger.info("Facturation du frais ID: {}", fraisId);
-
         FraisDeGestion frais = obtenirFrais(fraisId);
-
-        if (!frais.doitEtreFacture()) {
+        if (!frais.doitEtreFacture())
             throw new BusinessException("Ce frais ne peut pas être facturé maintenant");
-        }
-
         debiterCompteClientPourFrais(frais);
-
         frais.facturer();
         fraisRepository.save(frais);
-
-        logger.info("Frais facturé avec succès. Montant: {}", frais.getMontant());
+        logger.info("Frais {} facturé. Montant: {}", fraisId, frais.getMontant());
     }
 
     @Override
     public void facturerFraisClient(Long clientId) {
-        logger.info("Facturation de tous les frais du client ID: {}", clientId);
-
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-
-        List<FraisDeGestion> fraisAFacturer = fraisRepository.findByClient(client).stream()
+        fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
                 .filter(FraisDeGestion::doitEtreFacture)
-                .toList();
-
-        BigDecimal montantTotal = BigDecimal.ZERO;
-        int nombreFacturations = 0;
-
-        for (FraisDeGestion frais : fraisAFacturer) {
-            try {
-                facturerFrais(frais.getId());
-                montantTotal = montantTotal.add(frais.getMontant());
-                nombreFacturations++;
-            } catch (Exception e) {
-                logger.error("Erreur lors de la facturation du frais ID: {}", frais.getId(), e);
-            }
-        }
-
-        logger.info("Facturation terminée pour le client {}. {} frais facturés pour un montant total de {}",
-                clientId, nombreFacturations, montantTotal);
+                .forEach(frais -> {
+                    try { facturerFrais(frais.getId()); }
+                    catch (Exception e) { logger.error("Erreur facturation frais {}", frais.getId(), e); }
+                });
     }
 
     @Override
     @Scheduled(cron = "0 0 6 * * *")
     public void facturationAutomatique() {
-        logger.info("Début de la facturation automatique");
-
-        List<FraisDeGestion> fraisAFacturer = obtenirFraisAFacturer();
-
-        BigDecimal montantTotal = BigDecimal.ZERO;
-        int nombreFacturations = 0;
-        int nombreEchecs = 0;
-
-        for (FraisDeGestion frais : fraisAFacturer) {
-            try {
-                facturerFrais(frais.getId());
-                montantTotal = montantTotal.add(frais.getMontant());
-                nombreFacturations++;
-            } catch (Exception e) {
-                logger.error("Erreur lors de la facturation automatique du frais ID: {}", frais.getId(), e);
-                nombreEchecs++;
-            }
-        }
-
-        logger.info("Facturation automatique terminée. {} succès, {} échecs, montant total: {}",
-                nombreFacturations, nombreEchecs, montantTotal);
+        logger.info("Facturation automatique démarrée");
+        obtenirFraisAFacturer().forEach(f -> {
+            try { facturerFrais(f.getId()); }
+            catch (Exception e) { logger.error("Echec frais {}", f.getId(), e); }
+        });
     }
+
+    // ===================== Activation =====================
 
     @Override
     public void activerFrais(Long fraisId) {
-        logger.info("Activation du frais ID: {}", fraisId);
         FraisDeGestion frais = obtenirFrais(fraisId);
         frais.reactiver();
         fraisRepository.save(frais);
-        logger.info("Frais activé avec succès");
     }
 
     @Override
     public void desactiverFrais(Long fraisId) {
-        logger.info("Désactivation du frais ID: {}", fraisId);
         FraisDeGestion frais = obtenirFrais(fraisId);
         frais.desactiver();
         fraisRepository.save(frais);
-        logger.info("Frais désactivé avec succès");
     }
 
     @Override
     @Scheduled(cron = "0 30 6 * * *")
     public void desactiverFraisExpires() {
-        logger.info("Désactivation automatique des frais expirés");
-
-        List<FraisDeGestion> fraisExpires = fraisRepository.findAll().stream()
+        fraisRepository.findAll().stream()
                 .filter(f -> f.getEstActif() && f.estEchu())
-                .toList();
-
-        int nombreDesactives = 0;
-        for (FraisDeGestion frais : fraisExpires) {
-            frais.desactiver();
-            fraisRepository.save(frais);
-            nombreDesactives++;
-        }
-
-        logger.info("{} frais expirés ont été désactivés automatiquement", nombreDesactives);
+                .forEach(f -> { f.desactiver(); fraisRepository.save(f); });
     }
+
+    // ===================== Calculs =====================
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calculerMontantTotalActifClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-
-        return fraisRepository.findByClient(client).stream()
-                .filter(FraisDeGestion::getEstActif)
-                .filter(FraisDeGestion::estEnCours)
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
+                .filter(f -> f.getEstActif() && f.estEnCours())
                 .map(FraisDeGestion::getMontant)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -280,10 +189,7 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calculerMontantTotalFactureClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-
-        return fraisRepository.findByClient(client).stream()
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
                 .map(FraisDeGestion::getMontantTotalFacture)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -291,43 +197,38 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
     @Override
     @Transactional(readOnly = true)
     public Long compterFraisActifsClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-
-        return fraisRepository.findByClient(client).stream()
-                .filter(FraisDeGestion::getEstActif)
-                .count();
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
+                .filter(FraisDeGestion::getEstActif).count();
     }
+
+    // ===================== Recherche =====================
 
     @Override
     @Transactional(readOnly = true)
-    public List<FraisDeGestion> rechercherFrais(FraisDeGestion.TypeFrais typeFrais,
-                                                FraisDeGestion.Periodicite periodicite,
+    public List<FraisDeGestion> rechercherFrais(TypeFrais typeFrais,
+                                                Periodicite periodicite,
                                                 Boolean estActif,
                                                 LocalDate dateDebut,
                                                 LocalDate dateFin) {
-        List<FraisDeGestion> resultats = fraisRepository.findAll();
-
-        return resultats.stream()
-                .filter(f -> typeFrais == null || f.getTypeFrais().equals(typeFrais))
-                .filter(f -> periodicite == null || f.getPeriodicite().equals(periodicite))
-                .filter(f -> estActif == null || f.getEstActif().equals(estActif))
-                .filter(f -> dateDebut == null || !f.getDateDebut().isBefore(dateDebut))
-                .filter(f -> dateFin == null || !f.getDateFin().isAfter(dateFin))
+        return fraisRepository.findAll().stream()
+                .filter(f -> typeFrais   == null || typeFrais.equals(f.getTypeFrais()))
+                .filter(f -> periodicite == null || periodicite.equals(f.getPeriodicite()))
+                .filter(f -> estActif    == null || estActif.equals(f.getEstActif()))
+                .filter(f -> dateDebut   == null || !f.getDateDebut().isBefore(dateDebut))
+                .filter(f -> dateFin     == null || f.getDateFin() == null || !f.getDateFin().isAfter(dateFin))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FraisDeGestion> obtenirHistoriqueFacturationClient(Long clientId) {
-        Client client = clientService.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé avec l'ID: " + clientId));
-
-        return fraisRepository.findByClient(client).stream()
+        return fraisRepository.findByClient(getClientOrThrow(clientId)).stream()
                 .filter(f -> f.getDerniereFacturation() != null)
                 .sorted(Comparator.comparing(FraisDeGestion::getDerniereFacturation).reversed())
                 .toList();
     }
+
+    // ===================== Frais ouverture =====================
 
     @Override
     public void appliquerFraisOuverture(String numCompte) {
@@ -335,16 +236,15 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
         final String COMMENT = "FRAIS_OUVERTURE_COMPTE";
 
         if (operationRepository.countByCompteBancaire_NumCompteAndCommentaire(numCompte, COMMENT) > 0) {
-            logger.info("Frais d'ouverture déjà appliqué pour {}", numCompte);
+            logger.info("Frais ouverture déjà appliqué pour {}", numCompte);
             return;
         }
 
         CompteBancaire compte = compteBancaireRepository.findByNumCompte(numCompte)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte introuvable: " + numCompte));
 
-        BigDecimal balance = compte.getBalance() == null ? BigDecimal.ZERO : compte.getBalance();
-        if (balance.compareTo(new BigDecimal("20.00")) < 0) {
-            logger.info("Frais d'ouverture non appliqué (solde < 20€) pour {}", numCompte);
+        if (compte.getBalance().compareTo(new BigDecimal("20.00")) < 0) {
+            logger.info("Solde insuffisant pour frais ouverture sur {}", numCompte);
             return;
         }
 
@@ -366,8 +266,8 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
             fg.setClient(compte.getClient());
             fg.setMontant(FEE);
             fg.setDescription("Frais d'ouverture de compte");
-            fg.setTypeFrais(FraisDeGestion.TypeFrais.TENUE_COMPTE);
-            fg.setPeriodicite(FraisDeGestion.Periodicite.PONCTUEL);
+            fg.setTypeFrais(TypeFrais.TENUE_COMPTE);
+            fg.setPeriodicite(Periodicite.PONCTUELLE);
             fg.setDateDebut(LocalDate.now());
             fg.setDateFin(LocalDate.now());
             fg.setEstActif(false);
@@ -375,53 +275,54 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
             fg.setDerniereFacturation(LocalDate.now());
             fraisRepository.save(fg);
         } catch (Exception e) {
-            logger.warn("Trace frais_de_gestion non créée (non bloquant): {}", e.getMessage());
+            logger.warn("Trace frais_de_gestion non créée: {}", e.getMessage());
         }
 
-        logger.info("Frais d'ouverture appliqué sur {}", numCompte);
+        logger.info("Frais ouverture appliqué sur {}", numCompte);
+    }
+
+    // ===================== Helpers privés =====================
+
+    private Client getClientOrThrow(Long clientId) {
+        return clientService.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé ID: " + clientId));
     }
 
     private void validerFrais(FraisDeGestion frais) {
-        if (frais.getDateDebut().isAfter(frais.getDateFin())) {
-            throw new BusinessException("La date de début ne peut pas être postérieure à la date de fin");
-        }
-        if (frais.getMontant().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Le montant doit être positif");
-        }
-        if (frais.getClient() == null) {
+        if (frais.getClient() == null)
             throw new BusinessException("Le client est obligatoire");
-        }
+        if (frais.getMontant() == null || frais.getMontant().compareTo(BigDecimal.ZERO) <= 0)
+            throw new BusinessException("Le montant doit être positif");
+        if (frais.getDateDebut() != null && frais.getDateFin() != null
+                && frais.getDateDebut().isAfter(frais.getDateFin()))
+            throw new BusinessException("La date de début ne peut pas être postérieure à la date de fin");
     }
 
     private boolean verifierDoublon(FraisDeGestion frais) {
-        if (frais.getTypeFrais() == FraisDeGestion.TypeFrais.TENUE_COMPTE
-                || frais.getTypeFrais() == FraisDeGestion.TypeFrais.CARTE_BANCAIRE) {
-            List<FraisDeGestion> existants = fraisRepository
-                    .findByClientAndTypeFrais(frais.getClient(), frais.getTypeFrais()).stream()
+        TypeFrais type = frais.getTypeFrais();
+        if (type == TypeFrais.TENUE_COMPTE || type == TypeFrais.CARTE_BANCAIRE) {
+            // ✅ Filtre Java stream — findByClientAndTypeFrais supprimé du repository
+            return fraisRepository.findByClient(frais.getClient()).stream()
+                    .filter(f -> type.equals(f.getTypeFrais()))
                     .filter(FraisDeGestion::getEstActif)
-                    .toList();
-            return existants.stream().anyMatch(f -> periodesSeRecoupent(f, frais));
+                    .anyMatch(f -> periodesSeRecoupent(f, frais));
         }
         return false;
     }
 
     private boolean periodesSeRecoupent(FraisDeGestion a, FraisDeGestion b) {
+        if (a.getDateFin() == null || b.getDateFin() == null) return true;
         return !a.getDateFin().isBefore(b.getDateDebut()) &&
                 !b.getDateFin().isBefore(a.getDateDebut());
     }
 
     private void debiterCompteClientPourFrais(FraisDeGestion frais) {
         Client client = frais.getClient();
-        if (client == null || client.getComptes() == null || client.getComptes().isEmpty()) {
+        if (client == null || client.getComptes().isEmpty())
             throw new BusinessException("Aucun compte trouvé pour le client");
-        }
 
         CompteBancaire compte = client.getComptes().get(0);
-
         BigDecimal montant = frais.getMontant();
-        if (montant == null || montant.signum() <= 0) {
-            throw new BusinessException("Montant de frais invalide");
-        }
 
         compte.debiter(montant);
 
@@ -431,8 +332,7 @@ public class FraisDeGestionServiceImpl implements FraisDeGestionService {
         op.setTypeOperation(TypeOperation.FRAIS);
         op.setMontant(montant.negate());
         op.setDescription("Frais: " + (frais.getDescription() != null
-                ? frais.getDescription()
-                : String.valueOf(frais.getTypeFrais())));
+                ? frais.getDescription() : String.valueOf(frais.getTypeFrais())));
         op.setCommentaire("FACTURATION_FRAIS");
         op.setDateOperation(LocalDateTime.now());
 

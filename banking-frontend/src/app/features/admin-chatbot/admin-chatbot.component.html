@@ -1,213 +1,228 @@
-<div class="chatbot-monitor">
-  <!-- Loading indicator -->
-  <div class="loading-overlay" *ngIf="loading()">
-    <div class="spinner"></div>
-    <span>Chargement des données...</span>
-  </div>
+<div class="admin-chat-queue">
 
-  <!-- Header avec stats améliorées -->
-  <div class="monitor-header">
+  <!-- ===== HEADER ===== -->
+  <div class="queue-header">
     <div class="header-top">
-      <h3>🤖 Supervision Chatbot</h3>
-      <div class="header-actions">
-        <button (click)="refreshData()" class="refresh-btn" [disabled]="loading()">
-          🔄 Actualiser
-        </button>
-      </div>
-    </div>
+      <h2>
+        <span class="title-icon">💬</span>
+        Demandes clients
+        <span class="badge-pulse" *ngIf="stats().enAttente > 0">{{ stats().enAttente }}</span>
+      </h2>
 
-    <div class="stats-grid">
-      <div class="stat-card primary">
-        <div class="stat-icon">💬</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().totalInteractions }}</div>
-          <div class="stat-label">Interactions totales</div>
-        </div>
-      </div>
-
-      <div class="stat-card info">
-        <div class="stat-icon">👥</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().uniqueUsers }}</div>
-          <div class="stat-label">Utilisateurs uniques</div>
-        </div>
-      </div>
-
-      <div class="stat-card success">
-        <div class="stat-icon">✅</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().resolutionRate }}%</div>
-          <div class="stat-label">Taux de résolution</div>
-        </div>
-      </div>
-
-      <div class="stat-card warning">
-        <div class="stat-icon">⚡</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().avgResponseTime }}s</div>
-          <div class="stat-label">Temps de réponse</div>
-        </div>
-      </div>
-
-      <div class="stat-card accent">
-        <div class="stat-icon">📅</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().todayInteractions }}</div>
-          <div class="stat-label">Aujourd'hui</div>
-        </div>
-      </div>
-
-      <div class="stat-card positive">
-        <div class="stat-icon">😊</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ stats().satisfactionRate }}%</div>
-          <div class="stat-label">Satisfaction</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Filtres améliorés -->
-  <div class="filters">
-    <div class="filter-group">
-      <label>Catégorie:</label>
-      <select (change)="filterByCategory($event)" class="filter-select">
-        <option value="">Toutes les catégories</option>
-        <option value="balance">💰 Solde</option>
-        <option value="operations">📊 Opérations</option>
-        <option value="card">💳 Carte</option>
-        <option value="help">❓ Aide</option>
-        <option value="other">📋 Autre</option>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label>Sentiment:</label>
-      <select (change)="filterBySentiment($event)" class="filter-select">
-        <option value="">Tous les sentiments</option>
-        <option value="positive">😊 Positif</option>
-        <option value="neutral">😐 Neutre</option>
-        <option value="negative">😞 Négatif</option>
-      </select>
-    </div>
-
-    <div class="filter-group">
-      <label>Période:</label>
-      <select (change)="filterByDate($event)" class="filter-select">
-        <option value="">Toute la période</option>
-        <option value="today">Aujourd'hui</option>
-        <option value="week">Cette semaine</option>
-        <option value="month">Ce mois</option>
-      </select>
-    </div>
-
-    <div class="filter-actions">
-      <button (click)="exportData()" class="export-btn">
-        📊 Exporter CSV
+      <button class="btn-refresh" (click)="refresh()" [disabled]="loading()">
+        <span *ngIf="!loading()">🔄</span>
+        <span *ngIf="loading()" class="spinner-mini"></span>
+        Actualiser
       </button>
     </div>
-  </div>
 
-  <!-- Liste des interactions -->
-  <div class="interactions-list">
-    <div class="interaction-card"
-         *ngFor="let interaction of filteredInteractions()"
-         [class.unresolved]="!interaction.resolved"
-         [class.negative]="interaction.sentiment === 'negative'">
+    <!-- Stats rapides -->
+    <div class="stats-row">
+      <button class="stat-card stat-pending"
+              [class.active]="statusFilter() === 'EN_ATTENTE'"
+              (click)="setStatusFilter('EN_ATTENTE')">
+        <div class="stat-value">{{ stats().enAttente }}</div>
+        <div class="stat-label">En attente</div>
+      </button>
 
-      <div class="interaction-header">
-        <div class="user-info">
-          <div class="user-avatar">{{ interaction.userName.charAt(0).toUpperCase() }}</div>
-          <div class="user-details">
-            <strong>{{ interaction.userName }}</strong>
-            <span class="user-id">({{ interaction.userId }})</span>
-          </div>
-        </div>
-        <div class="interaction-meta">
-          <span class="timestamp">{{ formatTime(interaction.timestamp) }}</span>
-          <span class="category" [class]="'cat-' + interaction.category">
-            {{ getCategoryLabel(interaction.category) }}
-          </span>
-          <span class="sentiment">
-            {{ getSentimentIcon(interaction.sentiment) }}
-          </span>
-          <span class="status-badge" [class.resolved]="interaction.resolved">
-            {{ interaction.resolved ? '✅ Résolu' : '⏳ En attente' }}
-          </span>
-        </div>
-      </div>
+      <button class="stat-card stat-resolved"
+              [class.active]="statusFilter() === 'REPONDU'"
+              (click)="setStatusFilter('REPONDU')">
+        <div class="stat-value">{{ stats().repondu }}</div>
+        <div class="stat-label">Répondues</div>
+      </button>
 
-      <div class="conversation">
-        <div class="message user-message">
-          <div class="message-label">👤 Question:</div>
-          <div class="message-content">{{ interaction.userMessage }}</div>
-        </div>
-        <div class="message bot-message">
-          <div class="message-label">🤖 Réponse:</div>
-          <div class="message-content" [innerHTML]="interaction.botResponse"></div>
-        </div>
-      </div>
+      <button class="stat-card stat-rejected"
+              [class.active]="statusFilter() === 'REJETE'"
+              (click)="setStatusFilter('REJETE')">
+        <div class="stat-value">{{ stats().rejete }}</div>
+        <div class="stat-label">Refusées</div>
+      </button>
 
-      <div class="context-info" *ngIf="interaction.context.accountNumber">
-        <small>
-          📊 Contexte: Compte {{ interaction.context.accountNumber }}
-          <span *ngIf="interaction.context.balance">({{ interaction.context.balance | currency:'EUR' }})</span>
-        </small>
-      </div>
-
-      <div class="interaction-actions">
-        <button (click)="markAsResolved(interaction)"
-                *ngIf="!interaction.resolved"
-                class="action-btn resolve-btn">
-          ✅ Marquer résolu
-        </button>
-        <button (click)="flagForReview(interaction)" class="action-btn flag-btn">
-          🚩 Signaler
-        </button>
-        <button (click)="viewUserHistory(interaction.userId)" class="action-btn history-btn">
-          📋 Historique
-        </button>
-      </div>
+      <button class="stat-card stat-all"
+              [class.active]="statusFilter() === 'ALL'"
+              (click)="setStatusFilter('ALL')">
+        <div class="stat-value">{{ stats().total }}</div>
+        <div class="stat-label">Toutes</div>
+      </button>
     </div>
 
-    <!-- Message si aucune interaction -->
-    <div class="no-data" *ngIf="filteredInteractions().length === 0 && !loading()">
-      <div class="no-data-icon">🤖</div>
-      <h4>Aucune interaction trouvée</h4>
-      <p>Aucune interaction ne correspond aux filtres sélectionnés.</p>
+    <!-- Filtres -->
+    <div class="filters-row">
+      <input type="text"
+             class="search-input"
+             placeholder="🔍 Rechercher (nom, compte, message)..."
+             (input)="onSearchChange($event)">
+
+      <select class="action-filter" (change)="onActionFilterChange($event)">
+        <option value="ALL">Toutes les actions</option>
+        <option value="BLOQUER_CARTE">🔒 Bloquer carte</option>
+        <option value="DEBLOQUER_CARTE">🔓 Débloquer carte</option>
+        <option value="PERTE_VOL_CARTE">🚨 Perte / Vol carte</option>
+        <option value="SUSPENDRE_COMPTE">⏸️ Suspendre compte</option>
+        <option value="REACTIVER_COMPTE">▶️ Réactiver compte</option>
+        <option value="SIGNALER_FRAUDE">⚠️ Fraude</option>
+        <option value="RECLAMATION">📋 Réclamation</option>
+        <option value="AUTRE_SENSIBLE">❓ Autre</option>
+      </select>
     </div>
   </div>
 
-  <!-- Questions fréquentes -->
-  <div class="frequent-questions" *ngIf="stats().topQuestions.length">
-    <h4>🔥 Questions les plus fréquentes</h4>
-    <div class="question-list">
-      <div class="question-item" *ngFor="let q of stats().topQuestions; let i = index">
-        <div class="question-rank">#{{ i + 1 }}</div>
-        <span class="question-text">{{ q.question }}</span>
-        <span class="question-count">{{ q.count }}x</span>
-      </div>
-    </div>
-  </div>
+  <!-- ===== ERREUR ===== -->
+  <div class="error-banner" *ngIf="error()">⚠️ {{ error() }}</div>
 
-  <!-- Modal d'historique utilisateur -->
-  <div class="modal" *ngIf="showUserHistory()" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h4>📋 Historique - {{ selectedUser() }}</h4>
-        <button (click)="closeModal()" class="modal-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="user-interactions">
-          <div class="interaction-summary" *ngFor="let interaction of userHistory()">
-            <div class="summary-header">
-              <span class="summary-time">{{ formatTime(interaction.timestamp) }}</span>
-              <span class="summary-category">{{ getCategoryLabel(interaction.category) }}</span>
+  <!-- ===== LISTE ===== -->
+  <div class="queue-body">
+
+    <div class="messages-list" *ngIf="filteredMessages().length > 0; else emptyState">
+      <button class="message-card"
+              *ngFor="let msg of filteredMessages()"
+              [class.unread]="msg.statut === 'EN_ATTENTE'"
+              [class.selected]="selected()?.id === msg.id"
+              [ngClass]="actionClass(msg.actionType)"
+              (click)="selectMessage(msg)">
+
+        <div class="msg-top">
+          <div class="msg-client">
+            <div class="msg-avatar">
+              {{ (msg.clientNom || '?').charAt(0).toUpperCase() }}
             </div>
-            <div class="summary-content">{{ interaction.userMessage }}</div>
+            <div>
+              <div class="msg-name">{{ msg.clientNom || 'Client #' + (msg.clientId || '?') }}</div>
+              <div class="msg-account" *ngIf="msg.numCompte">Compte {{ msg.numCompte }}</div>
+            </div>
+          </div>
+
+          <span class="msg-status" [ngClass]="statusClass(msg.statut)">
+            {{ statusLabel(msg.statut) }}
+          </span>
+        </div>
+
+        <div class="msg-action-tag">{{ actionLabel(msg.actionType) }}</div>
+
+        <div class="msg-preview">{{ msg.contenu }}</div>
+
+        <div class="msg-bottom">
+          <span class="msg-date">{{ msg.dateHeure | date:'dd MMM yyyy, HH:mm' }}</span>
+          <span class="msg-arrow">→</span>
+        </div>
+      </button>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>Aucune demande</h3>
+        <p>
+          <ng-container [ngSwitch]="statusFilter()">
+            <span *ngSwitchCase="'EN_ATTENTE'">Pas de demande en attente. Bon travail !</span>
+            <span *ngSwitchCase="'REPONDU'">Aucune demande répondue pour ce filtre.</span>
+            <span *ngSwitchCase="'REJETE'">Aucune demande refusée.</span>
+            <span *ngSwitchDefault>Aucune demande à afficher.</span>
+          </ng-container>
+        </p>
+      </div>
+    </ng-template>
+
+  </div>
+
+  <!-- ===== PANNEAU DE DÉTAIL / RÉPONSE ===== -->
+  <div class="details-overlay" *ngIf="selected()" (click)="closeDetails()">
+    <div class="details-panel" (click)="$event.stopPropagation()">
+
+      <div class="details-header">
+        <div>
+          <h3>{{ actionLabel(selected()!.actionType) }}</h3>
+          <p class="details-sub">
+            De <strong>{{ selected()?.clientNom || 'Client #' + (selected()?.clientId || '?') }}</strong>
+            <span *ngIf="selected()?.numCompte"> · Compte {{ selected()?.numCompte }}</span>
+          </p>
+          <p class="details-date">{{ selected()?.dateHeure | date:'EEEE dd MMMM yyyy à HH:mm' }}</p>
+        </div>
+
+        <button class="btn-close" (click)="closeDetails()">✕</button>
+      </div>
+
+      <div class="details-body">
+
+        <!-- Message du client -->
+        <div class="bubble bubble-client">
+          <div class="bubble-label">Message du client</div>
+          <div class="bubble-text">{{ selected()?.contenu }}</div>
+        </div>
+
+        <!-- Réponse système automatique -->
+        <div class="bubble bubble-system" *ngIf="selected()?.reponse">
+          <div class="bubble-label">Réponse automatique envoyée</div>
+          <div class="bubble-text">{{ selected()?.reponse }}</div>
+        </div>
+
+        <!-- Réponse admin existante -->
+        <div class="bubble bubble-admin"
+             *ngIf="selected()?.reponseAdmin && selected()?.statut !== 'EN_ATTENTE'">
+          <div class="bubble-label">
+            Votre réponse · {{ selected()?.dateReponse | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+          <div class="bubble-text">{{ selected()?.reponseAdmin }}</div>
+        </div>
+
+        <!-- Form de réponse -->
+        <div class="response-form" *ngIf="selected()?.statut === 'EN_ATTENTE' && !showRejectDialog()">
+          <label>Votre réponse au client</label>
+          <textarea
+            rows="5"
+            [ngModel]="responseText()"
+            (ngModelChange)="responseText.set($event)"
+            placeholder="Ex: Bonjour, votre carte vient d'être bloquée. Une nouvelle carte sera envoyée à votre adresse sous 5 jours ouvrés..."
+            [disabled]="busy()">
+          </textarea>
+
+          <div class="response-actions">
+            <button class="btn-respond"
+                    (click)="respond()"
+                    [disabled]="busy() || !responseText().trim()">
+              {{ busy() ? '⏳ Envoi...' : '✅ Envoyer la réponse' }}
+            </button>
+
+            <button class="btn-treated"
+                    (click)="markTreated()"
+                    [disabled]="busy()">
+              ✓ Marquer traité
+            </button>
+
+            <button class="btn-reject"
+                    (click)="openRejectDialog()"
+                    [disabled]="busy()">
+              ❌ Refuser
+            </button>
           </div>
         </div>
+
+        <!-- Form de refus -->
+        <div class="reject-form" *ngIf="showRejectDialog()">
+          <label>Motif du refus</label>
+          <textarea
+            rows="3"
+            [ngModel]="rejectMotif()"
+            (ngModelChange)="rejectMotif.set($event)"
+            placeholder="Précisez la raison du refus, le client la verra."
+            [disabled]="busy()">
+          </textarea>
+
+          <div class="response-actions">
+            <button class="btn-cancel" (click)="cancelReject()" [disabled]="busy()">
+              Annuler
+            </button>
+            <button class="btn-confirm-reject"
+                    (click)="confirmReject()"
+                    [disabled]="busy() || !rejectMotif().trim()">
+              {{ busy() ? '⏳' : '❌ Confirmer le refus' }}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
+
 </div>

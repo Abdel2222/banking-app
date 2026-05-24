@@ -1,9 +1,6 @@
 package com.banking.dto.response;
 
-
-
 import com.banking.entities.Placement;
-import com.banking.entity.enums.StatutPlacement;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,149 +8,59 @@ import java.time.LocalDateTime;
 public class PlacementResponse {
 
     private Long id;
-    private Long clientId;
-    private String clientNomComplet;
-    private Long compteBancaireId;
-    private String numeroCompte;
-    private Long fondsId;
+    private String type;
+    private String codeIdentification;
     private String nomFonds;
+    private String codeFonds;
+    private String numeroCompte;
+    private String clientNomComplet;
     private BigDecimal montant;
-    private BigDecimal rendementPrevu;
+    private BigDecimal rendement;
     private BigDecimal gainPrevu;
     private BigDecimal valeurEstimee;
+    private BigDecimal fraisSortie;
     private LocalDateTime datePlacement;
     private LocalDateTime dateCloture;
-    private StatutPlacement statut;
+    private LocalDateTime dateSortie;
+    private String statut;
 
-    public PlacementResponse() {
+    public PlacementResponse() {}
+
+    public PlacementResponse(Placement p) {
+        this.id = p.getId();
+        this.type = p.getType();
+        this.codeIdentification = p.getCodeIdentification();
+        this.nomFonds = p.getFonds() != null ? p.getFonds().getNomFonds() : null;
+        this.codeFonds = p.getFonds() != null ? p.getFonds().getCodeIdentification() : null;
+        this.numeroCompte = p.getCompteBancaire() != null ? p.getCompteBancaire().getNumCompte() : null;
+        this.clientNomComplet = p.getClient() != null
+                ? p.getClient().getPrenom() + " " + p.getClient().getNom()
+                : null;
+        this.montant = p.getMontant();
+        this.rendement = p.getRendement();              // ⭐ renommé
+        this.gainPrevu = p.getGainPrevu();              // toujours dispo (méthode calculée)
+        this.valeurEstimee = p.getValeurEstimee();
+        this.fraisSortie = p.getFraisSortie();
+        this.datePlacement = p.getDatePlacement();
+        this.dateCloture = p.getDateCloture();
+        this.dateSortie = p.getDateSortie();
+        this.statut = p.getStatut() != null ? p.getStatut().name() : null;
     }
 
-    public PlacementResponse(Placement placement) {
-        this.id = placement.getId();
-        this.clientId = placement.getClient() != null ? placement.getClient().getId() : null;
-        this.clientNomComplet = placement.getClient() != null ? placement.getClient().getNomComplet() : null;
-        this.compteBancaireId = placement.getCompteBancaire() != null ? placement.getCompteBancaire().getId() : null;
-        this.numeroCompte = placement.getCompteBancaire() != null ? placement.getCompteBancaire().getNumCompte() : null;
-        this.fondsId = placement.getFonds() != null ? placement.getFonds().getId() : null;
-        this.nomFonds = placement.getFonds() != null ? placement.getFonds().getNomFonds() : null;
-        this.montant = placement.getMontant();
-        this.rendementPrevu = placement.getRendementPrevu();
-        this.gainPrevu = placement.getGainPrevu();
-        this.valeurEstimee = placement.getValeurEstimee();
-        this.datePlacement = placement.getDatePlacement();
-        this.dateCloture = placement.getDateCloture();
-        this.statut = placement.getStatut();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(Long clientId) {
-        this.clientId = clientId;
-    }
-
-    public String getClientNomComplet() {
-        return clientNomComplet;
-    }
-
-    public void setClientNomComplet(String clientNomComplet) {
-        this.clientNomComplet = clientNomComplet;
-    }
-
-    public Long getCompteBancaireId() {
-        return compteBancaireId;
-    }
-
-    public void setCompteBancaireId(Long compteBancaireId) {
-        this.compteBancaireId = compteBancaireId;
-    }
-
-    public String getNumeroCompte() {
-        return numeroCompte;
-    }
-
-    public void setNumeroCompte(String numeroCompte) {
-        this.numeroCompte = numeroCompte;
-    }
-
-    public Long getFondsId() {
-        return fondsId;
-    }
-
-    public void setFondsId(Long fondsId) {
-        this.fondsId = fondsId;
-    }
-
-    public String getNomFonds() {
-        return nomFonds;
-    }
-
-    public void setNomFonds(String nomFonds) {
-        this.nomFonds = nomFonds;
-    }
-
-    public BigDecimal getMontant() {
-        return montant;
-    }
-
-    public void setMontant(BigDecimal montant) {
-        this.montant = montant;
-    }
-
-    public BigDecimal getRendementPrevu() {
-        return rendementPrevu;
-    }
-
-    public void setRendementPrevu(BigDecimal rendementPrevu) {
-        this.rendementPrevu = rendementPrevu;
-    }
-
-    public BigDecimal getGainPrevu() {
-        return gainPrevu;
-    }
-
-    public void setGainPrevu(BigDecimal gainPrevu) {
-        this.gainPrevu = gainPrevu;
-    }
-
-    public BigDecimal getValeurEstimee() {
-        return valeurEstimee;
-    }
-
-    public void setValeurEstimee(BigDecimal valeurEstimee) {
-        this.valeurEstimee = valeurEstimee;
-    }
-
-    public LocalDateTime getDatePlacement() {
-        return datePlacement;
-    }
-
-    public void setDatePlacement(LocalDateTime datePlacement) {
-        this.datePlacement = datePlacement;
-    }
-
-    public LocalDateTime getDateCloture() {
-        return dateCloture;
-    }
-
-    public void setDateCloture(LocalDateTime dateCloture) {
-        this.dateCloture = dateCloture;
-    }
-
-    public StatutPlacement getStatut() {
-        return statut;
-    }
-
-    public void setStatut(StatutPlacement statut) {
-        this.statut = statut;
-    }
+    public Long getId() { return id; }
+    public String getType() { return type; }
+    public String getCodeIdentification() { return codeIdentification; }
+    public String getNomFonds() { return nomFonds; }
+    public String getCodeFonds() { return codeFonds; }
+    public String getNumeroCompte() { return numeroCompte; }
+    public String getClientNomComplet() { return clientNomComplet; }
+    public BigDecimal getMontant() { return montant; }
+    public BigDecimal getRendement() { return rendement; }
+    public BigDecimal getGainPrevu() { return gainPrevu; }
+    public BigDecimal getValeurEstimee() { return valeurEstimee; }
+    public BigDecimal getFraisSortie() { return fraisSortie; }
+    public LocalDateTime getDatePlacement() { return datePlacement; }
+    public LocalDateTime getDateCloture() { return dateCloture; }
+    public LocalDateTime getDateSortie() { return dateSortie; }
+    public String getStatut() { return statut; }
 }

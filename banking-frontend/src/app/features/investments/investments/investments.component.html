@@ -6,15 +6,27 @@
       </button>
 
       <h1>Fonds & Placements</h1>
-      <p>
-        Sélectionnez un fonds disponible et investissez depuis votre compte bancaire.
-      </p>
+      <p>Sélectionnez un fonds disponible et investissez depuis votre compte bancaire.</p>
     </div>
 
     <button class="btn-history" type="button" (click)="goToHistory()">
-      Voir mes placements
+      📊 Voir mes placements
     </button>
   </header>
+
+  <!-- Encart pédagogique : comment lire le rendement -->
+  <section class="info-banner">
+    <div class="info-icon">💡</div>
+    <div class="info-content">
+      <h3>Comment lire le rendement ?</h3>
+      <p>
+        Le pourcentage indiqué est le <strong>gain estimé sur un an</strong>.
+        Par exemple, à <strong>5 %</strong>, un placement de <strong>1 000 €</strong>
+        devient <strong>1 050 €</strong> après 12 mois (soit +50 € de gain).
+        Plus le rendement est élevé, plus le risque l'est aussi.
+      </p>
+    </div>
+  </section>
 
   <section class="account-box">
     <div>
@@ -28,123 +40,131 @@
     </div>
   </section>
 
-  <div *ngIf="loading()" class="state loading">
-    Chargement des fonds...
-  </div>
-
-  <div *ngIf="error()" class="state error">
-    {{ error() }}
-  </div>
-
-  <div *ngIf="success()" class="state success">
-    {{ success() }}
-  </div>
+  <div *ngIf="loading()" class="state loading">⏳ Chargement des fonds...</div>
+  <div *ngIf="error()" class="state error">❌ {{ error() }}</div>
+  <div *ngIf="success()" class="state success">✅ {{ success() }}</div>
 
   <section class="content-grid" *ngIf="!loading()">
     <div class="fonds-list">
-      <h2>Fonds disponibles</h2>
+      <div class="fonds-list-header">
+        <h2>Fonds disponibles</h2>
+        <span class="fonds-count">{{ fondsAffiches().length }} fonds</span>
+      </div>
 
-      <div *ngIf="fondsActifs().length === 0" class="empty">
-        Aucun fonds actif disponible.
+      <div *ngIf="fondsAffiches().length === 0" class="empty">
+        Aucun fonds disponible pour le moment.
       </div>
 
       <button
         type="button"
         class="fonds-card"
-        *ngFor="let f of fondsActifs()"
+        *ngFor="let f of fondsAffiches()"
         [class.active]="selectedFonds()?.id === f.id"
         (click)="selectFonds(f)">
 
+        <div class="fonds-card-glow"></div>
+
         <div class="fonds-top">
-          <div>
-            <h3>{{ f.nomFonds }}</h3>
-            <span class="code">{{ getCodeFonds(f) }}</span>
+          <div class="fonds-title-block">
+            <div class="fonds-icon">📈</div>
+            <div>
+              <h3>{{ f.nomFonds }}</h3>
+              <span class="code">{{ getCodeFonds(f) }}</span>
+            </div>
           </div>
 
-          <span class="risk" [ngClass]="getRiskClass(f.niveauRisque)">
-            {{ f.niveauRisque }}
+          <span class="rendement-badge"
+                [title]="'Pour 100 € placés, gain estimé de ' + ((f.rendement || 0) | number:'1.2-2') + ' € par an'">
+            +{{ f.rendement | number:'1.2-2' }} %
           </span>
         </div>
 
-        <p class="description">
-          {{ f.description || 'Fonds de placement Techno-Bank.' }}
-        </p>
-
         <div class="fonds-stats">
-          <div>
-            <span>Rendement</span>
-            <strong>{{ f.rendement | number:'1.2-2' }}%</strong>
+          <div class="stat-item">
+            <span class="stat-label">Rendement annuel</span>
+            <strong class="stat-value-green">{{ f.rendement | number:'1.2-2' }} %</strong>
+            <small class="stat-hint">
+              ≈ +{{ f.rendement | number:'1.2-2' }} € par an pour 100 € placés
+            </small>
           </div>
 
-          <div>
-            <span>Minimum</span>
-            <strong>{{ f.montantMinimum | currency:'EUR':'symbol':'1.2-2':'fr' }}</strong>
+          <div class="stat-divider"></div>
+
+          <div class="stat-item">
+            <span class="stat-label">Montant minimum</span>
+            <strong class="stat-value">
+              {{ (f.montant || 0) | currency:'EUR':'symbol':'1.2-2':'fr' }}
+            </strong>
+            <small class="stat-hint">{{ getStartingHint(f) }}</small>
           </div>
+        </div>
+
+        <div class="fonds-cta" *ngIf="selectedFonds()?.id === f.id">
+          ✓ Sélectionné
         </div>
       </button>
     </div>
 
     <aside class="investment-panel">
-      <h2>Créer un placement</h2>
+      <div class="panel-header">
+        <h2>Créer un placement</h2>
+        <small *ngIf="!selectedFonds()">Aucun fonds sélectionné</small>
+      </div>
 
       <ng-container *ngIf="selectedFonds(); else noFondsSelected">
         <div class="selected-box">
-          <span>Fonds choisi</span>
-          <strong>{{ selectedFonds()?.nomFonds }}</strong>
+          <div class="selected-icon">💎</div>
+          <div>
+            <span>Fonds choisi</span>
+            <strong>{{ selectedFonds()?.nomFonds }}</strong>
+            <small>
+              {{ getCodeFonds(selectedFonds()) }} · Rendement
+              {{ selectedFonds()?.rendement | number:'1.2-2' }} %
+            </small>
+          </div>
         </div>
 
         <label class="form-field">
           <span>Montant à investir</span>
-          <input
-            type="number"
-            min="1"
-            step="0.01"
-            [value]="montant() || ''"
-            (input)="updateMontant($event)"
-            placeholder="Ex: 100">
+          <div class="input-wrapper">
+            <input
+              type="number"
+              min="1"
+              step="0.01"
+              [value]="montant() || ''"
+              (input)="updateMontant($event)"
+              placeholder="Ex: 100">
+            <span class="currency-suffix">€</span>
+          </div>
+          <small class="hint">
+            Minimum : {{ (selectedFonds()?.montant || 0) | currency:'EUR':'symbol':'1.2-2':'fr' }}
+          </small>
         </label>
 
-        <div class="preview" *ngIf="montant()">
-          <div>
-            <span>Capital investi</span>
-            <strong>{{ montant() | currency:'EUR':'symbol':'1.2-2':'fr' }}</strong>
-          </div>
-
-          <div>
-            <span>Gain prévu</span>
-            <strong>
-              {{
-                ((montant() || 0) * ((selectedFonds()?.rendement || 0) / 100))
-                  | currency:'EUR':'symbol':'1.2-2':'fr'
-              }}
-            </strong>
-          </div>
-
-          <div>
-            <span>Valeur estimée</span>
-            <strong>
-              {{
-                ((montant() || 0) + ((montant() || 0) * ((selectedFonds()?.rendement || 0) / 100)))
-                  | currency:'EUR':'symbol':'1.2-2':'fr'
-              }}
-            </strong>
-          </div>
-        </div>
+        <!-- Simulation retirée -->
 
         <button
           type="button"
           class="btn-invest"
           [disabled]="investing() || !compteId()"
           (click)="investir()">
-          {{ investing() ? 'Placement en cours...' : 'Investir maintenant' }}
+          {{ investing() ? '⏳ Placement en cours...' : '🚀 Investir maintenant' }}
         </button>
       </ng-container>
 
       <ng-template #noFondsSelected>
         <div class="empty selected-empty">
-          Sélectionnez un fonds à gauche pour investir.
+          <div class="empty-icon">👈</div>
+          <p>Sélectionnez un fonds à gauche pour commencer.</p>
         </div>
       </ng-template>
     </aside>
   </section>
+
+  <!-- Mention légale -->
+  <footer class="legal-mention">
+    ⚠️ Les performances passées et les rendements indiqués sont des estimations et
+    ne préjugent pas des performances futures. Tout investissement comporte un risque
+    de perte en capital.
+  </footer>
 </div>

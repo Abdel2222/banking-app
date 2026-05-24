@@ -3,10 +3,8 @@ import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
-import {
-  Fonds,
-  InvestmentService
-} from '../investment.service';
+import { Fonds, InvestmentService } from '../investment.service';
+import { SelectedAccountService } from '../../../core/services/selected-account.service';
 
 @Component({
   selector: 'app-investments',
@@ -19,6 +17,7 @@ export class InvestmentsComponent implements OnInit {
   private readonly investmentService = inject(InvestmentService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly selectedAccount = inject(SelectedAccountService);
 
   fonds = signal<Fonds[]>([]);
   selectedFonds = signal<Fonds | null>(null);
@@ -33,45 +32,24 @@ export class InvestmentsComponent implements OnInit {
   error = signal<string>('');
   success = signal<string>('');
 
-  /**
-   * 🎯 AFFICHAGE DIRECT DE TOUS LES FONDS
-   * On affiche TOUS les fonds reçus de l'API sans filtre restrictif.
-   * Si l'API renvoie un fonds, c'est qu'il est disponible.
-   * Filtre ultra-permissif : on cache UNIQUEMENT les fonds explicitement marqués inactifs.
-   */
-  fondsActifs = computed(() => {
-    const liste = this.fonds();
-
-    return liste.filter((f: any) => {
-      // Si AUCUNE propriété "actif" n'est définie → on AFFICHE le fonds
-      if (
-        f.estActif === undefined &&
-        f.actif === undefined &&
-        f.disponible === undefined
-      ) {
-        return true;
-      }
-
-      // Si une propriété est explicitement à FALSE → on cache
-      if (f.estActif === false || f.actif === false || f.disponible === false) {
-        return false;
-      }
-
-      // Sinon (true, 1, null, autre) → on AFFICHE
-      return true;
-    });
-  });
+  fondsAffiches = computed(() => this.fonds());
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe(params => {
       const compteIdParam = params.get('compteId');
       const numCompteParam = params.get('numCompte');
 
-      this.compteId.set(compteIdParam ? Number(compteIdParam) : null);
-      this.numCompte.set(numCompteParam);
+      if (compteIdParam) {
+        const id = Number(compteIdParam);
+        this.compteId.set(id);
+        this.numCompte.set(numCompteParam);
+        this.selectedAccount.set(id, numCompteParam);
+      } else {
+        this.compteId.set(this.selectedAccount.compteId());
+        this.numCompte.set(this.selectedAccount.numCompte());
+      }
     });
 
-    // ✅ Chargement IMMÉDIAT des fonds dès l'ouverture de la page
     this.loadFonds();
   }
 
@@ -80,17 +58,11 @@ export class InvestmentsComponent implements OnInit {
     this.error.set('');
     this.success.set('');
 
-    this.investmentService.getFondsActifs().subscribe({
+    this.investmentService.getTousLesFonds().subscribe({
       next: (data: any) => {
         const rows = Array.isArray(data) ? data : data?.data ?? [];
-        console.log('[FONDS] Reçus de l\'API:', rows);
-        console.log('[FONDS] Nombre total:', rows.length);
-
         this.fonds.set(rows);
         this.loading.set(false);
-
-        // Log de debug pour voir ce qui est filtré
-        console.log('[FONDS] Affichés après filtre:', this.fondsActifs().length);
       },
       error: (err) => {
         console.error('[FONDS] Erreur chargement:', err);
@@ -104,7 +76,7 @@ export class InvestmentsComponent implements OnInit {
     this.selectedFonds.set(fonds);
     this.success.set('');
     this.error.set('');
-    this.montant.set(Number(fonds.montantMinimum || 0));
+    this.montant.set(Number(fonds.montant || 0));
   }
 
   updateMontant(event: Event): void {
@@ -121,19 +93,16 @@ export class InvestmentsComponent implements OnInit {
       this.error.set('Aucun compte sélectionné. Retourne au dashboard et choisis un compte.');
       return;
     }
-
     if (!fonds) {
       this.error.set('Veuillez sélectionner un fonds.');
       return;
     }
-
     if (!montant || montant <= 0) {
       this.error.set('Veuillez saisir un montant valide.');
       return;
     }
-
-    if (montant < Number(fonds.montantMinimum || 0)) {
-      this.error.set(`Le montant minimum pour ce fonds est ${fonds.montantMinimum} €.`);
+    if (montant < Number(fonds.montant || 0)) {
+      this.error.set(`Le montant minimum pour ce fonds est ${fonds.montant} €.`);
       return;
     }
 
@@ -160,7 +129,11 @@ export class InvestmentsComponent implements OnInit {
   }
 
   goToHistory(): void {
-    this.router.navigate(['/investissements/historique']);
+    const id = this.compteId();
+    const num = this.numCompte();
+    this.router.navigate(['/investissements/historique'], {
+      queryParams: id ? { compteId: id, numCompte: num } : {}
+    });
   }
 
   retourDashboard(): void {
@@ -168,10 +141,38 @@ export class InvestmentsComponent implements OnInit {
   }
 
   getCodeFonds(fonds: any): string {
-    return fonds.codeFonds || fonds.codeIdentification || fonds.code_identification || 'N/A';
+    return fonds?.codeIdentification || fonds?.codeFonds || 'N/A';
   }
 
-  getRiskClass(risque: string | undefined): string {
-    return (risque || '').toLowerCase();
+  /**
+   * Retourne un message personnalisé selon le profil du fonds.
+   * Basé sur le préfixe du code d'identification (FDS-SEC, FDS-CRY, etc.).
+   */
+  getStartingHint(fonds: any): string {
+    const code = (fonds?.codeIdentification || '').toUpperCase();
+
+    if (code.startsWith('FDS-SEC')) {
+      return '🛡️ Idéal pour débuter en toute sérénité';
+    }
+    if (code.startsWith('FDS-EQ')) {
+      return '⚖️ Le bon équilibre entre prudence et rendement';
+    }
+    if (code.startsWith('FDS-CRY')) {
+      return '🚀 Plongez dans l\'univers crypto avec ce ticket d\'entrée';
+    }
+    if (code.startsWith('FDS-TEC')) {
+      return '💡 Investissez dans l\'innovation et la tech de demain';
+    }
+    if (code.startsWith('FDS-IMM')) {
+      return '🏠 Démarrez votre patrimoine immobilier';
+    }
+    if (code.startsWith('FDS-TER')) {
+      return '🌾 Placement long terme avec belle plus-value à la clé';
+    }
+    if (code.startsWith('FDS-ENE')) {
+      return '🌱 Soutenez la transition écologique';
+    }
+
+    return '✨ Un montant de départ accessible pour démarrer';
   }
 }

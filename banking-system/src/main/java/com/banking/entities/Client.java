@@ -1,6 +1,7 @@
 package com.banking.entities;
 
 import com.banking.entity.enums.Role;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -16,9 +17,11 @@ public class Client extends Personne {
     // ===== Relations =====
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = false)
+    @JsonManagedReference("client-comptes")  // ✅ coupe la récursion côté parent
     private List<CompteBancaire> comptes = new ArrayList<>();
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference("client-frais")    // ✅ coupe la récursion côté parent
     private List<FraisDeGestion> fraisDeGestion = new ArrayList<>();
 
     // ===== Constructeurs =====
@@ -28,7 +31,7 @@ public class Client extends Personne {
     }
 
     public Client(String prenom, String nom, String email, String motDePasse) {
-        super(prenom, nom, email, motDePasse, Role.CLIENT); // 🟢 Utilisation propre de l'enum
+        super(prenom, nom, email, motDePasse, Role.CLIENT);
     }
 
     // ===== Méthodes métier pour CompteBancaire =====
@@ -43,9 +46,7 @@ public class Client extends Personne {
 
     public void supprimerCompte(CompteBancaire compte) {
         if (compte == null) return;
-        if (comptes.remove(compte)) {
-            // compte.setClient(null);
-        }
+        comptes.remove(compte);
     }
 
     public int getNombreComptes() {
@@ -91,9 +92,7 @@ public class Client extends Personne {
 
     public void supprimerFrais(FraisDeGestion frais) {
         if (frais == null) return;
-        if (fraisDeGestion.remove(frais)) {
-            // frais.setClient(null);
-        }
+        fraisDeGestion.remove(frais);
     }
 
     public BigDecimal getTotalFraisActifs() {
@@ -134,21 +133,11 @@ public class Client extends Personne {
 
     // ===== Getters / Setters =====
 
-    public List<CompteBancaire> getComptes() {
-        return comptes;
-    }
+    public List<CompteBancaire> getComptes() { return comptes; }
+    public void setComptes(List<CompteBancaire> comptes) { this.comptes = comptes; }
 
-    public void setComptes(List<CompteBancaire> comptes) {
-        this.comptes = comptes;
-    }
-
-    public List<FraisDeGestion> getFraisDeGestion() {
-        return fraisDeGestion;
-    }
-
-    public void setFraisDeGestion(List<FraisDeGestion> fraisDeGestion) {
-        this.fraisDeGestion = fraisDeGestion;
-    }
+    public List<FraisDeGestion> getFraisDeGestion() { return fraisDeGestion; }
+    public void setFraisDeGestion(List<FraisDeGestion> fraisDeGestion) { this.fraisDeGestion = fraisDeGestion; }
 
     // ===== toString / equals / hashCode =====
 
@@ -159,7 +148,6 @@ public class Client extends Personne {
                 ", nom='" + getNomComplet() + '\'' +
                 ", email='" + getEmail() + '\'' +
                 ", nombreComptes=" + getNombreComptes() +
-                ", totalFraisActifs=" + getTotalFraisActifs() +
                 '}';
     }
 

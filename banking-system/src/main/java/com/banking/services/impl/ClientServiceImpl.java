@@ -3,7 +3,8 @@ package com.banking.services.impl;
 import com.banking.entities.Client;
 import com.banking.entities.CompteBancaire;
 import com.banking.entities.FraisDeGestion;
-import com.banking.entity.enums.AccountStatus;
+import com.banking.entity.enums.Periodicite;  // ✅
+import com.banking.entity.enums.TypeFrais;     // ✅
 import com.banking.repositories.ClientRepository;
 import com.banking.repositories.CompteBancaireRepository;
 import com.banking.repositories.FraisDeGestionRepository;
@@ -23,19 +24,19 @@ import java.util.Random;
 @Transactional
 public class ClientServiceImpl implements ClientService {
 
-    @Autowired private ClientRepository          clientRepository;
-    @Autowired private CompteBancaireRepository  compteBancaireRepository;
-    @Autowired private FraisDeGestionRepository  fraisDeGestionRepository;
-    @Autowired private PasswordEncoder           passwordEncoder;
+    @Autowired private ClientRepository         clientRepository;
+    @Autowired private CompteBancaireRepository compteBancaireRepository;
+    @Autowired private FraisDeGestionRepository fraisDeGestionRepository;
+    @Autowired private PasswordEncoder          passwordEncoder;
 
-    /* ===================== Utilitaire ===================== */
+    // ===================== Utilitaire =====================
 
     private Client getClientOrThrow(Long id) {
         return clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Client non trouvé"));
     }
 
-    /* ===================== CRUD Client ===================== */
+    // ===================== CRUD Client =====================
 
     @Override
     public Client createClient(String prenom, String nom, String email, String motDePasse) {
@@ -50,7 +51,6 @@ public class ClientServiceImpl implements ClientService {
         Client client = getClientOrThrow(id);
         client.setPrenom(clientDetails.getPrenom());
         client.setNom(clientDetails.getNom());
-
         if (!client.getEmail().equals(clientDetails.getEmail())) {
             if (emailExists(clientDetails.getEmail()))
                 throw new IllegalArgumentException("Cet email est déjà utilisé");
@@ -59,17 +59,20 @@ public class ClientServiceImpl implements ClientService {
         return clientRepository.save(client);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Client> findById(Long id) {
         return clientRepository.findById(id);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Client> findByEmail(String email) {
         return clientRepository.findByEmail(email);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<Client> findAll() {
         return clientRepository.findAll();
     }
@@ -82,7 +85,7 @@ public class ClientServiceImpl implements ClientService {
         clientRepository.delete(client);
     }
 
-    /* ===================== Auth ===================== */
+    // ===================== Auth =====================
 
     @Override
     public Optional<Client> authenticate(String email, String motDePasse) {
@@ -103,7 +106,7 @@ public class ClientServiceImpl implements ClientService {
         return true;
     }
 
-    /* ===================== Comptes ===================== */
+    // ===================== Comptes =====================
 
     @Override
     public CompteBancaire openAccount(Long clientId, String typeCompte) {
@@ -119,59 +122,59 @@ public class ClientServiceImpl implements ClientService {
         CompteBancaire compte = new CompteBancaire(numCompte, client);
         compte = compteBancaireRepository.save(compte);
 
-        // ✅ FraisDeGestion avec compte bancaire obligatoire
+        // ✅ Constructeur simple compatible avec l'entité
         FraisDeGestion fraisTenue = new FraisDeGestion(
                 new BigDecimal("5.00"),
-                "Frais de tenue de compte mensuel",
-                FraisDeGestion.TypeFrais.TENUE_COMPTE,
-                LocalDate.now().plusYears(1),
+                LocalDate.now(),
                 client,
-                compte  // ✅ ajouté
+                compte
         );
-        fraisTenue.setPeriodicite(FraisDeGestion.Periodicite.MENSUEL);
+        fraisTenue.setDescription("Frais de tenue de compte mensuel");
+        fraisTenue.setTypeFrais(TypeFrais.TENUE_COMPTE);      // ✅ corrigé
+        fraisTenue.setPeriodicite(Periodicite.MENSUELLE);     // ✅ corrigé MENSUEL → MENSUELLE
+        fraisTenue.setDateFin(LocalDate.now().plusYears(1));
         fraisDeGestionRepository.save(fraisTenue);
 
         return compte;
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<CompteBancaire> getClientAccounts(Long clientId) {
         Client client = getClientOrThrow(clientId);
         return compteBancaireRepository.findByClient(client);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<CompteBancaire> getActiveAccounts(Long clientId) {
         return getClientOrThrow(clientId).getComptesActifs();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public BigDecimal getTotalBalance(Long clientId) {
         return getClientOrThrow(clientId).getSoldeTotal();
     }
 
-    /* ===================== Frais ===================== */
+    // ===================== Frais =====================
 
     @Override
-
     public FraisDeGestion addFees(Long clientId, FraisDeGestion frais) {
         Client client = getClientOrThrow(clientId);
         frais.setClient(client);
-
-        // ✅ Supprime la vérification si getCompteBancaire() n'existe pas encore
-        // if (frais.getCompteBancaire() == null)
-        //     throw new IllegalArgumentException("...");
-
         return fraisDeGestionRepository.save(frais);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<FraisDeGestion> getClientFees(Long clientId) {
         Client client = getClientOrThrow(clientId);
         return fraisDeGestionRepository.findByClient(client);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public BigDecimal getTotalActiveFees(Long clientId) {
         return getClientOrThrow(clientId).getTotalFraisActifs();
     }
@@ -181,63 +184,71 @@ public class ClientServiceImpl implements ClientService {
         Client client = getClientOrThrow(clientId);
         FraisDeGestion frais = fraisDeGestionRepository.findById(fraisId)
                 .orElseThrow(() -> new RuntimeException("Frais non trouvé"));
-
         if (!frais.getClient().equals(client))
             throw new IllegalArgumentException("Ces frais n'appartiennent pas à ce client");
-
         frais.facturer();
         fraisDeGestionRepository.save(frais);
     }
 
-    /* ===================== Recherche / stats ===================== */
+    // ===================== Recherche / stats =====================
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<Client> searchByName(String searchTerm) {
         return clientRepository.findByNomOrPrenom(searchTerm, searchTerm);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<Client> findClientsWithActiveAccounts() {
         return clientRepository.findClientsWithActiveAccounts();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<Client> findClientsWithUnpaidFees() {
         return clientRepository.findClientsWithUnpaidFees();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public List<Client> findWealthyClients(BigDecimal minimumBalance) {
         return clientRepository.findClientsBySoldeTotalGreaterThan(minimumBalance);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public Long countActiveClients() {
         return clientRepository.countActiveClients();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public Long countTotalAccounts(Long clientId) {
         return (long) getClientOrThrow(clientId).getNombreComptes();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasUnpaidFees(Long clientId) {
         return getClientOrThrow(clientId).aDesFraisImpayes();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public boolean emailExists(String email) {
         return clientRepository.existsByEmail(email);
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public boolean canOpenNewAccount(Long clientId) {
         Client client = getClientOrThrow(clientId);
         return client.getNombreComptes() < 5 && !client.aDesFraisImpayes();
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public boolean isEligibleForLoan(Long clientId) {
         Client client = getClientOrThrow(clientId);
         return !client.getComptesActifs().isEmpty()
@@ -245,7 +256,7 @@ public class ClientServiceImpl implements ClientService {
                 && !client.aDesFraisImpayes();
     }
 
-    /* ===================== Générateur ===================== */
+    // ===================== Générateur =====================
 
     private String generateAccountNumber() {
         Random random = new Random();

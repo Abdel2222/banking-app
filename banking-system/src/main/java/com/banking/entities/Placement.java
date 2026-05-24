@@ -1,6 +1,7 @@
 package com.banking.entities;
 
 import com.banking.entity.enums.StatutPlacement;
+import com.banking.entity.enums.TypeFonds;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -16,6 +17,12 @@ public class Placement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "type", nullable = false, length = 30)
+    private String type;
+
+    @Column(name = "code_identification", nullable = false, length = 50)
+    private String codeIdentification;
 
     @NotNull(message = "Le client est obligatoire")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,15 +40,12 @@ public class Placement {
     private Fonds fonds;
 
     @NotNull(message = "Le montant est obligatoire")
-    @DecimalMin(value = "1.00", message = "Le montant du placement doit être supérieur à 0")
+    @DecimalMin(value = "1.00", message = "Le montant doit être supérieur à 0")
     @Column(name = "montant", nullable = false, precision = 15, scale = 2)
     private BigDecimal montant;
 
-    @Column(name = "rendement_prevu", precision = 5, scale = 2)
-    private BigDecimal rendementPrevu;
-
-    @Column(name = "gain_prevu", precision = 15, scale = 2)
-    private BigDecimal gainPrevu;
+    @Column(name = "rendement", precision = 5, scale = 2)
+    private BigDecimal rendement;
 
     @Column(name = "date_placement", nullable = false)
     private LocalDateTime datePlacement;
@@ -49,45 +53,47 @@ public class Placement {
     @Column(name = "date_cloture")
     private LocalDateTime dateCloture;
 
+    @Column(name = "date_sortie")
+    private LocalDateTime dateSortie;
+
+    @Column(name = "frais_sortie", precision = 15, scale = 2)
+    private BigDecimal fraisSortie;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false, length = 30)
     private StatutPlacement statut = StatutPlacement.ACTIF;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    public Placement() {
-    }
+    public Placement() {}
 
     public Placement(Client client, CompteBancaire compteBancaire, Fonds fonds, BigDecimal montant) {
-        this.client = client;
+        this.client         = client;
         this.compteBancaire = compteBancaire;
-        this.fonds = fonds;
-        this.montant = montant;
-        this.rendementPrevu = fonds != null ? fonds.getRendement() : BigDecimal.ZERO;
-        this.gainPrevu = fonds != null ? fonds.calculerGainPrevu(montant) : BigDecimal.ZERO;
-        this.datePlacement = LocalDateTime.now();
-        this.statut = StatutPlacement.ACTIF;
+        this.fonds          = fonds;
+        this.montant        = montant;
+        this.datePlacement  = LocalDateTime.now();
+        this.statut         = StatutPlacement.ACTIF;
+
+        if (fonds != null) {
+            this.rendement          = fonds.getRendement();
+            this.codeIdentification = fonds.getCodeIdentification();
+            TypeFonds tf            = TypeFonds.fromCode(fonds.getCodeIdentification());
+            this.type               = tf.name();
+            this.dateCloture        = this.datePlacement.plusDays(tf.getDureeJours());
+        } else {
+            this.rendement = BigDecimal.ZERO;
+        }
     }
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        if (datePlacement == null) {
-            datePlacement = LocalDateTime.now();
+        if (datePlacement == null) datePlacement = LocalDateTime.now();
+        if (statut == null)        statut        = StatutPlacement.ACTIF;
+        if (dateCloture == null && fonds != null) {
+            TypeFonds tf = TypeFonds.fromCode(fonds.getCodeIdentification());
+            dateCloture = datePlacement.plusDays(tf.getDureeJours());
+            if (type == null)               type               = tf.name();
+            if (codeIdentification == null) codeIdentification = fonds.getCodeIdentification();
         }
-        if (statut == null) {
-            statut = StatutPlacement.ACTIF;
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 
     public boolean estActif() {
@@ -95,127 +101,92 @@ public class Placement {
     }
 
     public void cloturer() {
-        this.statut = StatutPlacement.CLOTURE;
-        this.dateCloture = LocalDateTime.now();
+        this.statut     = StatutPlacement.CLOTURE;
+        this.dateSortie = LocalDateTime.now();
+        BigDecimal retour = getValeurEstimee();
+        if (this.compteBancaire != null && retour.signum() > 0)
+            this.compteBancaire.crediter(retour);
+    }
+
+    public void sortirAvantEcheance(BigDecimal frais) {
+        if (!estActif())
+            throw new IllegalStateException("Ce placement n'est plus actif");
+
+        this.fraisSortie = (frais != null && frais.signum() > 0) ? frais : BigDecimal.ZERO;
+        this.dateSortie  = LocalDateTime.now();
+        this.statut      = StatutPlacement.CLOTURE;
+
+        BigDecimal retour = this.montant.subtract(this.fraisSortie);
+        if (retour.signum() < 0) retour = BigDecimal.ZERO;
+
+        if (this.compteBancaire != null)
+            this.compteBancaire.crediter(retour);
     }
 
     public void annuler() {
-        this.statut = StatutPlacement.ANNULE;
-        this.dateCloture = LocalDateTime.now();
+        this.statut     = StatutPlacement.ANNULE;
+        this.dateSortie = LocalDateTime.now();
+    }
+
+    public boolean estSortieAnticipee() {
+        return dateSortie != null && dateCloture != null && dateSortie.isBefore(dateCloture);
+    }
+
+    public BigDecimal getGainPrevu() {
+        if (montant == null || rendement == null) return BigDecimal.ZERO;
+        return montant.multiply(rendement).divide(BigDecimal.valueOf(100));
     }
 
     public BigDecimal getValeurEstimee() {
         if (montant == null) return BigDecimal.ZERO;
-        if (gainPrevu == null) return montant;
-        return montant.add(gainPrevu);
+        return montant.add(getGainPrevu());
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
-    public Client getClient() {
-        return client;
-    }
+    public String getCodeIdentification() { return codeIdentification; }
+    public void setCodeIdentification(String codeIdentification) { this.codeIdentification = codeIdentification; }
 
-    public void setClient(Client client) {
-        this.client = client;
-    }
+    public Client getClient() { return client; }
+    public void setClient(Client client) { this.client = client; }
 
-    public CompteBancaire getCompteBancaire() {
-        return compteBancaire;
-    }
+    public CompteBancaire getCompteBancaire() { return compteBancaire; }
+    public void setCompteBancaire(CompteBancaire compteBancaire) { this.compteBancaire = compteBancaire; }
 
-    public void setCompteBancaire(CompteBancaire compteBancaire) {
-        this.compteBancaire = compteBancaire;
-    }
+    public Fonds getFonds() { return fonds; }
+    public void setFonds(Fonds fonds) { this.fonds = fonds; }
 
-    public Fonds getFonds() {
-        return fonds;
-    }
+    public BigDecimal getMontant() { return montant; }
+    public void setMontant(BigDecimal montant) { this.montant = montant; }
 
-    public void setFonds(Fonds fonds) {
-        this.fonds = fonds;
-    }
+    public BigDecimal getRendement() { return rendement; }
+    public void setRendement(BigDecimal rendement) { this.rendement = rendement; }
 
-    public BigDecimal getMontant() {
-        return montant;
-    }
+    public LocalDateTime getDatePlacement() { return datePlacement; }
+    public void setDatePlacement(LocalDateTime datePlacement) { this.datePlacement = datePlacement; }
 
-    public void setMontant(BigDecimal montant) {
-        this.montant = montant;
-    }
+    public LocalDateTime getDateCloture() { return dateCloture; }
+    public void setDateCloture(LocalDateTime dateCloture) { this.dateCloture = dateCloture; }
 
-    public BigDecimal getRendementPrevu() {
-        return rendementPrevu;
-    }
+    public LocalDateTime getDateSortie() { return dateSortie; }
+    public void setDateSortie(LocalDateTime dateSortie) { this.dateSortie = dateSortie; }
 
-    public void setRendementPrevu(BigDecimal rendementPrevu) {
-        this.rendementPrevu = rendementPrevu;
-    }
+    public BigDecimal getFraisSortie() { return fraisSortie; }
+    public void setFraisSortie(BigDecimal fraisSortie) { this.fraisSortie = fraisSortie; }
 
-    public BigDecimal getGainPrevu() {
-        return gainPrevu;
-    }
-
-    public void setGainPrevu(BigDecimal gainPrevu) {
-        this.gainPrevu = gainPrevu;
-    }
-
-    public LocalDateTime getDatePlacement() {
-        return datePlacement;
-    }
-
-    public void setDatePlacement(LocalDateTime datePlacement) {
-        this.datePlacement = datePlacement;
-    }
-
-    public LocalDateTime getDateCloture() {
-        return dateCloture;
-    }
-
-    public void setDateCloture(LocalDateTime dateCloture) {
-        this.dateCloture = dateCloture;
-    }
-
-    public StatutPlacement getStatut() {
-        return statut;
-    }
-
-    public void setStatut(StatutPlacement statut) {
-        this.statut = statut;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public StatutPlacement getStatut() { return statut; }
+    public void setStatut(StatutPlacement statut) { this.statut = statut; }
 
     @Override
     public String toString() {
-        return "Placement{" +
-                "id=" + id +
-                ", montant=" + montant +
-                ", rendementPrevu=" + rendementPrevu +
-                ", gainPrevu=" + gainPrevu +
-                ", statut=" + statut +
-                ", datePlacement=" + datePlacement +
-                '}';
+        return "Placement{id=" + id + ", type='" + type + "', code='" + codeIdentification +
+                "', montant=" + montant + ", rendement=" + rendement +
+                ", statut=" + statut + ", datePlacement=" + datePlacement +
+                ", dateCloture=" + dateCloture + '}';
     }
 
     @Override
@@ -226,7 +197,5 @@ public class Placement {
     }
 
     @Override
-    public int hashCode() {
-        return id != null ? id.hashCode() : 0;
-    }
+    public int hashCode() { return id != null ? id.hashCode() : 0; }
 }

@@ -12,15 +12,9 @@ export interface Operation {
   statut?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class OperationsStoreService {
   private operations = signal<Operation[]>(this.loadFromLocalStorage());
-
-  constructor() {
-    console.log('📊 [OPERATIONS-STORE] Service initialisé');
-  }
 
   private loadFromLocalStorage(): Operation[] {
     try {
@@ -40,18 +34,18 @@ export class OperationsStoreService {
   }
 
   getOperationsByCompte(numCompte: string): Operation[] {
-    return this.operations().filter(op =>
-      op.numCompteSource === numCompte
-    ).sort((a, b) =>
-      new Date(b.dateOperation).getTime() - new Date(a.dateOperation).getTime()
-    );
+    return this.operations()
+      .filter(op => op.numCompteSource === numCompte)
+      .sort((a, b) =>
+        new Date(b.dateOperation).getTime() - new Date(a.dateOperation).getTime()
+      );
   }
 
-  getRecentOperations(numCompte: string, limit: number = 5): Operation[] {
+  getRecentOperations(numCompte: string, limit = 5): Operation[] {
     return this.getOperationsByCompte(numCompte).slice(0, limit);
   }
 
-  private addOperation(operation: Partial<Operation>) {
+  private addOperation(operation: Partial<Operation>): Operation {
     const newOperation: Operation = {
       id: Date.now() + Math.random(),
       type: operation.type || 'VIREMENT',
@@ -67,18 +61,18 @@ export class OperationsStoreService {
     const updated = [newOperation, ...this.operations()];
     this.operations.set(updated);
     this.saveToLocalStorage(updated);
-
-    console.log('✅ [OPERATIONS-STORE] Opération ajoutée:', newOperation);
     return newOperation;
   }
+
+  /* ====== Virements ====== */
 
   addVirement(
     numCompteSource: string,
     numCompteDestinataire: string,
     montant: number,
     communication: string,
-    intituleSource: string = 'Compte',
-    intituleDestinataire: string = 'Compte'
+    intituleSource = 'Compte',
+    intituleDestinataire = 'Compte'
   ) {
     this.addOperation({
       type: 'VIREMENT',
@@ -88,85 +82,107 @@ export class OperationsStoreService {
       communication,
       description: `Virement vers ${intituleDestinataire} (${numCompteDestinataire.slice(-4)})`
     });
-
-    console.log('✅ [OPERATIONS-STORE] Virement enregistré');
   }
 
-  addDepot(numCompte: string, montant: number, description: string = 'Dépôt en espèces') {
+  /* ====== Dépôts / Retraits ====== */
+
+  addDepot(numCompte: string, montant: number, description = 'Dépôt en espèces') {
     this.addOperation({
-      type: 'DEPOT',
-      montant: montant,
-      numCompteSource: numCompte,
-      communication: 'Dépôt',
-      description
+      type: 'DEPOT', montant, numCompteSource: numCompte,
+      communication: 'Dépôt', description
     });
-
-    console.log('✅ [OPERATIONS-STORE] Dépôt enregistré');
   }
 
-  addDepotWithDate(
-    numCompte: string, 
-    montant: number, 
-    description: string, 
-    dateOperation: Date
-  ) {
+  addDepotWithDate(numCompte: string, montant: number, description: string, dateOperation: Date) {
     this.addOperation({
-      type: 'DEPOT',
-      montant: montant,
-      numCompteSource: numCompte,
-      communication: 'Dépôt RDV',
-      description,
+      type: 'DEPOT', montant, numCompteSource: numCompte,
+      communication: 'Dépôt RDV', description,
       dateOperation: dateOperation.toISOString()
     });
-
-    console.log('✅ [OPERATIONS-STORE] Dépôt RDV enregistré avec date:', dateOperation);
   }
 
-  addRetrait(numCompte: string, montant: number, description: string = 'Retrait en espèces') {
+  addRetrait(numCompte: string, montant: number, description = 'Retrait en espèces') {
     this.addOperation({
-      type: 'RETRAIT',
-      montant: -montant,
-      numCompteSource: numCompte,
-      communication: 'Retrait',
-      description
+      type: 'RETRAIT', montant: -montant, numCompteSource: numCompte,
+      communication: 'Retrait', description
     });
-
-    console.log('✅ [OPERATIONS-STORE] Retrait enregistré');
   }
 
-  addRetraitWithDate(
-    numCompte: string, 
-    montant: number, 
-    description: string, 
-    dateOperation: Date
-  ) {
+  addRetraitWithDate(numCompte: string, montant: number, description: string, dateOperation: Date) {
     this.addOperation({
-      type: 'RETRAIT',
-      montant: -montant,
-      numCompteSource: numCompte,
-      communication: 'Retrait RDV',
-      description,
+      type: 'RETRAIT', montant: -montant, numCompteSource: numCompte,
+      communication: 'Retrait RDV', description,
       dateOperation: dateOperation.toISOString()
     });
-
-    console.log('✅ [OPERATIONS-STORE] Retrait RDV enregistré avec date:', dateOperation);
   }
 
-  addFrais(numCompte: string, montant: number, description: string = 'Frais bancaires') {
+  addFrais(numCompte: string, montant: number, description = 'Frais bancaires') {
     this.addOperation({
-      type: 'FRAIS',
-      montant: -montant,
+      type: 'FRAIS', montant: -montant, numCompteSource: numCompte,
+      communication: 'Frais', description
+    });
+  }
+
+  /* ====== Placements ✅ NOUVEAU ====== */
+
+  /**
+   * Débit lors de la création d'un placement.
+   */
+  addPlacement(numCompte: string, montant: number, nomFonds: string) {
+    this.addOperation({
+      type: 'PLACEMENT',
+      montant: -montant,  // débit du compte
       numCompteSource: numCompte,
-      communication: 'Frais',
-      description
+      communication: 'Placement',
+      description: `Placement dans ${nomFonds}`
+    });
+  }
+
+  /**
+   * Crédit lors d'une clôture normale (montant + gain).
+   */
+  addCloturePlacement(numCompte: string, montantRestitue: number, nomFonds: string) {
+    this.addOperation({
+      type: 'CLOTURE_PLACEMENT',
+      montant: +montantRestitue,  // crédit du compte
+      numCompteSource: numCompte,
+      communication: 'Clôture placement',
+      description: `Clôture placement ${nomFonds} — montant + gain restitués`
+    });
+  }
+
+  /**
+   * Crédit lors d'une sortie anticipée (montant - frais, gain perdu).
+   */
+  addSortieAnticipee(
+    numCompte: string,
+    montantRestitue: number,
+    fraisSortie: number,
+    nomFonds: string
+  ) {
+    // Crédit du montant restitué
+    this.addOperation({
+      type: 'SORTIE_ANTICIPEE',
+      montant: +montantRestitue,
+      numCompteSource: numCompte,
+      communication: 'Sortie anticipée',
+      description: `Sortie anticipée ${nomFonds} — restitué: ${montantRestitue.toFixed(2)} €`
     });
 
-    console.log('✅ [OPERATIONS-STORE] Frais enregistrés');
+    // Débit des frais de sortie
+    if (fraisSortie > 0) {
+      this.addOperation({
+        type: 'FRAIS_SORTIE',
+        montant: -fraisSortie,
+        numCompteSource: numCompte,
+        communication: 'Frais sortie anticipée',
+        description: `Frais de sortie anticipée ${nomFonds}`
+      });
+    }
   }
 
   clearAll() {
     this.operations.set([]);
     localStorage.removeItem('banking_operations');
-    console.log('🗑️ [OPERATIONS-STORE] Toutes les opérations effacées');
   }
 }

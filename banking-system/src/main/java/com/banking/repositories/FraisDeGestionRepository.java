@@ -7,40 +7,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * Repository simple pour FraisDeGestion
- * Version de base qui fonctionne immédiatement
- */
 @Repository
 public interface FraisDeGestionRepository extends JpaRepository<FraisDeGestion, Long> {
 
-    /**
-     * Recherche par client
-     */
     List<FraisDeGestion> findByClient(Client client);
 
-    /**
-     * Recherche par statut actif
-     */
     List<FraisDeGestion> findByEstActif(Boolean estActif);
 
-    /**
-     * Recherche par type de frais
-     */
-    List<FraisDeGestion> findByTypeFrais(FraisDeGestion.TypeFrais typeFrais);
-
-    /**
-     * Recherche par périodicité
-     */
-    List<FraisDeGestion> findByPeriodicite(FraisDeGestion.Periodicite periodicite);
-
-    /**
-     * Frais par client et type
-     */
-    List<FraisDeGestion> findByClientAndTypeFrais(Client client, FraisDeGestion.TypeFrais typeFrais);
-
-    /**
-     * Frais actifs par client
-     */
     List<FraisDeGestion> findByClientAndEstActif(Client client, Boolean estActif);
+
+    // ❌ SUPPRIMÉES — typeFrais et periodicite sont @Transient dans FraisDeGestion
+    // Spring Data JPA ne peut pas faire de requête SQL sur un champ @Transient
+    // findByTypeFrais(TypeFrais typeFrais)
+    // findByPeriodicite(Periodicite periodicite)
+    // findByClientAndTypeFrais(Client client, TypeFrais typeFrais)
 }

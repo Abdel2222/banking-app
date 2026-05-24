@@ -9,6 +9,7 @@ import { RendezVousComponent } from './features/rendez-vous/rendez-vous.componen
 import { OperationsComponent } from './features/operations/operations.component';
 import { InvestmentsComponent } from './features/investments/investments/investments.component';
 import { InvestmentsHistoryComponent } from './features/investments/investments-history/investments-history.component';
+import { SavingsPageComponent } from './features/savings/savings-page/savings-page.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'auth', pathMatch: 'full' },
@@ -53,6 +54,11 @@ export const routes: Routes = [
   {
     path: 'investissements/historique',
     component: InvestmentsHistoryComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'epargne',
+    component: SavingsPageComponent,
     canActivate: [authGuard]
   },
 

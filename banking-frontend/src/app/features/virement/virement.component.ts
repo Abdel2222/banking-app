@@ -14,28 +14,23 @@ import { OperationsStoreService } from '../../core/services/operations-store.ser
   styleUrls: ['./virement.component.scss']
 })
 export class VirementComponent implements OnInit {
-  // Signals pour la gestion d'état
+
   clients = signal<Client[]>([]);
   mesComptes = signal<Compte[]>([]);
   comptesDestinataire = signal<Compte[]>([]);
-
   selectedClientDestinataire = signal<Client | null>(null);
   selectedCompteSource = signal<Compte | null>(null);
   selectedCompteDestinataire = signal<Compte | null>(null);
-
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
   success = signal<string | null>(null);
   currentStep = signal<number>(1);
   searchFilter = '';
-
-  // NOUVEAUX Signals
   communicationStructuree = signal<boolean>(false);
   virementInterne = signal<boolean>(false);
 
   virementForm: FormGroup;
 
-  // Injections
   private http = inject(HttpClient);
   private operationsStore = inject(OperationsStoreService);
 
@@ -53,29 +48,23 @@ export class VirementComponent implements OnInit {
   }
 
   ngOnInit() {
-    console.log('🚀 [COMPONENT] Initialisation VirementComponent');
     this.loadClients();
     this.loadMesComptes();
   }
 
   loadClients() {
-    console.log('📡 [COMPONENT] loadClients - Début');
     this.loading.set(true);
     this.error.set(null);
-
     this.virementService.getAllClients().subscribe({
       next: (response) => {
-        console.log('📥 [COMPONENT] Réponse getAllClients:', response);
         if (response.success) {
           this.clients.set(response.data);
-          console.log('✅ [COMPONENT] Clients chargés:', response.data.length);
         } else {
           this.error.set('Erreur lors du chargement des clients');
         }
         this.loading.set(false);
       },
-      error: (err) => {
-        console.error('❌ [COMPONENT] Erreur loadClients:', err);
+      error: () => {
         this.error.set('Impossible de charger les clients');
         this.loading.set(false);
       }
@@ -83,58 +72,44 @@ export class VirementComponent implements OnInit {
   }
 
   loadMesComptes() {
-    console.log('📡 [COMPONENT] loadMesComptes - Début');
-
     this.virementService.getCurrentUserComptes().subscribe({
       next: (comptes) => {
-        console.log('✅ [COMPONENT] Mes comptes chargés:', comptes);
         this.mesComptes.set(comptes);
-
         if (comptes.length > 0) {
           this.selectedCompteSource.set(comptes[0]);
-          console.log('✅ [COMPONENT] Premier compte sélectionné:', comptes[0].numCompte);
-        } else {
-          console.warn('⚠️ [COMPONENT] Aucun compte trouvé');
         }
       },
-      error: (error) => {
-        console.error('❌ [COMPONENT] Erreur loadMesComptes:', error);
+      error: () => {
+        this.error.set('Impossible de charger vos comptes');
       }
     });
   }
 
   onCompteSourceSelect(numCompte: string) {
-    console.log('🎯 [COMPONENT] onCompteSourceSelect:', numCompte);
-
     const compte = this.mesComptes().find(c => c.numCompte === numCompte);
-    if (compte) {
-      this.selectedCompteSource.set(compte);
-      console.log('✅ [COMPONENT] Compte source sélectionné:', compte.numCompte, compte.balance, '€');
-    } else {
-      console.warn('⚠️ [COMPONENT] Compte non trouvé:', numCompte);
-    }
+    if (compte) this.selectedCompteSource.set(compte);
   }
 
   toggleVirementInterne() {
     this.virementInterne.update(v => !v);
-
     if (this.virementInterne()) {
-      this.comptesDestinataire.set(this.mesComptes());
+      // En mode interne, le destinataire = mes autres comptes (hors compte source)
+      const autresComptes = this.mesComptes().filter(
+        c => c.numCompte !== this.selectedCompteSource()?.numCompte
+      );
+      this.comptesDestinataire.set(autresComptes);
       this.selectedClientDestinataire.set(null);
       this.selectedCompteDestinataire.set(null);
       this.currentStep.set(2);
-      console.log('✅ [COMPONENT] Mode virement interne activé');
     } else {
       this.comptesDestinataire.set([]);
       this.selectedCompteDestinataire.set(null);
       this.currentStep.set(1);
-      console.log('✅ [COMPONENT] Mode virement externe activé');
     }
   }
 
   toggleCommunicationStructuree() {
     this.communicationStructuree.update(v => !v);
-
     if (this.communicationStructuree()) {
       this.virementForm.get('communicationOGM')?.setValidators([
         Validators.required,
@@ -150,7 +125,6 @@ export class VirementComponent implements OnInit {
       this.virementForm.get('communicationOGM')?.clearValidators();
       this.virementForm.get('communicationOGM')?.setValue('');
     }
-
     this.virementForm.get('communication')?.updateValueAndValidity();
     this.virementForm.get('communicationOGM')?.updateValueAndValidity();
   }
@@ -161,9 +135,7 @@ export class VirementComponent implements OnInit {
     const baseNumber = parseInt(part1 + part2);
     const modulo = baseNumber % 97;
     const part3 = String(modulo === 0 ? 97 : modulo).padStart(5, '0');
-    const ogm = `+++${part1}/${part2}/${part3}+++`;
-    this.virementForm.get('communicationOGM')?.setValue(ogm);
-    console.log('✅ [COMPONENT] Communication OGM générée:', ogm);
+    this.virementForm.get('communicationOGM')?.setValue(`+++${part1}/${part2}/${part3}+++`);
   }
 
   onClientDestinataireSelect(clientId: string) {
@@ -174,9 +146,7 @@ export class VirementComponent implements OnInit {
       this.currentStep.set(1);
       return;
     }
-
     const client = this.clients().find(c => c.id.toString() === clientId);
-
     if (client) {
       this.selectedClientDestinataire.set(client);
       this.loadComptesDestinataire(client.id);
@@ -189,51 +159,41 @@ export class VirementComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.comptesDestinataire.set([]);
-
     this.virementService.getComptesClient(clientId).subscribe({
       next: (comptes: Compte[]) => {
         this.comptesDestinataire.set(comptes);
-
         if (comptes.length > 0) {
           this.selectedCompteDestinataire.set(comptes[0]);
           this.currentStep.set(2);
         } else {
           this.error.set('Aucun compte disponible pour ce client');
         }
-
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        let errorMessage = 'Impossible de charger les comptes du destinataire';
-
         if (error.status === 401 || error.status === 403) {
-          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+          this.error.set('Session expirée. Veuillez vous reconnecter.');
         } else if (error.status === 404) {
-          errorMessage = 'Client introuvable ou aucun compte associé';
+          this.error.set('Client introuvable ou aucun compte associé');
+        } else {
+          this.error.set('Impossible de charger les comptes du destinataire');
         }
-
-        this.error.set(errorMessage);
         this.loading.set(false);
       }
     });
   }
 
   onCompteDestinataireSelect(numCompte: string) {
-    const compte = this.virementInterne()
-      ? this.mesComptes().find(c => c.numCompte === numCompte)
-      : this.comptesDestinataire().find(c => c.numCompte === numCompte);
-
+    const liste = this.virementInterne() ? this.mesComptes() : this.comptesDestinataire();
+    const compte = liste.find(c => c.numCompte === numCompte);
     if (compte) {
       this.selectedCompteDestinataire.set(compte);
       this.currentStep.set(3);
-      console.log('✅ [COMPONENT] Compte destinataire sélectionné:', compte.numCompte);
-      console.log('   Type de compte:', compte.savingsAccount ? 'ÉPARGNE' : 'COURANT');
+      console.log('Compte destinataire:', compte.numCompte, compte.savingsAccount ? 'ÉPARGNE' : 'COURANT');
     }
   }
 
   confirmerVirement() {
-    console.log('💸 [COMPONENT] === CONFIRMATION VIREMENT ===');
-
     if (this.virementForm.invalid || !this.selectedCompteSource() || !this.selectedCompteDestinataire()) {
       this.error.set('Veuillez remplir tous les champs');
       return;
@@ -251,23 +211,21 @@ export class VirementComponent implements OnInit {
       ? formValue.communicationOGM
       : formValue.communication;
 
+    // ✅ Virement interne vers compte épargne
     const isDestinationEpargne = this.selectedCompteDestinataire()!.savingsAccount === true;
-
     if (this.virementInterne() && isDestinationEpargne) {
-      console.log('💎 [COMPONENT] Virement vers compte épargne détecté');
       this.alimenterEpargne(montant, communication);
       return;
     }
 
+    // Virement normal
     const virementData: VirementRequest = {
       numCompteSource: this.selectedCompteSource()!.numCompte,
       numCompteDestinataire: this.selectedCompteDestinataire()!.numCompte,
-      montant: montant,
+      montant,
       communication: String(communication || '').trim(),
       description: formValue.description
     };
-
-    console.log('📤 [COMPONENT] Virement normal:', virementData);
 
     this.loading.set(true);
     this.error.set(null);
@@ -278,7 +236,6 @@ export class VirementComponent implements OnInit {
           ? `votre ${this.selectedCompteDestinataire()?.intitule || 'compte'}`
           : `${this.selectedClientDestinataire()?.prenom} ${this.selectedClientDestinataire()?.nom}`;
 
-        // ========== ENREGISTRER L'OPÉRATION ==========
         this.operationsStore.addVirement(
           this.selectedCompteSource()!.numCompte,
           this.selectedCompteDestinataire()!.numCompte,
@@ -287,62 +244,49 @@ export class VirementComponent implements OnInit {
           this.selectedCompteSource()!.intitule,
           this.selectedCompteDestinataire()!.intitule
         );
-        // ============================================
 
         this.success.set(`Virement de ${this.formatCurrency(montant)} effectué avec succès vers ${destinataire}`);
         setTimeout(() => this.router.navigate(['/dashboard']), 3000);
         this.loading.set(false);
       },
       error: (error: Error) => {
-        console.error('❌ [COMPONENT] Erreur virement:', error);
         this.error.set(error.message || 'Erreur lors du virement');
         this.loading.set(false);
       }
     });
   }
 
+  // ✅ CORRIGÉ — utilise le compte destinataire (épargne) dans l'URL
   alimenterEpargne(montant: number, communication: string) {
-    console.log('💎 [COMPONENT] === ALIMENTATION COMPTE ÉPARGNE ===');
-    console.log('   Montant:', montant, '€');
-    console.log('   Compte bancaire source:', this.selectedCompteSource()!.numCompte);
-    console.log('   Communication:', communication);
-
     this.loading.set(true);
     this.error.set(null);
 
     const token = localStorage.getItem('auth_token');
-    const numCompteBancaire = this.selectedCompteSource()!.numCompte;
+    const numCompteEpargne = this.selectedCompteDestinataire()!.numCompte; // ✅ compte épargne
+    const numCompteSource  = this.selectedCompteSource()!.numCompte;       // ✅ compte courant
+
+    console.log('💎 Épargne destinataire:', numCompteEpargne);
+    console.log('💳 Source:', numCompteSource);
 
     this.http.post<any>(
-      `/api/savings/${numCompteBancaire}/alimenter`,
-      { montant },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
+      `/api/savings/${numCompteEpargne}/alimenter`,  // ✅ numéro épargne dans l'URL
+      { montant, numCompteSource },
+      { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
     ).subscribe({
       next: (response) => {
-        console.log('✅ [COMPONENT] Épargne alimentée avec succès:', response);
-
-        // ========== ENREGISTRER L'OPÉRATION ==========
         this.operationsStore.addVirement(
-          this.selectedCompteSource()!.numCompte,
-          this.selectedCompteDestinataire()!.numCompte,
+          numCompteSource,
+          numCompteEpargne,
           montant,
           communication || 'Alimentation épargne',
           this.selectedCompteSource()!.intitule,
           this.selectedCompteDestinataire()!.intitule
         );
-        // ============================================
-
         this.success.set(`Virement de ${this.formatCurrency(montant)} effectué avec succès vers votre Compte Épargne`);
         setTimeout(() => this.router.navigate(['/dashboard']), 3000);
         this.loading.set(false);
       },
       error: (error) => {
-        console.error('❌ [COMPONENT] Erreur alimentation épargne:', error);
         this.error.set(error.error?.message || 'Erreur lors de l\'alimentation du compte épargne');
         this.loading.set(false);
       }
@@ -367,17 +311,11 @@ export class VirementComponent implements OnInit {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   }
 
   getFilteredClients(): Client[] {
-    if (!this.searchFilter.trim()) {
-      return this.clients();
-    }
-
+    if (!this.searchFilter.trim()) return this.clients();
     const filter = this.searchFilter.toLowerCase().trim();
     return this.clients().filter(c =>
       c.nom.toLowerCase().includes(filter) ||

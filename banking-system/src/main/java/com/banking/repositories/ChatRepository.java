@@ -1,18 +1,24 @@
 package com.banking.repositories;
 
 import com.banking.entities.Chat;
+import com.banking.entities.ChatStatut;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+@Repository
 public interface ChatRepository extends JpaRepository<Chat, Long> {
 
-    // Inbox du destinataire (les messages reçus)
-    List<Chat> findByCompteDestinataire_IdOrderByCreatedAtDesc(Long compteId);
+    /** Tous les chats triés du plus récent au plus ancien */
+    List<Chat> findAllByOrderByDateHeureDesc();
 
-    // Messages envoyés par ce compte
-    List<Chat> findByCompteSource_IdOrderByCreatedAtDesc(Long compteId);
+    /** Chats par client */
+    List<Chat> findByClientIdOrderByDateHeureDesc(Long clientId);
 
-    // Tous les chats où le compte est impliqué (source OU destinataire)
-    List<Chat> findByCompteSource_IdOrCompteDestinataire_IdOrderByCreatedAtDesc(Long sourceId, Long destId);
+    /** Demandes en attente pour la queue admin */
+    List<Chat> findByStatutOrderByDateHeureDesc(ChatStatut statut);
+
+    /** Compteur de demandes par statut (badge admin) */
+    long countByStatut(ChatStatut statut);
 }

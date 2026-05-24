@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-
-import { OperationsStoreService } from './operations-store.service';
+import { OperationsStoreService } from './operations-store.service'; // ✅ bon nom
 
 describe('OperationsStoreService', () => {
   let service: OperationsStoreService;

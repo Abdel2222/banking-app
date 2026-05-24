@@ -1,6 +1,7 @@
 package com.banking.entities;
 
 import com.banking.entity.enums.Role;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -37,17 +38,16 @@ public class Personne {
     @NotBlank(message = "Le mot de passe est obligatoire")
     @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères")
     @Column(name = "mot_de_passe", nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)  // ✅ mot de passe jamais retourné
     private String motDePasse;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
 
-    // Utilisé seulement quand role = EMPLOYE
     @Column(name = "matricule", unique = true, length = 50)
     private String matricule;
 
-    // Utilisé seulement quand role = EMPLOYE
     @Column(name = "poste", length = 100)
     private String poste;
 
@@ -56,6 +56,8 @@ public class Personne {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ===== Constructeurs =====
 
     public Personne() {}
 
@@ -67,7 +69,8 @@ public class Personne {
         this.role = role;
     }
 
-    public Personne(String prenom, String nom, String email, String motDePasse, Role role, String matricule, String poste) {
+    public Personne(String prenom, String nom, String email, String motDePasse, Role role,
+                    String matricule, String poste) {
         this.prenom = prenom;
         this.nom = nom;
         this.email = email;
@@ -76,6 +79,8 @@ public class Personne {
         this.matricule = matricule;
         this.poste = poste;
     }
+
+    // ===== Hooks JPA =====
 
     @PrePersist
     protected void onCreate() {
@@ -87,6 +92,8 @@ public class Personne {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // ===== Getters / Setters =====
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -117,6 +124,8 @@ public class Personne {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    // ===== Utils =====
 
     public String getNomComplet() {
         return prenom + " " + nom;

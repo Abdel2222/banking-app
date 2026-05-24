@@ -15,7 +15,4 @@ public interface FondsRepository extends JpaRepository<Fonds, Long> {
 
     boolean existsByCodeIdentification(String codeIdentification);
 
-    List<Fonds> findByEstActifTrue();
-
-    List<Fonds> findByNiveauRisque(NiveauRisque niveauRisque);
 }

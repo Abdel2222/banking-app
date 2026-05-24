@@ -1,11 +1,11 @@
 package com.banking.entities;
 
 import com.banking.entity.enums.TypeOperation;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// ✅ ajoute le listener
 @Entity
 @Table(name = "operations")
 @EntityListeners(Operation.OperationJournalListener.class)
@@ -15,9 +15,9 @@ public class Operation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // FK vers comptes_bancaires.id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "compte_bancaire_id", nullable = false)
+    @JsonBackReference("compte-operations")  // ✅ coupe la récursion côté enfant
     private CompteBancaire compteBancaire;
 
     @Column(name = "numero_compte", nullable = false)
@@ -48,7 +48,9 @@ public class Operation {
     @Column(name = "commentaire")
     private String commentaire;
 
-    public Operation() { }
+    // ===== Constructeurs =====
+
+    public Operation() {}
 
     public Operation(CompteBancaire compte, BigDecimal montant, TypeOperation typeOperation) {
         this(compte, montant, typeOperation, null);
@@ -63,6 +65,8 @@ public class Operation {
         this.dateOperation  = LocalDateTime.now();
     }
 
+    // ===== Getters / Setters =====
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -73,10 +77,10 @@ public class Operation {
     public void setNumeroCompte(String numeroCompte) { this.numeroCompte = numeroCompte; }
 
     public String getNumeroCompteDestinataire() { return numeroCompteDestinataire; }
-    public void setNumeroCompteDestinataire(String numeroCompteDestinataire) { this.numeroCompteDestinataire = numeroCompteDestinataire; }
+    public void setNumeroCompteDestinataire(String v) { this.numeroCompteDestinataire = v; }
 
     public String getNomTitulaireDestinataire() { return nomTitulaireDestinataire; }
-    public void setNomTitulaireDestinataire(String nomTitulaireDestinataire) { this.nomTitulaireDestinataire = nomTitulaireDestinataire; }
+    public void setNomTitulaireDestinataire(String v) { this.nomTitulaireDestinataire = v; }
 
     public TypeOperation getTypeOperation() { return typeOperation; }
     public void setTypeOperation(TypeOperation typeOperation) { this.typeOperation = typeOperation; }
@@ -101,29 +105,26 @@ public class Operation {
     public void setType(TypeOperation type) { this.typeOperation = type; }
     public String getDescriptionOperation() { return this.description; }
 
-    /* ============================================================
-       LISTENER qui pousse une ligne dans `releves_mensuels` à chaque insert
-       ============================================================ */
+    // ===== Listener JPA =====
+
     public static class OperationJournalListener {
 
         @PostPersist
         public void afterPersist(Operation op) {
             try {
-                // Récupère les beans Spring (repo) via le holder statique
-                var releveRepo = com.banking.support.SpringContext.getBean(com.banking.repositories.ReleveDeCompteRepository.class);
+                var releveRepo = com.banking.support.SpringContext.getBean(
+                        com.banking.repositories.ReleveDeCompteRepository.class);
 
                 BigDecimal solde = null;
                 try {
-                    // On tente de lire le solde à jour du compte
-                    var cRepo = com.banking.support.SpringContext.getBean(com.banking.repositories.CompteBancaireRepository.class);
-                    com.banking.entities.CompteBancaire c =
-                            (op.getCompteBancaire() != null)
-                                    ? op.getCompteBancaire()
-                                    : cRepo.findByNumCompte(op.getNumeroCompte()).orElse(null);
+                    var cRepo = com.banking.support.SpringContext.getBean(
+                            com.banking.repositories.CompteBancaireRepository.class);
+                    CompteBancaire c = (op.getCompteBancaire() != null)
+                            ? op.getCompteBancaire()
+                            : cRepo.findByNumCompte(op.getNumeroCompte()).orElse(null);
                     if (c != null) solde = c.getBalance();
-                } catch (Exception ignore) { /* on ne bloque pas */ }
+                } catch (Exception ignore) {}
 
-                // Construit la ligne "relevé"
                 com.banking.entities.ReleveDeCompte r = new com.banking.entities.ReleveDeCompte();
                 r.setNumCompte(op.getNumeroCompte());
                 r.setTypeOperation(op.getTypeOperation());
@@ -133,11 +134,9 @@ public class Operation {
                 r.setSolde(solde);
                 r.setCompte(op.getCompteBancaire());
 
-                // Enregistre
                 releveRepo.save(r);
             } catch (Throwable t) {
-                // Surtout ne pas casser l'opération bancaire si le journal échoue
-                // (tu peux logger ici si tu veux)
+                // Ne pas bloquer l'opération si le journal échoue
             }
         }
     }

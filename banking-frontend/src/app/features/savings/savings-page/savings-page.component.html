@@ -1,0 +1,308 @@
+<div class="savings-wrap">
+
+  <!-- HEADER -->
+  <header class="topbar">
+    <button class="btn-back" (click)="retour()">← Retour au dashboard</button>
+    <h2>Mon épargne</h2>
+    <div class="spacer"></div>
+  </header>
+
+  <div *ngIf="loading()" class="loading-state">⏳ Chargement de votre épargne...</div>
+  <div *ngIf="error()" class="error-banner">❌ {{ error() }}</div>
+
+  <ng-container *ngIf="!loading() && compte()">
+
+    <!-- ========== 1) FLUX DES INTÉRÊTS ========== -->
+    <section class="flux-section">
+      <div class="flux-title">FLUX DES INTÉRÊTS</div>
+
+      <div class="flux-grid">
+        <div class="flux-box flux-taux">
+          <div class="flux-emoji">📊</div>
+          <div class="flux-label">TAUX</div>
+          <div class="flux-value">{{ ((taux() ?? 0) * 100) | number:'1.2-2' }} %</div>
+          <small>annuel</small>
+        </div>
+
+        <div class="flux-arrow flux-arrow-gold">
+          <svg viewBox="0 0 40 20" width="40" height="20">
+            <defs>
+              <marker id="arrG" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <polygon points="0 0, 6 3, 0 6" fill="#ffd700"/>
+              </marker>
+            </defs>
+            <line x1="2" y1="10" x2="34" y2="10" stroke="#ffd700" stroke-width="2"
+                  stroke-dasharray="3 3" marker-end="url(#arrG)"/>
+          </svg>
+          <small>génère</small>
+        </div>
+
+        <div class="flux-box flux-interets">
+          <div class="flux-emoji">✨</div>
+          <div class="flux-label">INTÉRÊTS CUMULÉS</div>
+          <div class="flux-value">+ {{ totalInteretsCumules() | money }}</div>
+          <small>depuis l'ouverture</small>
+        </div>
+
+        <div class="flux-arrow flux-arrow-green">
+          <svg viewBox="0 0 40 20" width="40" height="20">
+            <defs>
+              <marker id="arrV" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                <polygon points="0 0, 6 3, 0 6" fill="#4ade80"/>
+              </marker>
+            </defs>
+            <line x1="2" y1="10" x2="34" y2="10" stroke="#4ade80" stroke-width="2"
+                  marker-end="url(#arrV)"/>
+          </svg>
+          <small>crédité sur</small>
+        </div>
+
+        <div class="flux-box flux-compte">
+          <div class="flux-emoji">💰</div>
+          <div class="flux-label">MON COMPTE</div>
+          <div class="flux-value">{{ compte()?.solde | money }}</div>
+          <small>solde épargne</small>
+        </div>
+      </div>
+
+      <div class="flux-footer">
+        💡 À chaque capitalisation, les intérêts s'ajoutent automatiquement à votre solde
+      </div>
+    </section>
+
+    <!-- ========== 2) CARTE PRINCIPALE COMPTE ========== -->
+    <section class="compte-card">
+      <div class="compte-card-tag">COMPTE ÉPARGNE</div>
+
+      <div class="compte-card-body">
+        <div class="compte-card-left">
+          <div class="compte-card-label">Solde actuel</div>
+          <div class="compte-card-amount">{{ compte()?.solde | money }}</div>
+          <div class="compte-card-num">N° {{ compte()?.numCompte }}</div>
+        </div>
+
+        <div class="compte-card-right">
+          <div class="compte-card-mini-label">↗ INTÉRÊTS REÇUS</div>
+          <div class="compte-card-mini-value">+ {{ totalInteretsCumules() | money }}</div>
+          <small>depuis l'ouverture</small>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- ========== 3) MINI-CARTES ========== -->
+    <section class="mini-cards-grid">
+      <div class="mini-card">
+        <div class="mini-card-label">TAUX ANNUEL</div>
+        <div class="mini-card-value mini-green">{{ ((taux() ?? 0) * 100) | number:'1.2-2' }} %</div>
+      </div>
+
+      <div class="mini-card">
+        <div class="mini-card-label">INTÉRÊTS EN COURS</div>
+        <div class="mini-card-value mini-gold">+ {{ interetsEnCours() | money }}</div>
+        <small>période actuelle</small>
+      </div>
+
+      <div class="mini-card">
+        <div class="mini-card-label">PROCHAINE CAPI.</div>
+        <div class="mini-card-value mini-white">
+          {{ prochaineCapitalisation() | date:'dd/MM/yyyy' }}
+        </div>
+        <small>dans {{ joursAvantProchaineCapi() }} jours</small>
+      </div>
+    </section>
+
+    <!-- ========== 4) GRAPHIQUE ========== -->
+    <section class="graph-section">
+      <div class="graph-header">
+        <div class="graph-title">Évolution du solde</div>
+        <div class="graph-periode">
+          <button [class.active]="periode() === '6M'"  (click)="setPeriode('6M')">6M</button>
+          <button [class.active]="periode() === '1A'"  (click)="setPeriode('1A')">1A</button>
+          <button [class.active]="periode() === 'ALL'" (click)="setPeriode('ALL')">Tout</button>
+        </div>
+      </div>
+
+      <svg viewBox="0 0 600 160" class="graph-svg" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stop-color="#ffd700" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Grille -->
+        <line x1="0" y1="40"  x2="600" y2="40"  stroke="rgba(255,255,255,0.05)"/>
+        <line x1="0" y1="80"  x2="600" y2="80"  stroke="rgba(255,255,255,0.05)"/>
+        <line x1="0" y1="120" x2="600" y2="120" stroke="rgba(255,255,255,0.05)"/>
+
+        <!-- Zone -->
+        <path [attr.d]="svgArea()" fill="url(#areaGrad)"/>
+
+        <!-- Courbe -->
+        <path [attr.d]="svgPath()" stroke="#ffd700" stroke-width="2.5" fill="none"/>
+
+        <!-- Points de capitalisation -->
+        <circle *ngFor="let p of capiPoints()"
+                [attr.cx]="p.x"
+                [attr.cy]="p.y"
+                r="4"
+                fill="#4ade80"
+                stroke="#fff"
+                stroke-width="1.5">
+          <title>+{{ p.montant | money }} le {{ p.date | date:'dd/MM/yyyy' }}</title>
+        </circle>
+      </svg>
+
+      <div class="graph-legend">
+        <div><span class="legend-line legend-gold"></span>Solde</div>
+        <div><span class="legend-dot legend-green"></span>Capitalisation d'intérêts</div>
+      </div>
+    </section>
+
+    <!-- ========== 5) SIMULATEUR ========== -->
+    <section class="simulator-section">
+      <div class="simulator-header">
+        <h4>🔮 Simulateur — Et dans le futur ?</h4>
+      </div>
+
+      <div class="simulator-body">
+        <div class="simulator-control">
+          <label>
+            Dans <strong>{{ anneesSimulation() }} an{{ anneesSimulation() > 1 ? 's' : '' }}</strong>,
+            avec un taux de {{ ((taux() ?? 0) * 100) | number:'1.2-2' }} %
+          </label>
+          <input type="range"
+                 min="1" max="30" step="1"
+                 [ngModel]="anneesSimulation()"
+                 (ngModelChange)="anneesSimulation.set($event)">
+          <div class="simulator-scale">
+            <span>1 an</span><span>15 ans</span><span>30 ans</span>
+          </div>
+        </div>
+
+        <div class="simulator-result">
+          <div class="simulator-result-label">Vous aurez environ</div>
+          <div class="simulator-result-value">{{ projection() | money }}</div>
+          <div class="simulator-result-gain">+ {{ gainProjection() | money }} de gain</div>
+        </div>
+      </div>
+
+      <small class="simulator-note">
+        💡 Estimation indicative basée sur le taux actuel, hors fiscalité.
+      </small>
+    </section>
+
+    <!-- ========== 6) ZONE ADMIN ========== -->
+    <section class="admin-zone" *ngIf="isAdmin()">
+      <div class="admin-zone-header">
+        <span>🛠️</span>
+        <strong>ZONE ADMIN</strong>
+        <small>capitalisation manuelle (en production: automatique chaque mois)</small>
+      </div>
+      <button class="btn-admin-capi" (click)="capitaliser()" [disabled]="busy()">
+        ⚡ {{ busy() ? 'Capitalisation...' : 'Capitaliser maintenant' }}
+      </button>
+    </section>
+
+    <!-- ========== 7) HISTORIQUE ========== -->
+    <section class="history-section">
+      <h4>Historique des intérêts reçus</h4>
+
+      <div *ngIf="historique().length === 0" class="history-empty">
+        <span>✨</span>
+        <p>Aucun intérêt capitalisé pour le moment</p>
+      </div>
+
+      <!-- Période en cours -->
+      <div class="history-item history-pending"
+           *ngIf="interetCourant() && !interetCourant()?.dateCapitalisation">
+        <div class="history-icon">⏳</div>
+        <div class="history-info">
+          <div class="history-title">Période en cours</div>
+          <div class="history-sub">
+            Depuis {{ interetCourant()?.dateDebut | date:'dd/MM/yyyy' }}
+            — sera créditée le {{ prochaineCapitalisation() | date:'dd/MM/yyyy' }}
+          </div>
+        </div>
+        <div class="history-amount history-amount-pending">
+          ~ {{ interetsEnCours() | money }} à ce jour
+        </div>
+      </div>
+
+      <!-- Capitalisations passées -->
+      <div class="history-item"
+           *ngFor="let i of historique()"
+           [class.history-hidden]="!i.dateCapitalisation">
+        <div class="history-icon" *ngIf="i.dateCapitalisation">↗</div>
+        <div class="history-info" *ngIf="i.dateCapitalisation">
+          <div class="history-title">Intérêts crédités sur épargne</div>
+        <div class="history-sub">
+           {{ i.dateCapitalisation | date:'dd/MM/yyyy' }}
+          — période du {{ i.dateDebut | date:'dd/MM/yyyy' }}
+         — taux {{ (+i.tauxInteret * 100) | number:'1.2-2' }} %
+</div>
+        </div>
+        <div class="history-amount history-amount-success" *ngIf="i.dateCapitalisation">
+          + {{ i.montantInteret | money }}
+        </div>
+      </div>
+    </section>
+
+  </ng-container>
+
+  <!-- ========== MODAL ALIMENTER ========== -->
+  <div class="modal-overlay" *ngIf="showAlimenterModal()" (click)="closeModals()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>+ Alimenter mon épargne</h3>
+        <button class="modal-x" (click)="closeModals()">✕</button>
+      </div>
+      <label class="modal-field">
+        <span>Montant à ajouter</span>
+        <input type="number"
+               min="1"
+               step="0.01"
+               [ngModel]="montantInput()"
+               (ngModelChange)="montantInput.set($event)">
+      </label>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="closeModals()">Annuler</button>
+        <button class="btn-submit btn-gold"
+                (click)="alimenter()"
+                [disabled]="busy() || montantInput() <= 0">
+          {{ busy() ? '...' : 'Alimenter' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL RETIRER ========== -->
+  <div class="modal-overlay" *ngIf="showRetirerModal()" (click)="closeModals()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>− Retirer de mon épargne</h3>
+        <button class="modal-x" (click)="closeModals()">✕</button>
+      </div>
+      <label class="modal-field">
+        <span>Montant à retirer (solde dispo: {{ compte()?.solde | money }})</span>
+        <input type="number"
+               min="1"
+               step="0.01"
+               [max]="compte()?.solde ?? null"
+               [ngModel]="montantInput()"
+               (ngModelChange)="montantInput.set($event)">
+      </label>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="closeModals()">Annuler</button>
+        <button class="btn-submit"
+                (click)="retirer()"
+                [disabled]="busy() || montantInput() <= 0">
+          {{ busy() ? '...' : 'Retirer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
