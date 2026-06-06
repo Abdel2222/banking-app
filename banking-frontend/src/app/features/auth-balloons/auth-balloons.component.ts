@@ -27,10 +27,12 @@ export class AuthBalloonsComponent implements OnInit {
   hideSignupForm         = signal(false);
   isSignup               = signal(false);
 
+  // ✅ RGPD — affichage politique
+  showRgpd = signal(false);
+
   loginForm = this.fb.group({
     email:      ['', [Validators.required, Validators.email]],
-   // ✅ APRÈS
-motDePasse: ['', [Validators.required, Validators.minLength(8)]],
+    motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     remember:   [false],
   });
 
@@ -39,7 +41,8 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     nom:        ['', [Validators.required, Validators.minLength(2)]],
     email:      ['', [Validators.required, Validators.email]],
     motDePasse: ['', [Validators.required, Validators.minLength(6)]],
-    remember:   [false],
+    // ✅ RGPD — consentement obligatoire
+    rgpd:       [false, [Validators.requiredTrue]],
   });
 
   ngOnInit(): void {
@@ -52,8 +55,6 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
-  // ── Panel navigation ──────────────────────────────────────────────────────
-
   goToSignup(): void { this.isSignup.set(true);  this.errorLogin.set(null); }
   goToLogin():  void { this.isSignup.set(false); this.errorSignup.set(null); }
 
@@ -63,7 +64,20 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     this.goToSignup();
   }
 
-  // ── Login ─────────────────────────────────────────────────────────────────
+  // ✅ RGPD
+  openRgpd(event: Event): void {
+    event.preventDefault();
+    this.showRgpd.set(true);
+  }
+
+  closeRgpd(): void {
+    this.showRgpd.set(false);
+  }
+
+  acceptRgpd(): void {
+    this.signupForm.patchValue({ rgpd: true });
+    this.showRgpd.set(false);
+  }
 
   submitLogin(): void {
     if (this.loginForm.invalid) { this.loginForm.markAllAsTouched(); return; }
@@ -96,10 +110,14 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
-  // ── Signup (WORKFLOW COMPLET : compte + épargne + carte) ──────────────────
-
   submitSignup(): void {
     if (this.signupForm.invalid) { this.signupForm.markAllAsTouched(); return; }
+
+    // ✅ RGPD — vérification consentement
+    if (!this.signupForm.value.rgpd) {
+      this.errorSignup.set('Vous devez accepter la politique de confidentialité pour continuer.');
+      return;
+    }
 
     this.loading.set(true);
     this.errorSignup.set(null);
@@ -107,116 +125,50 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
     const { prenom, nom, email, motDePasse } = this.signupForm.value;
     const payload = { prenom: prenom!, nom: nom!, email: email!, motDePasse: motDePasse! };
 
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('🚀 INSCRIPTION CLIENTE - Workflow complet');
-    console.log('Cliente:', prenom, nom, '|', email);
+    let clientId: number;
+    let userToken: string;
+    let numCompte: string;
 
-    let clientId:   number;
-    let userToken:  string;
-    let adminToken: string;
-    let numCompte:  string;
+    const apiBase = 'http://localhost:8084/api';
+    const userHeaders = () => new HttpHeaders({
+      Authorization: `Bearer ${userToken}`,
+      'Content-Type': 'application/json'
+    });
 
-    const apiBase    = 'http://localhost:8084/api';
-    const userHeaders  = () => new HttpHeaders({ Authorization: `Bearer ${userToken}`,  'Content-Type': 'application/json' });
-    const adminHeaders = () => new HttpHeaders({ Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' });
-
-    // 1) Inscription
     this.auth.register(payload).pipe(
 
-      // 2) Login cliente
       switchMap((regResponse: any) => {
         clientId = regResponse.data?.id || 0;
-        console.log('✅ 1. Cliente créée (id=' + clientId + ')');
         return this.auth.login({ email: email!, motDePasse: motDePasse! });
       }),
 
-      // 3) Login admin
       switchMap((loginResponse: any) => {
         userToken = loginResponse.data?.token || '';
-        console.log('✅ 2. Login cliente OK');
-        return this.auth.login({ email: 'admin@bank.local', motDePasse: 'Admin#2025!' });
-      }),
-
-      // 4) ✅ FIX — Créer compte courant AVEC typeCompte
-      switchMap((adminLogin: any) => {
-        adminToken = adminLogin.data?.token || '';
-        console.log('✅ 3. Token admin récupéré');
         return this.http.post<any>(
           `${apiBase}/comptes`,
-          {
-            typeCompte: 'COURANT',          // ✅ AJOUTÉ
-            intitule:   'Compte principal',
-            devise:     'EUR'
-          },
+          { typeCompte: 'COURANT', intitule: 'Compte principal', devise: 'EUR' },
           { headers: userHeaders() }
         );
       }),
 
-      // 5) Activer le compte (admin)
       switchMap((accountResponse: any) => {
         numCompte = accountResponse.numCompte || accountResponse.data?.numCompte;
-        console.log('✅ 4. Compte créé:', numCompte);
-        return this.http.post(
-          `${apiBase}/comptes/${numCompte}/activer`,
-          {},
-          { headers: adminHeaders() }
-        );
-      }),
-
-      // 6) Dépôt initial 200€
-      switchMap(() => {
-        console.log('✅ 5. Compte activé');
         return this.http.post(
           `${apiBase}/operations/deposit`,
           { numCompte, montant: 200, description: 'DEPOT_INIT' },
           { headers: userHeaders() }
-        );
-      }),
-
-      // 7) Convertir en compte épargne (admin, taux 1.25%)
-      switchMap(() => {
-        console.log('✅ 6. Dépôt 200€ effectué');
-        return this.http.post(
-          `${apiBase}/savings/${numCompte}/convertir`,
-          { tauxInteret: 0.0125 },
-          { headers: adminHeaders() }
-        );
-      }),
-
-      // 8) Émettre la carte bancaire (admin)
-      switchMap((savingsResp: any) => {
-        const numEp = savingsResp?.numCompteEpargne ?? '?';
-        console.log('✅ 7. Compte épargne créé (num=' + numEp + ')');
-        return this.http.post(
-          `${apiBase}/cartes/${numCompte}/issue`,
-          {},
-          { headers: adminHeaders() }
-        );
-      }),
-
-      // 9) Débloquer la carte (admin)
-      switchMap(() => {
-        console.log('✅ 8. Carte émise');
-        return this.http.post(
-          `${apiBase}/cartes/${numCompte}/debloquer`,
-          {},
-          { headers: adminHeaders() }
+        ).pipe(
+          catchError(() => of(null))
         );
       }),
 
       finalize(() => {
         this.loading.set(false);
-        this.auth.logout(); // nettoyage token admin
+        this.auth.logout();
       })
 
     ).subscribe({
       next: () => {
-        console.log('✅ 9. Carte débloquée et active');
-        console.log('🎉 ONBOARDING TERMINÉ AVEC SUCCÈS');
-        console.log('   → Compte courant ✓');
-        console.log('   → Compte épargne ✓');
-        console.log('   → Carte bancaire active ✓');
-
         this.hideSignupForm.set(true);
         this.showInscriptionSuccess.set(true);
         this.loginForm.patchValue({ email: email! });
@@ -224,9 +176,6 @@ motDePasse: ['', [Validators.required, Validators.minLength(8)]],
         setTimeout(() => this.showInscriptionSuccess.set(false), 8000);
       },
       error: (err) => {
-        console.error('❌ ERREUR ONBOARDING — Status:', err.status);
-        console.error('URL:', err.url);
-        console.error('Détails:', err.error);
         this.errorSignup.set(this.msg(err));
       }
     });

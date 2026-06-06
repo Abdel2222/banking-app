@@ -1,7 +1,6 @@
 package com.banking.entities;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,14 +18,14 @@ public class CarteBancaire {
     private Long id;
 
     @Column(name = "numero_carte", nullable = false, unique = true, length = 16)
-    @Size(min = 16, max = 16, message = "Le numéro de carte doit contenir 16 chiffres")
     private String numeroCarte;
 
     @Column(name = "date_expiration", nullable = false)
     private LocalDate dateExpiration;
 
-    @Column(name = "cvv", nullable = false, length = 3)
-    @Size(min = 3, max = 3, message = "Le CVV doit contenir 3 chiffres")
+    // ✅ length = 60 pour stocker le hash BCrypt ($2a$10$...)
+    // ❌ plus de @Size(min=3, max=3) — incompatible avec BCrypt
+    @Column(name = "cvv", nullable = false, length = 60)
     private String cvv;
 
     @Column(name = "est_active", nullable = false)
@@ -47,6 +46,10 @@ public class CarteBancaire {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ✅ Champ transient : pas en base, juste en mémoire le temps de retourner le CVV à l'admin
+    @Transient
+    private String cvvClair;
 
     public CarteBancaire() {}
 
@@ -108,8 +111,12 @@ public class CarteBancaire {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
+    // ✅ Getter/Setter pour le CVV clair (transient — jamais persisté)
+    public String getCvvClair() { return cvvClair; }
+    public void setCvvClair(String cvvClair) { this.cvvClair = cvvClair; }
+
     // Utilitaires
-    public void bloquer() { this.estActive = false; }
+    public void bloquer()  { this.estActive = false; }
     public void debloquer() { this.estActive = true; }
     public boolean estExpiree() { return dateExpiration.isBefore(LocalDate.now()); }
 }

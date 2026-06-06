@@ -19,16 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 @Service
 public class PlacementService {
 
-    private final PlacementRepository placementRepository;
-    private final CompteBancaireRepository compteBancaireRepository;
-    private final FondsRepository fondsRepository;
-    private final OperationRepository operationRepository;
+    private final PlacementRepository        placementRepository;
+    private final CompteBancaireRepository   compteBancaireRepository;
+    private final FondsRepository            fondsRepository;
+    private final OperationRepository        operationRepository;
 
     public PlacementService(
             PlacementRepository placementRepository,
@@ -36,10 +35,10 @@ public class PlacementService {
             FondsRepository fondsRepository,
             OperationRepository operationRepository
     ) {
-        this.placementRepository      = placementRepository;
+        this.placementRepository    = placementRepository;
         this.compteBancaireRepository = compteBancaireRepository;
-        this.fondsRepository          = fondsRepository;
-        this.operationRepository      = operationRepository;
+        this.fondsRepository        = fondsRepository;
+        this.operationRepository    = operationRepository;
     }
 
     /* ==================== Création ==================== */
@@ -52,9 +51,8 @@ public class PlacementService {
                 ));
 
         Client client = compte.getClient();
-        if (client == null) {
+        if (client == null)
             throw new BusinessException("Ce compte bancaire n'est associé à aucun client");
-        }
 
         Fonds fonds = fondsRepository.findById(request.getFondsId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -64,7 +62,6 @@ public class PlacementService {
         verifierReglesMetier(client, compte, fonds, request.getMontant());
 
         BigDecimal montant = request.getMontant();
-
         compte.setBalance(compte.getBalance().subtract(montant));
 
         Placement placement = new Placement(client, compte, fonds, montant);
@@ -72,14 +69,14 @@ public class PlacementService {
         compteBancaireRepository.save(compte);
         Placement saved = placementRepository.save(placement);
 
-        Operation operationPlacement = new Operation(
+        Operation op = new Operation(
                 compte,
                 montant,
                 TypeOperation.PLACEMENT,
                 "Placement dans le fonds " + fonds.getNomFonds()
         );
-        operationPlacement.setCommunication("PLACEMENT");
-        operationRepository.save(operationPlacement);
+        op.setCommunication("PLACEMENT");
+        operationRepository.save(op);
 
         return new PlacementResponse(saved);
     }
@@ -96,11 +93,12 @@ public class PlacementService {
 
     @Transactional(readOnly = true)
     public PlacementResponse getPlacementById(Long id) {
-        Placement placement = placementRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Placement introuvable avec l'id : " + id
-                ));
-        return new PlacementResponse(placement);
+        return new PlacementResponse(
+                placementRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Placement introuvable avec l'id : " + id
+                        ))
+        );
     }
 
     @Transactional(readOnly = true)
@@ -126,6 +124,7 @@ public class PlacementService {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
+        // capital + gain total prévu
         BigDecimal retour = placement.getValeurEstimee();
         compte.setBalance(compte.getBalance().add(retour));
 
@@ -134,70 +133,73 @@ public class PlacementService {
         compteBancaireRepository.save(compte);
         Placement saved = placementRepository.save(placement);
 
-        Operation operationCloture = new Operation(
+        Operation op = new Operation(
                 compte,
                 retour,
                 TypeOperation.CLOTURE_PLACEMENT,
                 "Clôture du placement " + placement.getFonds().getNomFonds()
-                        + " (capital + gain)"
+                        + " | Capital + gain : " + retour + " €"
         );
-        operationCloture.setCommunication("CLOTURE_PLACEMENT");
-        operationRepository.save(operationCloture);
+        op.setCommunication("CLOTURE_PLACEMENT");
+        operationRepository.save(op);
 
         return new PlacementResponse(saved);
     }
 
     /* ==================== Sortie anticipée ==================== */
 
+    /**
+     * Sortie anticipée avec frais bancaires dégressifs calculés automatiquement.
+     * Règle : frais = max(capital × 0.25%, capital × 2% × ratioRestant)
+     * Restitué : capital + intérêts courus - frais
+     */
     @Transactional
     public PlacementResponse sortirAvantEcheance(Long placementId) {
-        return sortirAvantEcheance(placementId, null);
-    }
-
-    @Transactional
-    public PlacementResponse sortirAvantEcheance(Long placementId, BigDecimal fraisPersonnalises) {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
-        BigDecimal frais = (fraisPersonnalises != null && fraisPersonnalises.signum() > 0)
-                ? fraisPersonnalises
-                : placement.getMontant()
-                .multiply(BigDecimal.valueOf(0.02))
-                .setScale(2, RoundingMode.HALF_UP);
+        // ✅ Frais bancaires dégressifs (calculés dans l'entité)
+        BigDecimal frais    = placement.calculerFraisSortie();
+        BigDecimal interets = placement.getInteretsCourus();
+        BigDecimal retour   = placement.getMontant()
+                .add(interets)
+                .subtract(frais);
 
-        BigDecimal retour = placement.getMontant().subtract(frais);
-        if (retour.signum() < 0) {
-            retour = BigDecimal.ZERO;
-        }
+        if (retour.signum() < 0) retour = BigDecimal.ZERO;
 
+        // ✅ Créditer le compte
         compte.setBalance(compte.getBalance().add(retour));
 
-        placement.sortirAvantEcheance(frais);
+        // ✅ Mettre à jour le placement (fraisSortie, dateSortie, statut)
+        placement.sortirAvantEcheance();
 
         compteBancaireRepository.save(compte);
         Placement saved = placementRepository.save(placement);
 
-        // Opération : montant restitué
-        Operation operationRetour = new Operation(
+        // Opération principale — restitution
+        Operation opRetour = new Operation(
                 compte,
                 retour,
                 TypeOperation.SORTIE_ANTICIPEE,
-                "Sortie anticipée du placement " + placement.getFonds().getNomFonds()
-                        + " — restitué : " + retour + " €"
+                "Sortie anticipée : " + placement.getFonds().getNomFonds()
+                        + " | Capital : " + placement.getMontant() + " €"
+                        + " | Intérêts courus : " + interets + " €"
+                        + " | Frais : " + frais + " €"
+                        + " | Restitué : " + retour + " €"
         );
-        operationRetour.setCommunication("SORTIE_ANTICIPEE");
-        operationRepository.save(operationRetour);
+        opRetour.setCommunication("SORTIE_ANTICIPEE");
+        operationRepository.save(opRetour);
 
-        // Opération : frais de sortie
+        // Opération séparée pour les frais (traçabilité)
         if (frais.signum() > 0) {
-            Operation operationFrais = new Operation(
+            Operation opFrais = new Operation(
                     compte,
                     frais,
                     TypeOperation.FRAIS_SORTIE,
-                    "Frais de sortie anticipée du placement " + placement.getFonds().getNomFonds()
+                    "Frais de sortie anticipée : " + placement.getFonds().getNomFonds()
             );
-            operationFrais.setCommunication("FRAIS_SORTIE");
-            operationRepository.save(operationFrais);
+            opFrais.setCommunication("FRAIS_SORTIE");
+            operationRepository.save(opFrais);
         }
 
         return new PlacementResponse(saved);
@@ -210,6 +212,7 @@ public class PlacementService {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
+        // Annulation = remboursement du capital uniquement, sans intérêts ni frais
         BigDecimal montant = placement.getMontant();
         compte.setBalance(compte.getBalance().add(montant));
 
@@ -218,14 +221,15 @@ public class PlacementService {
         compteBancaireRepository.save(compte);
         Placement saved = placementRepository.save(placement);
 
-        Operation operationAnnulation = new Operation(
+        Operation op = new Operation(
                 compte,
                 montant,
                 TypeOperation.ANNULATION_PLACEMENT,
                 "Annulation du placement " + placement.getFonds().getNomFonds()
+                        + " | Capital remboursé : " + montant + " €"
         );
-        operationAnnulation.setCommunication("ANNULATION_PLACEMENT");
-        operationRepository.save(operationAnnulation);
+        op.setCommunication("ANNULATION_PLACEMENT");
+        operationRepository.save(op);
 
         return new PlacementResponse(saved);
     }
@@ -237,9 +241,8 @@ public class PlacementService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Placement introuvable avec l'id : " + id
                 ));
-        if (!placement.estActif()) {
+        if (!placement.estActif())
             throw new BusinessException("Ce placement n'est pas actif");
-        }
         return placement;
     }
 
@@ -249,24 +252,23 @@ public class PlacementService {
             Fonds fonds,
             BigDecimal montant
     ) {
-        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
+        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0)
             throw new BusinessException("Le montant du placement doit être supérieur à 0");
-        }
-        if (!fonds.montantRespecteMinimum(montant)) {
+
+        if (!fonds.montantRespecteMinimum(montant))
             throw new BusinessException(
                     "Le montant est inférieur au minimum du fonds (" + fonds.getMontant() + " €)"
             );
-        }
-        if (compte.getClient() == null ||
-                compte.getClient().getId() == null ||
-                !compte.getClient().getId().equals(client.getId())) {
+
+        if (compte.getClient() == null
+                || compte.getClient().getId() == null
+                || !compte.getClient().getId().equals(client.getId()))
             throw new BusinessException("Ce compte bancaire n'appartient pas à ce client");
-        }
-        if (!compte.isActive()) {
+
+        if (!compte.isActive())
             throw new BusinessException("Le compte bancaire n'est pas actif");
-        }
-        if (compte.getBalance() == null || compte.getBalance().compareTo(montant) < 0) {
+
+        if (compte.getBalance() == null || compte.getBalance().compareTo(montant) < 0)
             throw new BusinessException("Solde insuffisant pour effectuer ce placement");
-        }
     }
 }

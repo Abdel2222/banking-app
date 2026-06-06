@@ -5,13 +5,10 @@
         <svg class="admin-shield-icon" viewBox="0 0 64 64" fill="none">
           <defs>
             <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ff6b6b"/>
-              <stop offset="50%" stop-color="#c44569"/>
-              <stop offset="100%" stop-color="#3742fa"/>
+              <stop offset="0%" stop-color="#ff6b6b"/><stop offset="50%" stop-color="#c44569"/><stop offset="100%" stop-color="#3742fa"/>
             </linearGradient>
             <radialGradient id="shieldGlow">
-              <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.6"/>
-              <stop offset="100%" stop-color="#3742fa" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.6"/><stop offset="100%" stop-color="#3742fa" stop-opacity="0"/>
             </radialGradient>
           </defs>
           <circle cx="32" cy="32" r="30" fill="url(#shieldGlow)"/>
@@ -21,37 +18,27 @@
           <text x="32" y="20" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">A</text>
         </svg>
       </div>
-
       <div class="admin-brand-text-wrapper">
-        <span class="star star-1">✦</span>
-        <span class="star star-2">✦</span>
+        <span class="star star-1">✦</span><span class="star star-2">✦</span>
         <span class="admin-brand-text">ADMIN</span>
         <span class="admin-brand-subtitle">CONTROL CENTER</span>
-        <span class="star star-3">✦</span>
-        <span class="star star-4">✦</span>
+        <span class="star star-3">✦</span><span class="star star-4">✦</span>
       </div>
     </div>
-
-    <div class="admin-actions" style="position: relative; z-index: 100;">
-      <div class="admin-hello-card" *ngIf="me() as admin" style="pointer-events: none;">
+    <div class="admin-actions" style="position:relative;z-index:100;">
+      <div class="admin-hello-card" *ngIf="me() as admin" style="pointer-events:none;">
         <span class="admin-crown">👑</span>
         <div class="admin-hello-text">
           <small class="admin-hello-label">SUPER ADMIN</small>
           <span class="admin-hello-name">{{ admin?.nomComplet || admin?.email || 'Administrateur' }}</span>
         </div>
       </div>
-
-      <button
-        type="button"
-        class="btn-admin-logout"
-        (click)="logout()"
-        style="position: relative; z-index: 9999; cursor: pointer !important; pointer-events: auto !important;">
-        <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
+      <button type="button" class="btn-admin-logout" (click)="logout()" style="position:relative;z-index:9999;cursor:pointer!important;pointer-events:auto!important;">
+        <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none;">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
-        <span style="pointer-events: none;">Déconnexion</span>
+        <span style="pointer-events:none;">Déconnexion</span>
       </button>
     </div>
   </header>
@@ -60,33 +47,19 @@
     <div class="stat-card stat-clients">
       <div class="stat-icon-wrapper">
         <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
-          <defs>
-            <linearGradient id="clientsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#00ffcc"/>
-              <stop offset="100%" stop-color="#0099ff"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="clientsGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ffcc"/><stop offset="100%" stop-color="#0099ff"/></linearGradient></defs>
           <circle cx="22" cy="22" r="10" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5"/>
           <circle cx="42" cy="22" r="10" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
           <path d="M8 50 Q8 38 22 38 Q36 38 36 50 Z" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5"/>
           <path d="M28 50 Q28 38 42 38 Q56 38 56 50 Z" fill="url(#clientsGrad)" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
         </svg>
       </div>
-      <div class="stat-content">
-        <div class="stat-label">Total Clients</div>
-        <div class="stat-value">{{ totalClients() || clientsWithAccounts().length }}</div>
-      </div>
+      <div class="stat-content"><div class="stat-label">Total Clients</div><div class="stat-value">{{ totalClients() || clientsWithAccounts().length }}</div></div>
     </div>
-
     <div class="stat-card stat-accounts">
       <div class="stat-icon-wrapper">
         <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
-          <defs>
-            <linearGradient id="accountsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#fff89c"/>
-              <stop offset="100%" stop-color="#ff8c00"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="accountsGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff89c"/><stop offset="100%" stop-color="#ff8c00"/></linearGradient></defs>
           <polygon points="32,8 56,22 8,22" fill="url(#accountsGrad)" stroke="#fff" stroke-width="1.5"/>
           <rect x="10" y="22" width="44" height="3" fill="#fff"/>
           <rect x="14" y="28" width="4" height="20" fill="url(#accountsGrad)"/>
@@ -96,777 +69,562 @@
           <rect x="8" y="50" width="48" height="4" fill="#fff"/>
         </svg>
       </div>
-      <div class="stat-content">
-        <div class="stat-label">Comptes Gérés</div>
-        <div class="stat-value">{{ accounts()?.length || 0 }}</div>
-      </div>
+      <div class="stat-content"><div class="stat-label">Comptes Gérés</div><div class="stat-value">{{ accounts()?.length || 0 }}</div></div>
     </div>
-
     <div class="stat-card stat-cards">
       <div class="stat-icon-wrapper">
         <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
-          <defs>
-            <linearGradient id="cardsStatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#667eea"/>
-              <stop offset="100%" stop-color="#f093fb"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="cardsStatGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#667eea"/><stop offset="100%" stop-color="#f093fb"/></linearGradient></defs>
           <rect x="6" y="14" width="52" height="36" rx="4" fill="url(#cardsStatGrad)" stroke="#fff" stroke-width="1.5"/>
           <rect x="10" y="22" width="10" height="7" rx="1" fill="#ffd700"/>
           <rect x="10" y="36" width="30" height="2" fill="#fff" opacity="0.7"/>
           <rect x="10" y="40" width="20" height="2" fill="#fff" opacity="0.5"/>
         </svg>
       </div>
-      <div class="stat-content">
-        <div class="stat-label">Cartes liées</div>
-        <div class="stat-value">{{ accounts()?.length || 0 }}</div>
-      </div>
+      <div class="stat-content"><div class="stat-label">Cartes liées</div><div class="stat-value">{{ getComptesCourants().length }}</div></div>
     </div>
-
     <div class="stat-card stat-status">
       <div class="stat-icon-wrapper">
         <svg class="stat-icon" viewBox="0 0 64 64" fill="none">
-          <defs>
-            <linearGradient id="statusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#00ff88"/>
-              <stop offset="100%" stop-color="#00cc6a"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="statusGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ff88"/><stop offset="100%" stop-color="#00cc6a"/></linearGradient></defs>
           <circle cx="32" cy="32" r="22" fill="url(#statusGrad)" stroke="#fff" stroke-width="1.5"/>
           <path d="M22 32 L29 39 L44 24" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div class="stat-content">
-        <div class="stat-label">Système</div>
-        <div class="stat-value-small">EN LIGNE</div>
-      </div>
+      <div class="stat-content"><div class="stat-label">Système</div><div class="stat-value-small">EN LIGNE</div></div>
     </div>
   </section>
 
   <section class="admin-tabs-section">
     <div class="admin-tabs">
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'accounts'" (click)="switchTab('accounts')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 3v18h18"/>
-          <rect x="6" y="12" width="3" height="6"/>
-          <rect x="11" y="8" width="3" height="10"/>
-          <rect x="16" y="4" width="3" height="14"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='accounts'" (click)="switchTab('accounts')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="6" y="12" width="3" height="6"/><rect x="11" y="8" width="3" height="10"/><rect x="16" y="4" width="3" height="14"/></svg>
         <span>Gestion des Comptes</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'cards'" (click)="switchTab('cards')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="5" width="20" height="14" rx="2"/>
-          <line x1="2" y1="10" x2="22" y2="10"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='cards'" (click)="switchTab('cards')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         <span>Gestion Carte</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'clients'" (click)="switchTab('clients')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='clients'" (click)="switchTab('clients')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Liste des Clients</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'employees'" (click)="switchTab('employees')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='employees'" (click)="switchTab('employees')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Liste des Employés</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'agencyServices'" (click)="switchTab('agencyServices')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='agencyServices'" (click)="switchTab('agencyServices')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Agence service</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'investments'" (click)="switchTab('investments')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 3v18h18"/>
-          <path d="M7 14l4-4 3 3 5-6"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='investments'" (click)="switchTab('investments')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
         <span>Investissements</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'funds'" (click)="switchTab('funds')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="9"/>
-          <path d="M8 12h8"/>
-          <path d="M12 8v8"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='funds'" (click)="switchTab('funds')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
         <span>Fonds</span>
       </button>
-
-      <button class="admin-tab-btn" [class.active]="activeTab() === 'chatbot'" (click)="switchTab('chatbot')">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
+      <button class="admin-tab-btn" [class.active]="activeTab()==='chatbot'" (click)="switchTab('chatbot')">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Supervision Chatbot</span>
       </button>
     </div>
   </section>
 
   <!-- ====== ONGLET GESTION DES COMPTES ====== -->
-  <main class="grid" *ngIf="activeTab() === 'accounts'">
+  <main class="grid" *ngIf="activeTab()==='accounts'">
     <section class="panel-3d">
-      <h3 class="panel-title">
-        <span class="panel-title-icon">🏦</span>
-        <span class="panel-title-text">Comptes des clients</span>
-      </h3>
+      <h3 class="panel-title"><span class="panel-title-icon">🏦</span><span class="panel-title-text">Comptes des clients</span></h3>
 
-      <div style="margin-bottom: 12px; text-align: right;">
-        <button class="btn-action btn-suspend" (click)="facturerTousLesComptes()" [disabled]="loading()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+      <!-- ✅ BARRE DE RECHERCHE GESTION COMPTES -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;position:relative;">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Rechercher client, compte, statut..."
+                 [value]="accountsSearch()"
+                 (input)="onAccountsSearchChange($any($event.target).value)"
+                 style="width:100%;padding:8px 8px 8px 34px;background:rgba(15,23,42,0.6);border:1.5px solid #334155;border-radius:8px;color:#e5e7eb;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+        <button class="btn-action btn-suspend" (click)="facturerTousLesComptes()" [disabled]="loading()"
+                style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);white-space:nowrap;">
           💸 Facturer tous les comptes
         </button>
       </div>
 
       <div *ngIf="loading()" class="muted">Chargement des comptes clients...</div>
-
       <div class="accounts-table-wrapper">
-        <table class="admin-table" *ngIf="accounts()?.length; else noacc">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Compte</th>
-              <th>Type</th>
-              <th>Catégorie</th>
-              <th>Solde</th>
-              <th>Carte</th>
-              <th>Statut</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+        <table class="admin-table" *ngIf="filteredAccounts().length; else noacc">
+          <thead><tr><th>Client</th><th>Compte</th><th>Type</th><th>Catégorie</th><th>Solde</th><th>Carte</th><th>Statut</th><th>Action</th></tr></thead>
           <tbody>
-            <tr *ngFor="let a of accounts()"
-                [class.active]="a.clientId === selectedClientId()">
+            <!-- ✅ filteredAccounts() au lieu de accounts() -->
+            <tr *ngFor="let a of filteredAccounts()" [class.active]="a.clientId===selectedClientId()">
               <td>{{ a.clientName || 'Client inconnu' }}</td>
               <td class="mono">{{ a.numCompte }}</td>
-              <td>
-                <span class="status-badge" [class.active-status]="!isEpargne(a)" [class.pending-status]="isEpargne(a)">
-                  {{ getAccountDisplayType(a) }}
-                </span>
-              </td>
+              <td><span class="status-badge" [class.active-status]="!isEpargne(a)" [class.pending-status]="isEpargne(a)">{{ getAccountDisplayType(a) }}</span></td>
               <td>{{ getAccountCategory(a) }}</td>
               <td class="right balance">{{ a.balance | money }}</td>
               <td>{{ getCardDisplay(a) }}</td>
               <td>
-                <span class="status-badge"
-                  [class.active-status]="a.status === 'ACTIVATED'"
-                  [class.pending-status]="a.status === 'CREATED'"
-                  [class.suspended-status]="isAccountSuspended(a)">
-                  {{ getDisplayStatus(a.status) }}
-                </span>
+                <span class="status-badge" [class.active-status]="a.status==='ACTIVATED'" [class.pending-status]="a.status==='CREATED'" [class.suspended-status]="isAccountSuspended(a)">{{ getDisplayStatus(a.status) }}</span>
               </td>
-              <td class="right">
-                <button class="btn-view" (click)="select(a)">👁️ Gérer client</button>
-              </td>
+              <td class="right"><button class="btn-view" (click)="select(a)">👁️ Gérer client</button></td>
             </tr>
           </tbody>
         </table>
-        <ng-template #noacc><p class="muted">Aucun compte client trouvé.</p></ng-template>
+        <ng-template #noacc>
+          <p class="muted" *ngIf="accountsSearch()">Aucun résultat pour "{{ accountsSearch() }}".</p>
+          <p class="muted" *ngIf="!accountsSearch()">Aucun compte client trouvé.</p>
+        </ng-template>
       </div>
     </section>
 
-    <!-- ✨ AFFICHAGE VERTICAL DES SECTIONS PAR COMPTE -->
-    <section class="panel-3d span2" *ngIf="selected() && accountSections().length > 0">
-      <h3 class="panel-title">
-        <span class="panel-title-icon">👤</span>
-        <span class="panel-title-text">Comptes de {{ selected()?.clientName }}</span>
-      </h3>
+    <section class="panel-3d span2" *ngIf="selected() && accountSections().length>0">
+      <h3 class="panel-title"><span class="panel-title-icon">👤</span><span class="panel-title-text">Comptes de {{ selected()?.clientName }}</span></h3>
+      <div *ngIf="loadingSections()" class="loading-card" style="margin:16px 0;"><p>⏳ Chargement des comptes...</p></div>
 
-      <div *ngIf="loadingSections()" class="loading-card" style="margin: 16px 0;">
-        <p>⏳ Chargement des comptes...</p>
-      </div>
-
-      <!-- Une section verticale par compte -->
-      <div *ngFor="let section of accountSections()"
-           class="panel-3d"
+      <div *ngFor="let section of accountSections()" class="panel-3d"
            [class.section-epargne]="section.account.savingsAccount"
-           style="margin-bottom: 24px; border-left: 4px solid;"
+           style="margin-bottom:24px;border-left:4px solid;"
            [style.border-left-color]="section.account.savingsAccount ? '#f59e0b' : '#3b82f6'">
 
-        <!-- En-tête de section -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
           <div>
-            <h4 style="margin: 0; font-size: 1.3rem;">
-              {{ section.account.savingsAccount ? '💰 Compte Épargne' : '🏦 Compte Courant' }}
-            </h4>
-            <small class="mono" style="opacity: 0.7;">{{ section.account.numCompte }}</small>
+            <h4 style="margin:0;font-size:1.3rem;">{{ section.account.savingsAccount ? '💰 Compte Épargne' : '🏦 Compte Courant' }}</h4>
+            <small class="mono" style="opacity:0.7;">{{ section.account.numCompte }}</small>
           </div>
-          <div style="text-align: right;">
-            <div style="font-size: 1.8rem; font-weight: 700;" [style.color]="section.account.savingsAccount ? '#f59e0b' : '#10b981'">
-              {{ section.account.balance | money }}
-            </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.8rem;font-weight:700;" [style.color]="section.account.savingsAccount ? '#f59e0b' : '#10b981'">{{ section.account.balance | money }}</div>
             <span class="status-badge"
-              [class.active-status]="section.account.status === 'ACTIVATED'"
-              [class.pending-status]="section.account.status === 'CREATED'"
-              [class.suspended-status]="isAccountSuspended(section.account)">
+                  [class.active-status]="section.account.status==='ACTIVATED'"
+                  [class.pending-status]="section.account.status==='CREATED'"
+                  [class.suspended-status]="isAccountSuspended(section.account)">
               {{ getDisplayStatus(section.account.status) }}
             </span>
           </div>
         </div>
 
-        <!-- Actions communes au compte -->
-        <div class="actions-buttons" style="margin-bottom: 16px;">
-          <button class="btn-action btn-activate"
-                  (click)="activateAccountByNum(section.account.numCompte)"
-                  [disabled]="section.account.status === 'ACTIVATED' || loading()">
-            ✓ Activer
-          </button>
-          <button class="btn-action btn-suspend"
-                  (click)="toggleSuspendCompteByNum(section.account.numCompte)"
-                  [disabled]="loading()">
+        <div class="actions-buttons" style="margin-bottom:16px;">
+          <button class="btn-action btn-activate" (click)="activateAccountByNum(section.account.numCompte)" [disabled]="section.account.status==='ACTIVATED'||loading()">✓ Activer</button>
+          <button class="btn-action btn-suspend" (click)="toggleSuspendCompteByNum(section.account.numCompte)" [disabled]="loading()">
             {{ isAccountSuspended(section.account) ? '▶️ Réactiver' : '⏸️ Suspendre' }}
           </button>
         </div>
 
-        <!-- ====== SECTION ÉPARGNE ====== -->
-        <ng-container *ngIf="section.account.savingsAccount">
-          <div class="row">
-            <!-- Mini-cartes flux d'intérêts -->
-            <div class="info-card info-card-gold">
-              <div class="info-card-header">
-                <span class="info-icon">📊</span>
-                <span class="info-title">Flux des intérêts</span>
-              </div>
-              <div class="info-content">
-                <div class="info-row">
-                  <span class="label">Taux annuel :</span>
-                  <b style="color: #10b981;">{{ ((section.tauxAnnuel ?? 0) * 100) | number:'1.2-2' }} %</b>
-                </div>
-                <div class="info-row">
-                  <span class="label">Intérêts en cours :</span>
-                  <b style="color: #f59e0b;">+ {{ (section.interetsEnCours ?? 0) | money }}</b>
-                </div>
-                <div class="info-row">
-                  <span class="label">Intérêts cumulés :</span>
-                  <b style="color: #10b981;">+ {{ (section.totalInteretsCumules ?? 0) | money }}</b>
-                </div>
-                <div class="info-row">
-                  <span class="label">Prochaine capi. :</span>
-                  <b>{{ section.prochaineCapi | date:'dd/MM/yyyy' }} (dans {{ section.joursAvantCapi }}j)</b>
-                </div>
-              </div>
+        <!-- ====== BLOC ÉPARGNE — logique bancaire ====== -->
+        <div *ngIf="section.account.savingsAccount"
+             style="margin-bottom:18px;padding:16px;border-radius:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
 
-              <div class="actions-buttons">
-                <button class="btn-action btn-activate"
-                        (click)="capitaliserCompte(section.account.numCompte)"
-                        [disabled]="busy()"
-                        style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                  ⚡ {{ busy() ? 'Capitalisation...' : 'Capitaliser maintenant' }}
-                </button>
-              </div>
+          <!-- En-tête avec statut -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+            <h5 style="margin:0;font-size:1.05rem;color:#f59e0b;">📈 Livret d'épargne</h5>
+            <span class="status-badge active-status" *ngIf="section.interetCourant">✓ Intérêt actif</span>
+            <span class="status-badge pending-status" *ngIf="!section.interetCourant">⚠️ Aucun intérêt configuré</span>
+          </div>
 
-              <small style="display: block; margin-top: 8px; opacity: 0.7;">
-                💡 En production : capitalisation automatique mensuelle
-              </small>
+          <!-- 4 indicateurs clés — logique bancaire -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+
+            <!-- Taux annuel -->
+            <div style="padding:14px;border-radius:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);">
+              <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Taux annuel brut</div>
+              <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;">
+                {{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100) | number:'1.2-2' }} %
+              </div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">
+                soit {{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100 / 12) | number:'1.3-3' }} % / mois
+              </div>
             </div>
 
-            <!-- Historique des intérêts -->
-            <div class="info-card info-card-green">
-              <div class="info-card-header">
-                <span class="info-icon">📜</span>
-                <span class="info-title">Historique des intérêts</span>
+            <!-- Intérêt du mois en cours -->
+            <div style="padding:14px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);">
+              <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Intérêt du mois en cours</div>
+              <div style="font-size:1.4rem;font-weight:800;color:#10b981;">
+                {{ (section.interetsEnCours || 0) | money }}
               </div>
-              <div class="ops-table-wrapper">
-                <table class="admin-table" *ngIf="section.historiqueInterets?.length; else noInteret">
-                  <thead>
-                    <tr>
-                      <th>Date capi.</th>
-                      <th>Période</th>
-                      <th>Taux</th>
-                      <th class="right">Montant</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let i of section.historiqueInterets">
-                      <td>{{ i.dateCapitalisation ? (i.dateCapitalisation | date:'dd/MM/yy') : '⏳ En cours' }}</td>
-                      <td>{{ i.dateDebut | date:'dd/MM/yy' }}</td>
-                      <td>{{ (+i.tauxInteret * 100) | number:'1.2-2' }}%</td>
-                      <td class="right" [class.positive]="i.dateCapitalisation">
-                        + {{ i.montantInteret | money }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <ng-template #noInteret>
-                  <p class="muted" style="padding: 12px;">Aucun intérêt généré pour le moment.</p>
-                </ng-template>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">Fixe jusqu'au {{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}</div>
+            </div>
+
+            <!-- Total capitalisé depuis ouverture -->
+            <div style="padding:14px;border-radius:12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);">
+              <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Total capitalisé (historique)</div>
+              <div style="font-size:1.4rem;font-weight:800;color:#818cf8;">
+                {{ (section.totalInteretsCumules || 0) | money }}
+              </div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">Crédités sur le solde</div>
+            </div>
+
+            <!-- Prochaine capitalisation -->
+            <div style="padding:14px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);">
+              <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Prochaine capitalisation</div>
+              <div style="font-size:1.2rem;font-weight:800;color:#60a5fa;">
+                {{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}
+              </div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">
+                dans {{ section.joursAvantCapi ?? 0 }} jour(s)
               </div>
             </div>
           </div>
-        </ng-container>
 
-        <!-- ====== SECTION COMPTE COURANT ====== -->
-        <ng-container *ngIf="!section.account.savingsAccount">
-          <div class="row">
-            <!-- Carte bancaire -->
-            <div class="info-card info-card-purple">
-              <div class="info-card-header">
-                <span class="info-icon">💳</span>
-                <span class="info-title">Carte bancaire</span>
+          <!-- Pas d'intérêt → formulaire création -->
+          <div *ngIf="!section.interetCourant"
+               style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(245,158,11,0.4);margin-bottom:14px;">
+            <p style="margin:0 0 12px 0;font-size:0.9rem;color:#94a3b8;">
+              Aucun taux configuré pour ce compte. Définissez un taux annuel pour activer la capitalisation mensuelle.
+            </p>
+            <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+              <div style="min-width:200px;">
+                <label style="display:block;font-size:0.85rem;margin-bottom:6px;opacity:0.85;">Taux annuel (ex: 0.03 = 3%)</label>
+                <input type="number" step="0.001" min="0.001" max="0.20" class="input"
+                       [ngModel]="getTauxParDefaut(section.account.numCompte)"
+                       (ngModelChange)="setTauxPourCompte(section.account.numCompte,$event)"
+                       placeholder="0.03"/>
               </div>
-
-              <div *ngIf="section.card; else noCardCourant" class="info-content">
-                <div class="info-row">
-                  <span class="label">Numéro :</span>
-                  <span class="mono">{{ section.card.numeroCarte }}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Expire :</span>
-                  <span>{{ section.card.dateExpiration || '—' }}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">État :</span>
-                  <span class="status-pill" [class.ok]="section.card.estActive" [class.ko]="!section.card.estActive">
-                    {{ section.card.estActive ? '✓ Active' : '🔒 Bloquée' }}
-                  </span>
-                </div>
-                <div class="info-row" *ngIf="section.card.plafondJournalier">
-                  <span class="label">Plafond jour :</span>
-                  <b>{{ section.card.plafondJournalier }} €</b>
-                </div>
-                <div class="info-row" *ngIf="section.card.plafondMensuel">
-                  <span class="label">Plafond mois :</span>
-                  <b>{{ section.card.plafondMensuel }} €</b>
-                </div>
-
-                <div class="actions-buttons">
-                  <button class="btn-action"
-                          [class.btn-block]="section.card.estActive"
-                          [class.btn-unblock]="!section.card.estActive"
-                          (click)="toggleCardForAccount(section.account.numCompte, section.card)"
-                          [disabled]="loading()">
-                    {{ section.card.estActive ? '🔒 Bloquer' : '🔓 Débloquer' }}
-                  </button>
-                </div>
-              </div>
-
-              <ng-template #noCardCourant>
-                <div class="empty-state">
-                  <p>Aucune carte liée.</p>
-                  <button class="btn-action btn-issue"
-                          (click)="issueCardForAccount(section.account.numCompte)"
-                          [disabled]="loading()">
-                    💳 Émettre une carte
-                  </button>
-                </div>
-              </ng-template>
-            </div>
-
-            <!-- Dernières opérations -->
-            <div class="info-card info-card-green">
-              <div class="info-card-header">
-                <span class="info-icon">📊</span>
-                <span class="info-title">Dernières opérations</span>
-              </div>
-              <div class="ops-table-wrapper">
-                <table class="admin-table" *ngIf="section.ops?.length; else noopsSec">
-                  <thead>
-                    <tr><th>Date</th><th>Description</th><th class="right">Montant</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let o of section.ops">
-                      <td>{{ o.date | date:'short' }}</td>
-                      <td>{{ o.description }}</td>
-                      <td class="right" [class.positive]="o.montant >= 0" [class.negative]="o.montant < 0">
-                        {{ o.montant | money }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <ng-template #noopsSec>
-                  <p class="muted" style="padding: 12px;">Aucune opération récente.</p>
-                </ng-template>
-              </div>
+              <button class="btn-action btn-activate" type="button" [disabled]="busy()"
+                      (click)="creerInteretCompte(section.account.numCompte)">
+                ➕ Activer le taux
+              </button>
             </div>
           </div>
-        </ng-container>
 
-        <!-- ====== FRAIS DE GESTION (commun aux 2 types) ====== -->
-        <div class="row">
-          <div class="info-card info-card-gold" style="grid-column: span 2;">
-            <div class="info-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <span>
-                <span class="info-icon">💰</span>
-                <span class="info-title">Frais de gestion</span>
-              </span>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn-action btn-activate"
-                        (click)="openFraisModal(section.account.id)"
-                        [disabled]="loading()"
-                        style="padding: 8px 16px; font-size: 0.9rem;">
-                  ➕ Ajouter
-                </button>
-                <button class="btn-action btn-suspend"
-                        (click)="facturerSurCompte(section.account.numCompte)"
-                        [disabled]="loading()"
-                        style="padding: 8px 16px; font-size: 0.9rem; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
-                  💸 Facturer
-                </button>
+          <!-- Intérêt actif → bouton capitalisation -->
+          <div *ngIf="section.interetCourant" style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+                        padding:12px 16px;border-radius:10px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
+              <div style="font-size:0.88rem;color:#94a3b8;">
+                Période en cours :
+                <strong style="color:#e5e7eb;">{{ section.interetCourant.dateDebut | date:'dd/MM/yyyy' }}</strong>
+                → <strong style="color:#e5e7eb;">{{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}</strong>
+                · Taux : <strong style="color:#10b981;">{{ (section.interetCourant.tauxInteret * 100) | number:'1.2-2' }} %</strong>
               </div>
+              <button class="btn-action" type="button"
+                      [disabled]="busy() || !peutCapitaliser(section)"
+                      (click)="capitaliserCompte(section.account.numCompte)"
+                      [style.background]="peutCapitaliser(section)
+                        ? 'linear-gradient(135deg,#10b981 0%,#059669 100%)'
+                        : 'linear-gradient(135deg,#374151 0%,#4b5563 100%)'"
+                      [style.cursor]="peutCapitaliser(section) ? 'pointer' : 'not-allowed'"
+                      [style.opacity]="peutCapitaliser(section) ? '1' : '0.75'"
+                      style="color:white;transition:all 0.3s;border:none;white-space:nowrap;">
+                {{ getMessageCapitalisation(section) }}
+              </button>
             </div>
+          </div>
 
-            <div class="info-content" style="margin-top: 12px;">
-              <table class="admin-table" *ngIf="section.frais?.length; else noFraisSec">
+          <!-- Historique des capitalisations (seulement les capitalisées) -->
+          <div *ngIf="section.historiqueInterets?.length">
+            <h6 style="margin:0 0 10px 0;font-size:0.9rem;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">
+              Historique des capitalisations
+            </h6>
+            <div style="overflow-x:auto;">
+              <table class="admin-table" style="font-size:0.88rem;">
                 <thead>
                   <tr>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th class="right">Montant</th>
-                    <th>Périodicité</th>
                     <th>Période</th>
-                    <th>Total facturé</th>
+                    <th>Taux</th>
+                    <th class="right">Montant crédité</th>
+                    <th>Date capitalisation</th>
                     <th>Statut</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let f of section.frais">
-                    <td><span class="status-badge active-status">{{ f.typeFrais }}</span></td>
-                    <td>{{ f.description }}</td>
-                    <td class="right negative">-{{ f.montant | money }}</td>
-                    <td>{{ f.periodicite }}</td>
-                    <td>{{ f.dateDebut | date:'dd/MM/yy' }} → {{ f.dateFin | date:'dd/MM/yy' }}</td>
-                    <td class="right">{{ f.montantTotalFacture | money }}</td>
+                  <tr *ngFor="let interet of section.historiqueInterets">
                     <td>
-                      <span class="status-badge" [class.active-status]="f.estEnCours" [class.suspended-status]="f.estEchu">
-                        {{ f.estEnCours ? '✓ En cours' : (f.estEchu ? '⛔ Échu' : 'Inactif') }}
-                      </span>
+                      {{ interet.dateDebut | date:'dd/MM/yyyy' }}
+                      <span *ngIf="interet.dateFin"> → {{ interet.dateFin | date:'dd/MM/yyyy' }}</span>
+                      <span *ngIf="!interet.dateFin" style="color:#10b981;"> → en cours</span>
                     </td>
-                    <td class="right">
-                      <button class="btn-view" (click)="supprimerFrais(f.id)" style="background: #fee2e2; color: #991b1b;">🗑️</button>
+                    <td>{{ (interet.tauxInteret * 100) | number:'1.2-2' }} %</td>
+                    <td class="right" [style.color]="interet.dateCapitalisation ? '#10b981' : '#f59e0b'">
+                      {{ (interet.montantInteret || 0) | money }}
+                    </td>
+                    <td>{{ interet.dateCapitalisation ? (interet.dateCapitalisation | date:'dd/MM/yyyy') : '—' }}</td>
+                    <td>
+                      <span class="status-badge active-status" *ngIf="interet.dateCapitalisation">✓ Capitalisé</span>
+                      <span class="status-badge pending-status" *ngIf="!interet.dateCapitalisation">En cours</span>
                     </td>
                   </tr>
                 </tbody>
               </table>
-
-              <ng-template #noFraisSec>
-                <p class="muted" style="text-align: center; padding: 20px;">
-                  ✨ Aucun frais sur ce compte.
-                </p>
-              </ng-template>
             </div>
           </div>
+
         </div>
 
-      </div>
+        <!-- BLOCS COMPTE COURANT UNIQUEMENT -->
+        <ng-container *ngIf="!section.account.savingsAccount">
+          <div style="margin-bottom:18px;padding:14px;border-radius:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
+            <h5 style="margin:0 0 10px 0;">💳 Carte bancaire</h5>
+            <div *ngIf="section.card" style="margin-bottom:8px;">
+              <p style="margin:4px 0;"><strong>Numéro :</strong> {{ section.card.numeroCarte }}</p>
+              <p style="margin:4px 0;"><strong>Expiration :</strong> {{ section.card.dateExpiration | date:'MM/yy' }}</p>
+              <p style="margin:4px 0;"><strong>Statut :</strong>
+                <span [style.color]="section.card.estActive ? '#10b981' : '#ef4444'">
+                  {{ section.card.estActive ? '✅ Active' : '🔒 Bloquée' }}
+                </span>
+              </p>
+            </div>
+            <div *ngIf="!section.card" class="muted" style="margin-bottom:8px;">Aucune carte liée à ce compte.</div>
+            <small style="color:#94a3b8;font-style:italic;">
+              Pour bloquer / débloquer ou émettre une carte, utilisez l'onglet
+              <strong style="color:#60a5fa;cursor:pointer;text-decoration:underline;" (click)="switchTab('cards')">Gestion Carte</strong>.
+            </small>
+          </div>
 
-      <p class="err" *ngIf="error()">⚠️ {{ error() }}</p>
+          <div style="margin-bottom:18px;">
+            <h5 style="margin-bottom:10px;">📜 Dernières opérations</h5>
+            <div *ngIf="section.ops?.length; else noOpsBlock" style="overflow-x:auto;">
+              <table class="admin-table">
+                <thead><tr><th>Date</th><th>Description</th><th class="right">Montant</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let op of section.ops">
+                    <td>{{ op.date | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ op.description }}</td>
+                    <td class="right" [style.color]="op.montant>=0?'#10b981':'#ef4444'">{{ op.montant | money }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ng-template #noOpsBlock><p class="muted">Aucune opération récente.</p></ng-template>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+              <h5 style="margin:0;">💸 Frais de gestion</h5>
+              <div class="actions-buttons">
+                <button class="btn-action btn-suspend" (click)="openFraisModal(section.account.id)" [disabled]="loading()">➕ Ajouter frais</button>
+                <button class="btn-action" (click)="facturerSurCompte(section.account.numCompte)" [disabled]="loading()"
+                        style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);color:white;">💳 Débiter frais</button>
+              </div>
+            </div>
+            <div *ngIf="section.frais?.length; else noFraisBlock" style="overflow-x:auto;">
+              <table class="admin-table">
+                <thead><tr><th>Description</th><th>Période</th><th class="right">Montant</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let fr of section.frais">
+                    <td>{{ fr.description }}</td>
+                    <td>
+                      <span *ngIf="fr.dateDebut && fr.dateFin">{{ fr.dateDebut | date:'dd/MM/yyyy' }} → {{ fr.dateFin | date:'dd/MM/yyyy' }}</span>
+                      <span *ngIf="!fr.dateDebut || !fr.dateFin">—</span>
+                    </td>
+                    <td class="right">{{ fr.montant | money }}</td>
+                    <td><button class="btn-view" (click)="supprimerFrais(fr.id)" [disabled]="loading()">🗑 Supprimer</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ng-template #noFraisBlock><p class="muted">Aucun frais configuré pour ce compte.</p></ng-template>
+          </div>
+        </ng-container>
+      </div>
     </section>
   </main>
 
-  <!-- ====== ONGLET CARDS ====== -->
-  <main class="grid" *ngIf="activeTab() === 'cards'">
+  <!-- ====== ONGLET GESTION CARTE ====== -->
+  <main class="grid" *ngIf="activeTab()==='cards'">
     <section class="panel-3d">
-      <h3 class="panel-title">
-        <span class="panel-title-icon">💳</span>
-        <span class="panel-title-text">Cartes par client</span>
-      </h3>
+      <h3 class="panel-title"><span class="panel-title-icon">💳</span><span class="panel-title-text">Cartes par client</span></h3>
+
+      <!-- ✅ BARRE DE RECHERCHE GESTION CARTE -->
+      <div style="margin-bottom:12px;position:relative;">
+        <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Rechercher client, numéro de compte..."
+               [value]="cardsSearch()"
+               (input)="onCardsSearchChange($any($event.target).value)"
+               style="width:100%;padding:8px 8px 8px 34px;background:rgba(15,23,42,0.6);border:1.5px solid #334155;border-radius:8px;color:#e5e7eb;font-size:0.88rem;box-sizing:border-box;">
+      </div>
 
       <div *ngIf="loading()" class="muted">Chargement des cartes...</div>
-
       <div class="accounts-table-wrapper">
-        <table class="admin-table" *ngIf="accounts()?.length; else noaccCards">
-          <thead>
-            <tr><th>Client</th><th>Compte</th><th>Type</th><th>Carte</th><th>Statut compte</th><th>Action</th></tr>
-          </thead>
+        <!-- ✅ filteredComptesCourants() au lieu de getComptesCourants() -->
+        <table class="admin-table" *ngIf="filteredComptesCourants().length; else noaccCards">
+          <thead><tr><th>Client</th><th>Compte courant</th><th>Carte</th><th>Statut compte</th><th>Action</th></tr></thead>
           <tbody>
-            <tr *ngFor="let a of accounts()" [class.active]="a.numCompte === selected()?.numCompte">
+            <tr *ngFor="let a of filteredComptesCourants()" [class.active]="a.numCompte===selectedCourant()?.numCompte">
               <td>{{ a.clientName || 'Client inconnu' }}</td>
               <td class="mono">{{ a.numCompte }}</td>
-              <td>{{ getAccountDisplayType(a) }}</td>
               <td>{{ getCardDisplay(a) }}</td>
-              <td>
-                <span class="status-badge"
-                  [class.active-status]="a.status === 'ACTIVATED'"
-                  [class.pending-status]="a.status === 'CREATED'"
-                  [class.suspended-status]="isAccountSuspended(a)">
-                  {{ getDisplayStatus(a.status) }}
-                </span>
-              </td>
-              <td class="right">
-                <button class="btn-view" (click)="select(a)">💳 Gérer carte</button>
-              </td>
+              <td><span class="status-badge" [class.active-status]="a.status==='ACTIVATED'" [class.pending-status]="a.status==='CREATED'" [class.suspended-status]="isAccountSuspended(a)">{{ getDisplayStatus(a.status) }}</span></td>
+              <td class="right"><button class="btn-view" (click)="selectCompteForCard(a)">💳 Gérer carte</button></td>
             </tr>
           </tbody>
         </table>
-        <ng-template #noaccCards><p class="muted">Aucun compte disponible pour la gestion carte.</p></ng-template>
+        <ng-template #noaccCards>
+          <p class="muted" *ngIf="cardsSearch()">Aucun résultat pour "{{ cardsSearch() }}".</p>
+          <p class="muted" *ngIf="!cardsSearch()">Aucun compte courant disponible.</p>
+        </ng-template>
       </div>
     </section>
 
-    <section class="panel-3d span2" *ngIf="selected()">
-      <div class="row">
-        <div class="info-card info-card-purple" *ngIf="card(); else nocardAdmin">
-          <div class="info-card-header">
-            <span class="info-icon">💳</span>
-            <span class="info-title">Gestion de la carte</span>
+    <section class="panel-3d span2" *ngIf="selectedCourant()">
+      <!-- Info compte courant -->
+      <div style="padding:14px;border-radius:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:1.2rem;">🏦</span><strong>Compte courant associé à la carte</strong></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+          <div><div style="font-size:0.82rem;opacity:0.7;">Client</div><div style="font-weight:700;">{{ selectedCourant()?.clientName }}</div></div>
+          <div><div style="font-size:0.82rem;opacity:0.7;">Numéro de compte</div><div class="mono" style="font-weight:700;">{{ selectedCourant()?.numCompte }}</div></div>
+          <div><div style="font-size:0.82rem;opacity:0.7;">Solde</div><div style="font-weight:700;color:#10b981;">{{ selectedCourant()?.balance | money }}</div></div>
+          <div>
+            <div style="font-size:0.82rem;opacity:0.7;">Statut compte</div>
+            <span class="status-badge" [class.active-status]="selectedCourant()?.status==='ACTIVATED'" [class.pending-status]="selectedCourant()?.status==='CREATED'" [class.suspended-status]="isAccountSuspended(selectedCourant())">
+              {{ getDisplayStatus(selectedCourant()?.status) }}
+            </span>
           </div>
+        </div>
+      </div>
+
+      <!-- ✅ ALERTE COMPTE SUSPENDU dans Gestion Carte -->
+      <div *ngIf="isAccountSuspended(selectedCourant())"
+           style="padding:12px 16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.4rem;">⛔</span>
+        <div>
+          <strong style="color:#fca5a5;display:block;margin-bottom:4px;">Compte SUSPENDU</strong>
+          <p style="margin:0;font-size:0.85rem;color:#94a3b8;">
+            Ce compte est suspendu. La carte bancaire est inutilisable jusqu'à la réactivation du compte.
+            Allez dans l'onglet
+            <strong style="color:#60a5fa;cursor:pointer;text-decoration:underline;" (click)="switchTab('accounts')">Gestion des Comptes</strong>
+            pour réactiver.
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="info-card info-card-purple" *ngIf="courantCard(); else nocardAdmin">
+          <div class="info-card-header"><span class="info-icon">💳</span><span class="info-title">Carte bancaire</span></div>
           <div class="info-content">
-            <div class="info-row"><span class="label">Client :</span> <b>{{ selected()?.clientName }}</b></div>
-            <div class="info-row"><span class="label">Compte :</span> <span class="mono">{{ selected()?.numCompte }}</span></div>
-            <div class="info-row"><span class="label">Type compte :</span> <b>{{ getAccountDisplayType(selected()) }}</b></div>
-            <div class="info-row"><span class="label">Numéro carte :</span> <span class="mono">{{ card()?.numeroCarte || '—' }}</span></div>
-            <div class="info-row"><span class="label">Expire :</span> {{ card()?.dateExpiration || '—' }}</div>
+            <div class="info-row"><span class="label">Numéro :</span><span class="mono">{{ courantCard()?.numeroCarte || '—' }}</span></div>
+            <div class="info-row"><span class="label">Expire :</span>{{ courantCard()?.dateExpiration || '—' }}</div>
             <div class="info-row">
               <span class="label">État :</span>
-              <span class="status-pill" [class.ok]="card()?.estActive" [class.ko]="!card()?.estActive">
-                {{ card()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}
-              </span>
+              <span class="status-pill" [class.ok]="courantCard()?.estActive" [class.ko]="!courantCard()?.estActive">{{ courantCard()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}</span>
             </div>
             <div class="limits-grid">
-              <div class="limit-box">
-                <span class="limit-label">Plafond Jour</span>
-                <span class="limit-value">{{ card()?.plafondJournalier ?? '—' }} €</span>
-              </div>
-              <div class="limit-box">
-                <span class="limit-label">Plafond Mois</span>
-                <span class="limit-value">{{ card()?.plafondMensuel ?? '—' }} €</span>
-              </div>
+              <div class="limit-box"><span class="limit-label">Plafond Jour</span><span class="limit-value">{{ courantCard()?.plafondJournalier ?? '—' }} €</span></div>
+              <div class="limit-box"><span class="limit-label">Plafond Mois</span><span class="limit-value">{{ courantCard()?.plafondMensuel ?? '—' }} €</span></div>
             </div>
           </div>
           <div class="actions-buttons">
-            <button class="btn-action" [class.btn-block]="card()?.estActive" [class.btn-unblock]="!card()?.estActive" (click)="toggleCard()" [disabled]="loading()">
-              {{ card()?.estActive ? '🔒 BLOQUER' : '🔓 Débloquer la carte' }}
+            <button class="btn-action"
+                    [class.btn-block]="courantCard()?.estActive"
+                    [class.btn-unblock]="!courantCard()?.estActive"
+                    (click)="toggleCardForCourant()"
+                    [disabled]="loading()">
+              {{ courantCard()?.estActive ? '🔒 BLOQUER' : '🔓 Débloquer la carte' }}
             </button>
           </div>
         </div>
-
         <ng-template #nocardAdmin>
           <div class="info-card info-card-empty">
-            <div class="info-card-header">
-              <span class="info-icon">💳</span>
-              <span class="info-title">Aucune carte</span>
-            </div>
+            <div class="info-card-header"><span class="info-icon">💳</span><span class="info-title">Aucune carte liée</span></div>
             <div class="empty-state">
-              <p>Aucune carte liée à ce compte.</p>
-              <button class="btn-action btn-issue" (click)="issueCard()" [disabled]="loading()">💳 Émettre une carte</button>
+              <p>Ce compte courant n'a pas encore de carte bancaire.</p>
+              <button class="btn-action btn-issue" (click)="issueCardForCourant()" [disabled]="loading()">💳 Émettre une carte</button>
             </div>
           </div>
         </ng-template>
       </div>
 
       <div class="row">
-        <form [formGroup]="limitsForm" (ngSubmit)="setLimits()" class="info-card info-card-gold">
-          <div class="info-card-header">
-            <span class="info-icon">⚙️</span>
-            <span class="info-title">Plafonds de la carte</span>
-          </div>
+        <form [formGroup]="limitsForm" (ngSubmit)="setLimitsForCourant()" class="info-card info-card-gold">
+          <div class="info-card-header"><span class="info-icon">⚙️</span><span class="info-title">Modifier les plafonds</span></div>
           <div class="form-grid">
-            <label class="form-label">
-              <span>Plafond journalier (€)</span>
-              <input type="number" formControlName="plafondJournalier" min="1" step="1">
-            </label>
-            <label class="form-label">
-              <span>Plafond mensuel (€)</span>
-              <input type="number" formControlName="plafondMensuel" min="1" step="1">
-            </label>
+            <label class="form-label"><span>Plafond journalier (€)</span><input type="number" formControlName="plafondJournalier" min="1" step="1"></label>
+            <label class="form-label"><span>Plafond mensuel (€)</span><input type="number" formControlName="plafondMensuel" min="1" step="1"></label>
           </div>
           <div class="actions-buttons">
-            <button class="btn-action btn-save" [disabled]="limitsForm.invalid || !card() || loading()">💾 Enregistrer</button>
+            <button class="btn-action btn-save" [disabled]="limitsForm.invalid||!courantCard()||loading()">💾 Enregistrer</button>
           </div>
         </form>
       </div>
-
       <p class="err" *ngIf="error()">⚠️ {{ error() }}</p>
     </section>
   </main>
 
-  <!-- ====== ONGLET CLIENTS (avec placements dans le dépli) ====== -->
-  <main class="clients-section" *ngIf="activeTab() === 'clients'">
+  <!-- ====== ONGLET CLIENTS ====== -->
+  <main class="clients-section" *ngIf="activeTab()==='clients'">
     <section class="panel-3d">
       <div class="clients-header">
-        <h3 class="panel-title">
-          <span class="panel-title-icon">👥</span>
-          <span class="panel-title-text">Liste complète des clients</span>
-        </h3>
+        <h3 class="panel-title"><span class="panel-title-icon">👥</span><span class="panel-title-text">Liste complète des clients</span></h3>
         <div class="header-stats">
-          <div class="mini-stat">
-            <span class="mini-stat-label">Total</span>
-            <span class="mini-stat-value">{{ totalClients() }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-stat-label">Filtrés</span>
-            <span class="mini-stat-value">{{ getFilteredClients().length }}</span>
-          </div>
+          <div class="mini-stat"><span class="mini-stat-label">Total</span><span class="mini-stat-value">{{ totalClients() }}</span></div>
+          <div class="mini-stat"><span class="mini-stat-label">Filtrés</span><span class="mini-stat-value">{{ getFilteredClients().length }}</span></div>
         </div>
       </div>
-
       <div class="search-bar">
         <div class="search-input-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" placeholder="Rechercher par nom, prénom, email ou ID..." [value]="searchFilter()" (input)="onSearchChange($any($event.target).value)" class="search-input">
         </div>
         <button class="btn-refresh" (click)="refreshClients()" [disabled]="loadingClients()">
-          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           <span>Actualiser</span>
         </button>
       </div>
-
-      <div class="loading-card" *ngIf="loadingClients()">
-        <div class="spinner-3d"></div>
-        <p>Chargement des clients...</p>
-      </div>
-
-      <div class="error-card" *ngIf="errorClients()">
-        <p>❌ {{ errorClients() }}</p>
-        <button class="btn-retry" (click)="refreshClients()">🔄 Réessayer</button>
-      </div>
-
-      <div class="clients-table-wrapper" *ngIf="!loadingClients() && !errorClients()">
-        <table class="clients-table" *ngIf="getFilteredClients().length > 0; else noClients">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nom complet</th>
-              <th>Email</th>
-              <th>Inscription</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+      <div class="loading-card" *ngIf="loadingClients()"><div class="spinner-3d"></div><p>Chargement des clients...</p></div>
+      <div class="error-card" *ngIf="errorClients()"><p>❌ {{ errorClients() }}</p><button class="btn-retry" (click)="refreshClients()">🔄 Réessayer</button></div>
+      <div class="clients-table-wrapper" *ngIf="!loadingClients()&&!errorClients()">
+        <table class="clients-table" *ngIf="getFilteredClients().length>0; else noClients">
+          <thead><tr><th>ID</th><th>Nom complet</th><th>Email</th><th>Inscription</th><th>Actions</th></tr></thead>
           <tbody>
             <ng-container *ngFor="let client of getFilteredClients()">
               <tr class="client-row" [class.expanded]="isClientExpanded(client.id)">
                 <td class="client-id-cell">#{{ client.id }}</td>
-                <td class="client-name-cell">
-                  <div class="client-avatar">{{ client.prenom?.[0] }}{{ client.nom?.[0] }}</div>
-                  <strong>{{ client.prenom }} {{ client.nom }}</strong>
-                </td>
+                <td class="client-name-cell"><div class="client-avatar">{{ client.prenom?.[0] }}{{ client.nom?.[0] }}</div><strong>{{ client.prenom }} {{ client.nom }}</strong></td>
                 <td class="client-email">{{ client.email }}</td>
                 <td class="client-date">{{ formatDate(client.dateInscription) }}</td>
                 <td class="client-actions">
                   <button class="btn-toggle" (click)="toggleClientAccounts(client.id)" [class.active]="isClientExpanded(client.id)">
                     <span>{{ isClientExpanded(client.id) ? '▼' : '▶' }}</span>
                     {{ isClientExpanded(client.id) ? 'Masquer' : 'Voir' }}
-                    <span class="badge" *ngIf="client.comptes && client.comptes.length > 0">{{ client.comptes.length }}</span>
+                    <span class="badge" *ngIf="client.comptes&&client.comptes.length>0">{{ client.comptes.length }}</span>
                   </button>
                 </td>
               </tr>
-
               <tr class="accounts-row" *ngIf="isClientExpanded(client.id)">
                 <td colspan="5">
                   <div class="accounts-details">
-                    <!-- Comptes bancaires -->
                     <h4>💼 Comptes bancaires ({{ client.comptes?.length || 0 }})</h4>
-
-                    <div class="accounts-grid" *ngIf="client.comptes && client.comptes.length > 0; else noAccounts">
+                    <div class="accounts-grid" *ngIf="client.comptes&&client.comptes.length>0; else noAccounts">
                       <div class="account-mini-card" *ngFor="let compte of client.comptes">
                         <div class="account-mini-header">
                           <span class="account-mini-icon">{{ getAccountIcon(compte.intitule) }}</span>
                           <span class="account-mini-type">{{ getAccountDisplayType(compte) }}</span>
-                          <span class="status-badge"
-                                [class.active-status]="!isEpargne(compte)"
-                                [class.pending-status]="isEpargne(compte)"
-                                style="margin-left: 8px;">
-                            {{ getAccountCategory(compte) }}
-                          </span>
+                          <span class="status-badge" [class.active-status]="!isEpargne(compte)" [class.pending-status]="isEpargne(compte)" style="margin-left:8px;">{{ getAccountCategory(compte) }}</span>
                         </div>
-
-                        <div class="account-mini-num">
-                          <small>N° de compte</small>
-                          <span class="mono">{{ compte.numCompte }}</span>
-                        </div>
-
-                        <div class="account-mini-balance">
-                          <small>Solde disponible</small>
-                          <span class="balance-big-green">{{ formatCurrency(compte.balance) }}</span>
-                        </div>
-
+                        <div class="account-mini-num"><small>N° de compte</small><span class="mono">{{ compte.numCompte }}</span></div>
+                        <div class="account-mini-balance"><small>Solde disponible</small><span class="balance-big-green">{{ formatCurrency(compte.balance) }}</span></div>
                         <div class="account-mini-footer">
-                          <span class="status-pill" [class.ok]="compte.status === 'ACTIVATED'" [class.ko]="compte.status !== 'ACTIVATED'">
-                            {{ getDisplayStatus(compte.status) }}
-                          </span>
+                          <span class="status-pill" [class.ok]="compte.status==='ACTIVATED'" [class.ko]="compte.status!=='ACTIVATED'">{{ getDisplayStatus(compte.status) }}</span>
                           <span class="devise-badge">{{ compte.devise || 'EUR' }}</span>
                         </div>
-
-                        <div class="account-mini-card-info">
-                          Carte : {{ compte.card ? ((compte.card.estActive ? 'Active ' : 'Bloquée ') + (compte.card.numeroCarte || '')) : 'Aucune carte' }}
-                        </div>
-
+                        <div class="account-mini-card-info">Carte : {{ compte.card ? ((compte.card.estActive ? 'Active ' : 'Bloquée ') + (compte.card.numeroCarte || '')) : 'Aucune carte' }}</div>
                         <div class="account-mini-actions">
-                          <button class="btn-view" (click)="openClientAccount(compte, client)">Gérer compte</button>
-                          <button class="btn-view" (click)="openClientCard(compte, client)">Gérer carte</button>
+                          <button class="btn-view" (click)="openClientAccount(compte,client)">Gérer compte</button>
+                          <button class="btn-view" (click)="openClientCard(compte,client)" *ngIf="!isEpargne(compte)">Gérer carte</button>
                         </div>
                       </div>
                     </div>
-
-                    <ng-template #noAccounts>
-                      <div class="no-accounts">
-                        <p>📭 Aucun compte bancaire pour ce client</p>
-                      </div>
-                    </ng-template>
-
-                    <!-- ✨ PLACEMENTS / FONDS DU CLIENT -->
-                    <h4 style="margin-top: 24px;">
-                      📈 Placements & fonds
-                      <span *ngIf="client.placements" style="font-size: 0.85rem; opacity: 0.7;">
-                        ({{ client.placements.length }})
-                      </span>
-                    </h4>
-
-                    <div *ngIf="loadingPlacementsClientId() === client.id" class="muted" style="padding: 12px;">
-                      ⏳ Chargement des placements...
-                    </div>
-
-                    <div *ngIf="loadingPlacementsClientId() !== client.id && client.placements !== undefined">
-                      <div class="accounts-grid" *ngIf="client.placements && client.placements.length > 0; else noPlacements">
+                    <ng-template #noAccounts><div class="no-accounts"><p>📭 Aucun compte bancaire pour ce client</p></div></ng-template>
+                    <h4 style="margin-top:24px;">📈 Placements & fonds <span *ngIf="client.placements" style="font-size:0.85rem;opacity:0.7;">({{ client.placements.length }})</span></h4>
+                    <div *ngIf="loadingPlacementsClientId()===client.id" class="muted" style="padding:12px;">⏳ Chargement des placements...</div>
+                    <div *ngIf="loadingPlacementsClientId()!==client.id&&client.placements!==undefined">
+                      <div class="accounts-grid" *ngIf="client.placements&&client.placements.length>0; else noPlacements">
                         <div class="account-mini-card" *ngFor="let p of client.placements">
                           <div class="account-mini-header">
                             <span class="account-mini-icon">📊</span>
                             <span class="account-mini-type">{{ p.nomFonds }}</span>
-                            <span class="status-badge"
-                                  [class.active-status]="p.statut === 'ACTIF'"
-                                  [class.pending-status]="p.statut === 'CLOTURE'"
-                                  [class.suspended-status]="p.statut === 'ANNULE'"
-                                  style="margin-left: 8px;">
-                              {{ p.statut }}
-                            </span>
+                            <span class="status-badge" [class.active-status]="p.statut==='ACTIF'" [class.pending-status]="p.statut==='CLOTURE'" [class.suspended-status]="p.statut==='ANNULE'" style="margin-left:8px;">{{ p.statut }}</span>
                           </div>
-
-                          <div class="account-mini-num">
-                            <small>Compte source</small>
-                            <span class="mono">{{ p.numeroCompte }}</span>
-                          </div>
-
-                          <div class="account-mini-balance">
-                            <small>Montant investi</small>
-                            <span class="balance-big-green">{{ formatCurrency(p.montant) }}</span>
-                          </div>
-
-                          <div class="account-mini-footer" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                            <small>Gain prévu : <b style="color: #10b981;">+ {{ formatCurrency(p.gainPrevu) }}</b></small>
-                            <small>Gain actuel : <b style="color: #f59e0b;">+ {{ formatCurrency(getGainDuMoment(p)) }}</b></small>
-                            <small>Valeur actuelle : <b>{{ formatCurrency(getValeurDuMoment(p)) }}</b></small>
+                          <div class="account-mini-num"><small>Compte source</small><span class="mono">{{ p.numeroCompte }}</span></div>
+                          <div class="account-mini-balance"><small>Montant investi</small><span class="balance-big-green">{{ formatCurrency(p.montant) }}</span></div>
+                          <div class="account-mini-footer" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                            <small>Gain du moment : <b style="color:#f59e0b;">+ {{ formatCurrency(getGainDuMoment(p)) }}</b></small>
+                            <small>Valeur du moment : <b>{{ formatCurrency(getValeurDuMoment(p)) }}</b></small>
                             <small>Date : {{ formatDate(p.datePlacement) }}</small>
                           </div>
                         </div>
                       </div>
-
-                      <ng-template #noPlacements>
-                        <div class="no-accounts">
-                          <p>📭 Aucun placement pour ce client</p>
-                        </div>
-                      </ng-template>
+                      <ng-template #noPlacements><div class="no-accounts"><p>📭 Aucun placement pour ce client</p></div></ng-template>
                     </div>
                   </div>
                 </td>
@@ -874,354 +632,152 @@
             </ng-container>
           </tbody>
         </table>
-
-        <ng-template #noClients>
-          <div class="no-results">
-            <p>🔍 Aucun client trouvé</p>
-            <p class="muted">Essayez de modifier votre recherche</p>
-          </div>
-        </ng-template>
+        <ng-template #noClients><div class="no-results"><p>🔍 Aucun client trouvé</p><p class="muted">Essayez de modifier votre recherche</p></div></ng-template>
       </div>
     </section>
   </main>
 
   <!-- ====== ONGLET EMPLOYÉS ====== -->
-  <main class="clients-section" *ngIf="activeTab() === 'employees'">
+  <main class="clients-section" *ngIf="activeTab()==='employees'">
     <section class="panel-3d">
       <div class="clients-header">
-        <h3 class="panel-title">
-          <span class="panel-title-icon">🧑‍💼</span>
-          <span class="panel-title-text">Liste des employés</span>
-        </h3>
+        <h3 class="panel-title"><span class="panel-title-icon">🧑‍💼</span><span class="panel-title-text">Liste des employés</span></h3>
         <div class="header-stats">
           <div class="mini-stat"><span class="mini-stat-label">Total</span><span class="mini-stat-value">{{ employees().length }}</span></div>
           <div class="mini-stat"><span class="mini-stat-label">Filtrés</span><span class="mini-stat-value">{{ getFilteredEmployees().length }}</span></div>
         </div>
       </div>
-
       <div class="search-bar">
         <div class="search-input-wrapper">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Rechercher par nom, prénom, email, rôle, poste ou matricule..."
-            [value]="employeeSearch()"
-            (input)="onEmployeeSearchChange($any($event.target).value)"
-            class="search-input">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Rechercher par nom, prénom, email, rôle, poste ou matricule..." [value]="employeeSearch()" (input)="onEmployeeSearchChange($any($event.target).value)" class="search-input">
         </div>
-
         <button class="btn-refresh" (click)="refreshEmployees()" [disabled]="loadingEmployees()">
-          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           <span>Actualiser</span>
         </button>
       </div>
-
-      <div class="loading-card" *ngIf="loadingEmployees()">
-        <div class="spinner-3d"></div>
-        <p>Chargement des employés...</p>
-      </div>
-
-      <div class="error-card" *ngIf="errorEmployees()">
-        <p>❌ {{ errorEmployees() }}</p>
-        <button class="btn-retry" (click)="refreshEmployees()">🔄 Réessayer</button>
-      </div>
-
-      <div class="clients-table-wrapper" *ngIf="!loadingEmployees() && !errorEmployees()">
-        <table class="clients-table" *ngIf="getFilteredEmployees().length > 0; else noEmployees">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nom complet</th>
-              <th>Email</th>
-              <th>Rôle</th>
-              <th>Matricule</th>
-              <th>Poste</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+      <div class="loading-card" *ngIf="loadingEmployees()"><div class="spinner-3d"></div><p>Chargement des employés...</p></div>
+      <div class="error-card" *ngIf="errorEmployees()"><p>❌ {{ errorEmployees() }}</p><button class="btn-retry" (click)="refreshEmployees()">🔄 Réessayer</button></div>
+      <div class="clients-table-wrapper" *ngIf="!loadingEmployees()&&!errorEmployees()">
+        <table class="clients-table" *ngIf="getFilteredEmployees().length>0; else noEmployees">
+          <thead><tr><th>ID</th><th>Nom complet</th><th>Email</th><th>Rôle</th><th>Matricule</th><th>Poste</th><th>Actions</th></tr></thead>
           <tbody>
             <tr *ngFor="let emp of getFilteredEmployees()">
               <td class="client-id-cell">#{{ emp.id }}</td>
-              <td class="client-name-cell">
-                <div class="client-avatar">{{ emp.prenom?.[0] }}{{ emp.nom?.[0] }}</div>
-                <strong>{{ emp.prenom }} {{ emp.nom }}</strong>
-              </td>
+              <td class="client-name-cell"><div class="client-avatar">{{ emp.prenom?.[0] }}{{ emp.nom?.[0] }}</div><strong>{{ emp.prenom }} {{ emp.nom }}</strong></td>
               <td class="client-email">{{ emp.email }}</td>
-              <td>{{ emp.role }}</td>
-              <td>{{ emp.matricule || '—' }}</td>
-              <td>{{ emp.poste || '—' }}</td>
-              <td class="client-actions">
-                <button class="btn-view" (click)="selectEmployee(emp)">👁️ Voir</button>
-              </td>
+              <td>{{ emp.role }}</td><td>{{ emp.matricule || '—' }}</td><td>{{ emp.poste || '—' }}</td>
+              <td class="client-actions"><button class="btn-view" (click)="selectEmployee(emp)">👁️ Voir</button></td>
             </tr>
           </tbody>
         </table>
-
-        <ng-template #noEmployees>
-          <div class="no-results">
-            <p>🔍 Aucun employé trouvé</p>
-            <p class="muted">Essayez de modifier votre recherche</p>
-          </div>
-        </ng-template>
+        <ng-template #noEmployees><div class="no-results"><p>🔍 Aucun employé trouvé</p><p class="muted">Essayez de modifier votre recherche</p></div></ng-template>
       </div>
     </section>
   </main>
 
   <!-- ====== ONGLET AGENCY SERVICES ====== -->
-  <main class="clients-section" *ngIf="activeTab() === 'agencyServices'">
+  <main class="clients-section" *ngIf="activeTab()==='agencyServices'">
     <section class="panel-3d">
       <div class="clients-header">
-        <h3 class="panel-title">
-          <span class="panel-title-icon">📅</span>
-          <span class="panel-title-text">Agence service</span>
-        </h3>
-        <div class="header-stats">
-          <div class="mini-stat">
-            <span class="mini-stat-label">Total</span>
-            <span class="mini-stat-value">{{ agencyServices().length }}</span>
-          </div>
-        </div>
+        <h3 class="panel-title"><span class="panel-title-icon">📅</span><span class="panel-title-text">Opérations en agence</span></h3>
+        <div class="header-stats"><div class="mini-stat"><span class="mini-stat-label">Total</span><span class="mini-stat-value">{{ agencyServices().length }}</span></div></div>
       </div>
-
       <div class="search-bar">
         <button class="btn-refresh" (click)="refreshAgencyServices()" [disabled]="loadingAgencyServices()">
-          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
+          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           <span>Actualiser</span>
         </button>
       </div>
-
-      <div class="loading-card" *ngIf="loadingAgencyServices()">
-        <div class="spinner-3d"></div>
-        <p>Chargement des services agence...</p>
-      </div>
-
-      <div class="error-card" *ngIf="errorAgencyServices()">
-        <p>❌ {{ errorAgencyServices() }}</p>
-      </div>
-
-      <div class="clients-table-wrapper" *ngIf="!loadingAgencyServices() && !errorAgencyServices()">
-        <table class="clients-table" *ngIf="agencyServices().length > 0; else noAgencyServices">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Heure</th>
-              <th>Type</th>
-              <th>Agence</th>
-              <th>Montant</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
+      <div class="loading-card" *ngIf="loadingAgencyServices()"><div class="spinner-3d"></div><p>Chargement...</p></div>
+      <div class="error-card" *ngIf="errorAgencyServices()"><p>❌ {{ errorAgencyServices() }}</p></div>
+      <div class="clients-table-wrapper" *ngIf="!loadingAgencyServices()&&!errorAgencyServices()">
+        <table class="clients-table" *ngIf="agencyServices().length>0; else noAgencyServices">
+          <thead><tr><th>Date</th><th>Heure</th><th>Type</th><th>Client</th><th>Compte</th><th class="right">Montant</th><th>Guichet</th><th>Ticket</th><th>Conseiller</th><th>Statut</th></tr></thead>
           <tbody>
             <tr *ngFor="let service of agencyServices()">
-              <td>{{ service.date }}</td>
-              <td>{{ service.heure }}</td>
-              <td>{{ service.typeOperation }}</td>
-              <td>{{ service.agence }}</td>
-              <td>{{ formatCurrency(service.montant) }}</td>
-              <td>
-                <span class="status-badge active-status">{{ service.statut }}</span>
-              </td>
+              <td>{{ service.date }}</td><td>{{ service.heure }}</td>
+              <td><span class="status-badge" [class.active-status]="service.typeOperation==='DÉPÔT'||service.typeOperation==='DEPOT'" [class.suspended-status]="service.typeOperation==='RETRAIT'">{{ service.typeOperation }}</span></td>
+              <td><strong>{{ service.clientNom || '—' }}</strong></td>
+              <td class="mono">{{ service.numeroCompte || '—' }}</td>
+              <td class="right" style="font-weight:700;">{{ formatCurrency(service.montant) }}</td>
+              <td><span class="status-badge active-status">G{{ service.guichet }}</span></td>
+              <td class="mono">{{ service.ticket }}</td>
+              <td><div><strong>{{ service.conseiller || '—' }}</strong></div><small style="opacity:0.7;" *ngIf="service.conseillerMatricule">{{ service.conseillerMatricule }}</small></td>
+              <td><span class="status-badge active-status">{{ service.statut }}</span></td>
             </tr>
           </tbody>
         </table>
-
-        <ng-template #noAgencyServices>
-          <div class="no-results">
-            <p>📭 Aucun service agence</p>
-            <p class="muted">Les données de démonstration apparaîtront ici</p>
-          </div>
-        </ng-template>
+        <ng-template #noAgencyServices><div class="no-results"><p>📭 Aucune opération en agence</p></div></ng-template>
       </div>
     </section>
   </main>
 
   <!-- ====== ONGLET INVESTMENTS ====== -->
-  <main class="clients-section" *ngIf="activeTab() === 'investments'">
+  <main class="clients-section" *ngIf="activeTab()==='investments'">
     <section class="panel-3d">
       <div class="clients-header">
-        <h3 class="panel-title">
-          <span class="panel-title-icon">📈</span>
-          <span class="panel-title-text">Placements des clients</span>
-        </h3>
-        <div class="header-stats">
-          <div class="mini-stat">
-            <span class="mini-stat-label">Total</span>
-            <span class="mini-stat-value">{{ investments().length }}</span>
-          </div>
-        </div>
+        <h3 class="panel-title"><span class="panel-title-icon">📈</span><span class="panel-title-text">Placements des clients</span></h3>
+        <div class="header-stats"><div class="mini-stat"><span class="mini-stat-label">Total</span><span class="mini-stat-value">{{ investments().length }}</span></div></div>
       </div>
-
-      <div class="search-bar">
-        <button class="btn-refresh" (click)="refreshInvestments()" [disabled]="loadingInvestments()">
-          <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          <span>Actualiser</span>
-        </button>
-      </div>
-
-      <div class="loading-card" *ngIf="loadingInvestments()">
-        <div class="spinner-3d"></div>
-        <p>Chargement des investissements...</p>
-      </div>
-
-      <div class="error-card" *ngIf="errorInvestments()">
-        <p>❌ {{ errorInvestments() }}</p>
-      </div>
-
-      <div class="clients-table-wrapper" *ngIf="!loadingInvestments() && !errorInvestments()">
-        <table class="clients-table" *ngIf="investments().length > 0; else noInvestments">
-          <thead>
-            <tr>
-              <th>Client</th>
-              <th>Compte</th>
-              <th>Fonds</th>
-              <th>Montant</th>
-              <th>Gain prévu</th>
-              <th>Gain journalier</th>
-              <th>Gain du moment</th>
-              <th>Valeur du moment</th>
-              <th>Valeur estimée</th>
-              <th>Statut</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+      <div class="search-bar"><button class="btn-refresh" (click)="refreshInvestments()" [disabled]="loadingInvestments()"><svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Actualiser</span></button></div>
+      <div class="loading-card" *ngIf="loadingInvestments()"><div class="spinner-3d"></div><p>Chargement...</p></div>
+      <div class="error-card" *ngIf="errorInvestments()"><p>❌ {{ errorInvestments() }}</p></div>
+      <div class="clients-table-wrapper" *ngIf="!loadingInvestments()&&!errorInvestments()">
+        <table class="clients-table" *ngIf="investments().length>0; else noInvestments">
+          <thead><tr><th>Client</th><th>Compte</th><th>Fonds</th><th class="right">Montant</th><th class="right">Gain du moment</th><th class="right">Valeur du moment</th><th>Statut</th></tr></thead>
           <tbody>
             <tr *ngFor="let p of investments()">
-              <td>{{ p.clientNomComplet }}</td>
-              <td>{{ p.numeroCompte }}</td>
+              <td><strong>{{ p.clientNomComplet }}</strong></td>
+              <td class="mono">{{ p.numeroCompte }}</td>
               <td>{{ p.nomFonds }}</td>
-              <td>{{ formatCurrency(p.montant) }}</td>
-              <td>{{ formatCurrency(p.gainPrevu) }}</td>
-              <td>{{ formatCurrency(getGainJournalier(p)) }}</td>
-              <td>{{ formatCurrency(getGainDuMoment(p)) }}</td>
-              <td>{{ formatCurrency(getValeurDuMoment(p)) }}</td>
-              <td>{{ formatCurrency(p.valeurEstimee) }}</td>
-              <td>
-                <span class="status-badge"
-                  [class.active-status]="p.statut === 'ACTIF'"
-                  [class.pending-status]="p.statut === 'CLOTURE'"
-                  [class.suspended-status]="p.statut === 'ANNULE'">
-                  {{ p.statut }}
-                </span>
-              </td>
-              <td>
-                <button class="btn-view" (click)="showClientFunds(p.clientId, p.clientNomComplet)">
-                  Voir fonds client
-                </button>
-              </td>
+              <td class="right">{{ formatCurrency(p.montant) }}</td>
+              <td class="right positive">+ {{ formatCurrency(getGainDuMoment(p)) }}</td>
+              <td class="right" style="font-weight:700;color:#f59e0b;">{{ formatCurrency(getValeurDuMoment(p)) }}</td>
+              <td><span class="status-badge" [class.active-status]="p.statut==='ACTIF'" [class.pending-status]="p.statut==='CLOTURE'" [class.suspended-status]="p.statut==='ANNULE'">{{ p.statut }}</span></td>
             </tr>
           </tbody>
         </table>
-
-        <ng-template #noInvestments>
-          <div class="no-results">
-            <p>📭 Aucun investissement trouvé</p>
-          </div>
-        </ng-template>
+        <ng-template #noInvestments><div class="no-results"><p>📭 Aucun investissement trouvé</p></div></ng-template>
       </div>
     </section>
   </main>
 
   <!-- ====== ONGLET FUNDS ====== -->
-  <main class="clients-section" *ngIf="activeTab() === 'funds'">
+  <main class="clients-section" *ngIf="activeTab()==='funds'">
     <section class="panel-3d">
       <div class="clients-header">
-        <h3 class="panel-title">
-          <span class="panel-title-icon">💼</span>
-          <span class="panel-title-text">
-            {{ selectedClientFunds().length > 0 ? ('Placements de ' + selectedClientName()) : 'Catalogue des fonds' }}
-          </span>
-        </h3>
-
-        <button class="btn-refresh" *ngIf="selectedClientFunds().length > 0" (click)="clearSelectedClientFunds()">
-          <span>Retour</span>
-        </button>
+        <h3 class="panel-title"><span class="panel-title-icon">💼</span><span class="panel-title-text">{{ selectedClientFunds().length>0 ? ('Placements de '+selectedClientName()) : 'Catalogue des fonds' }}</span></h3>
+        <button class="btn-refresh" *ngIf="selectedClientFunds().length>0" (click)="clearSelectedClientFunds()"><span>Retour</span></button>
       </div>
-
-      <div class="loading-card" *ngIf="loadingFunds() || loadingInvestments()">
-        <div class="spinner-3d"></div>
-        <p>Chargement...</p>
-      </div>
-
-      <div class="error-card" *ngIf="errorFunds() || errorInvestments()">
-        <p>❌ {{ errorFunds() || errorInvestments() }}</p>
-      </div>
-
-    <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length === 0 && !loadingFunds() && !errorFunds()">
-        <table class="clients-table" *ngIf="fonds().length > 0; else noFunds">
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Code</th>
-              <th>Rendement annuel</th>
-              <th>Rendement journalier</th>
-              <th>Gain/jour pour 1000 €</th>
-              <th>Montant min.</th>
-            </tr>
-          </thead>
+      <div class="loading-card" *ngIf="loadingFunds()||loadingInvestments()"><div class="spinner-3d"></div><p>Chargement...</p></div>
+      <div class="error-card" *ngIf="errorFunds()||errorInvestments()"><p>❌ {{ errorFunds() || errorInvestments() }}</p></div>
+      <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length===0&&!loadingFunds()&&!errorFunds()">
+        <table class="clients-table" *ngIf="fonds().length>0; else noFunds">
+          <thead><tr><th>Nom</th><th>Code</th><th>Rendement annuel</th></tr></thead>
           <tbody>
             <tr *ngFor="let f of fonds()">
               <td>{{ f.nomFonds }}</td>
               <td><span class="mono">{{ f.codeIdentification || '—' }}</span></td>
-              <td><b style="color: #10b981;">{{ f.rendement | number:'1.2-2' }} %</b></td>
-              <td>{{ getRendementJournalier(f.rendement) | number:'1.4-4' }} %</td>
-              <td><b style="color: #f59e0b;">+ {{ formatCurrency(getGainJournalierFonds(f, 1000)) }}</b></td>
-              <td>{{ formatCurrency(f.montant) }}</td>
+              <td><b style="color:#10b981;">{{ f.rendement | number:'1.2-2' }} %</b></td>
             </tr>
           </tbody>
         </table>
-
-        <ng-template #noFunds>
-          <div class="no-results">
-            <p>📭 Aucun fonds disponible</p>
-          </div>
-        </ng-template>
+        <ng-template #noFunds><div class="no-results"><p>📭 Aucun fonds disponible</p></div></ng-template>
       </div>
-
-      <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length > 0 && !loadingInvestments()">
+      <div class="clients-table-wrapper" *ngIf="selectedClientFunds().length>0&&!loadingInvestments()">
         <table class="clients-table">
-          <thead>
-            <tr>
-              <th>Fonds</th>
-              <th>Compte</th>
-              <th>Montant</th>
-              <th>Rendement</th>
-              <th>Gain prévu</th>
-              <th>Gain journalier</th>
-              <th>Gain du moment</th>
-              <th>Valeur du moment</th>
-              <th>Valeur estimée</th>
-              <th>Date placement</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Fonds</th><th>Compte</th><th class="right">Montant</th><th class="right">Gain du moment</th><th class="right">Valeur du moment</th><th>Date placement</th><th>Statut</th></tr></thead>
           <tbody>
             <tr *ngFor="let p of selectedClientFunds()">
-              <td>{{ p.nomFonds }}</td>
-              <td>{{ p.numeroCompte }}</td>
-              <td>{{ formatCurrency(p.montant) }}</td>
-              <td>{{ p.rendement | number:'1.2-2' }} %</td>
-              <td>{{ formatCurrency(p.gainPrevu) }}</td>
-              <td>{{ formatCurrency(getGainJournalier(p)) }}</td>
-              <td>{{ formatCurrency(getGainDuMoment(p)) }}</td>
-              <td>{{ formatCurrency(getValeurDuMoment(p)) }}</td>
-              <td>{{ formatCurrency(p.valeurEstimee) }}</td>
+              <td><strong>{{ p.nomFonds }}</strong></td>
+              <td class="mono">{{ p.numeroCompte }}</td>
+              <td class="right">{{ formatCurrency(p.montant) }}</td>
+              <td class="right positive">+ {{ formatCurrency(getGainDuMoment(p)) }}</td>
+              <td class="right" style="font-weight:700;color:#f59e0b;">{{ formatCurrency(getValeurDuMoment(p)) }}</td>
               <td>{{ formatDate(p.datePlacement) }}</td>
-              <td>{{ p.statut }}</td>
+              <td><span class="status-badge" [class.active-status]="p.statut==='ACTIF'" [class.pending-status]="p.statut==='CLOTURE'" [class.suspended-status]="p.statut==='ANNULE'">{{ p.statut }}</span></td>
             </tr>
           </tbody>
         </table>
@@ -1230,38 +786,27 @@
   </main>
 
   <!-- ====== ONGLET CHATBOT ====== -->
-  <main class="chatbot-section" *ngIf="activeTab() === 'chatbot'">
+  <main class="chatbot-section" *ngIf="activeTab()==='chatbot'">
     <app-admin-chatbot></app-admin-chatbot>
   </main>
 
   <!-- ====== MODAL AJOUT FRAIS ====== -->
-  <div class="modal-overlay" *ngIf="showFraisModal()" (click)="closeFraisModal()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-    <div class="modal-content" (click)="$event.stopPropagation()" style="background: white; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #1a1a2e;">➕ Ajouter un frais</h3>
-        <button (click)="closeFraisModal()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+  <div class="modal-overlay" *ngIf="showFraisModal()" (click)="closeFraisModal()"
+       style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;">
+    <div class="modal-content" (click)="$event.stopPropagation()"
+         style="background:white;padding:24px;border-radius:12px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="margin:0;color:#1a1a2e;">➕ Ajouter un frais</h3>
+        <button (click)="closeFraisModal()" style="background:transparent;border:none;font-size:1.5rem;cursor:pointer;">✕</button>
       </div>
-
-      <p style="color: #64748b; margin-bottom: 16px;">
-        Client : <strong>{{ selected()?.clientName }}</strong><br>
-        Compte ciblé : <span style="font-family: monospace;">ID {{ fraisTargetAccountId() }}</span>
-      </p>
-
+      <p style="color:#64748b;margin-bottom:16px;">Client : <strong>{{ selected()?.clientName }}</strong><br>Compte ciblé : <span style="font-family:monospace;">ID {{ fraisTargetAccountId() }}</span></p>
       <form [formGroup]="fraisForm" (ngSubmit)="submitFrais()">
-        <div style="margin-bottom: 12px;">
-          <label style="display: block; margin-bottom: 4px; font-weight: 600;">💰 Montant (€)</label>
-          <input type="number" step="0.01" formControlName="montant" min="0" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-        </div>
-
-        <div style="margin-bottom: 12px;">
-          <label style="display: block; margin-bottom: 4px; font-weight: 600;">📝 Description</label>
-          <input type="text" formControlName="description" placeholder="Ex: Frais de tenue mensuel" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:600;">💰 Montant (€)</label><input type="number" step="0.01" formControlName="montant" min="0" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;"></div>
+        <div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-weight:600;">📝 Description</label><input type="text" formControlName="description" placeholder="Ex: Frais de tenue mensuel" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
           <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 600;">🏷️ Type</label>
-            <select formControlName="typeFrais" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            <label style="display:block;margin-bottom:4px;font-weight:600;">🏷️ Type</label>
+            <select formControlName="typeFrais" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;">
               <option value="TENUE_COMPTE">Tenue de compte</option>
               <option value="CARTE_BANCAIRE">Carte bancaire</option>
               <option value="VIREMENT_INTERNATIONAL">Virement international</option>
@@ -1273,10 +818,9 @@
               <option value="AUTRE">Autre</option>
             </select>
           </div>
-
           <div>
-            <label style="display: block; margin-bottom: 4px; font-weight: 600;">🔄 Périodicité</label>
-            <select formControlName="periodicite" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px">
+            <label style="display:block;margin-bottom:4px;font-weight:600;">🔄 Périodicité</label>
+            <select formControlName="periodicite" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;">
               <option value="MENSUELLE">Mensuelle</option>
               <option value="TRIMESTRIELLE">Trimestrielle</option>
               <option value="SEMESTRIELLE">Semestrielle</option>
@@ -1285,12 +829,9 @@
             </select>
           </div>
         </div>
-
-        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-          <button type="button" (click)="closeFraisModal()" style="padding: 10px 20px; background: #e2e8f0; color: #1a1a2e; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Annuler</button>
-          <button type="submit" [disabled]="fraisForm.invalid || loading()" style="padding: 10px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-            {{ loading() ? '⏳ Envoi...' : '✓ Ajouter le frais' }}
-          </button>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" (click)="closeFraisModal()" style="padding:10px 20px;background:#e2e8f0;color:#1a1a2e;border:none;border-radius:6px;cursor:pointer;font-weight:600;">Annuler</button>
+          <button type="submit" [disabled]="fraisForm.invalid||loading()" style="padding:10px 20px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">{{ loading() ? '⏳ Envoi...' : '✓ Ajouter le frais' }}</button>
         </div>
       </form>
     </div>

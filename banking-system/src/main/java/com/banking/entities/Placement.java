@@ -7,7 +7,9 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 @Entity
@@ -63,6 +65,10 @@ public class Placement {
     @Column(name = "statut", nullable = false, length = 30)
     private StatutPlacement statut = StatutPlacement.ACTIF;
 
+    /* ================================================
+       CONSTRUCTEURS
+    ================================================ */
+
     public Placement() {}
 
     public Placement(Client client, CompteBancaire compteBancaire, Fonds fonds, BigDecimal montant) {
@@ -76,13 +82,31 @@ public class Placement {
         if (fonds != null) {
             this.rendement          = fonds.getRendement();
             this.codeIdentification = fonds.getCodeIdentification();
-            TypeFonds tf            = TypeFonds.fromCode(fonds.getCodeIdentification());
-            this.type               = tf.name();
-            this.dateCloture        = this.datePlacement.plusDays(tf.getDureeJours());
+
+            // Résolution du type : code d'abord, nom en fallback
+            TypeFonds tf = TypeFonds.fromCode(fonds.getCodeIdentification());
+            if (tf == TypeFonds.SECURITE
+                    && fonds.getCodeIdentification() != null
+                    && !fonds.getCodeIdentification().toUpperCase().contains("SEC")) {
+                TypeFonds tfParNom = TypeFonds.fromNom(fonds.getNomFonds());
+                if (tfParNom != TypeFonds.SECURITE) tf = tfParNom;
+            }
+
+            this.type        = tf.name();
+            this.dateCloture = this.datePlacement.plusDays(tf.getDureeJours());
+
+            System.out.println("✅ Placement créé — Fonds: " + fonds.getNomFonds()
+                    + " | Type: " + tf.name()
+                    + " | Durée: " + tf.getDureeJours() + "j"
+                    + " | Clôture: " + this.dateCloture);
         } else {
             this.rendement = BigDecimal.ZERO;
         }
     }
+
+    /* ================================================
+       LIFECYCLE JPA
+    ================================================ */
 
     @PrePersist
     protected void onCreate() {
@@ -90,37 +114,51 @@ public class Placement {
         if (statut == null)        statut        = StatutPlacement.ACTIF;
         if (dateCloture == null && fonds != null) {
             TypeFonds tf = TypeFonds.fromCode(fonds.getCodeIdentification());
-            dateCloture = datePlacement.plusDays(tf.getDureeJours());
+            dateCloture  = datePlacement.plusDays(tf.getDureeJours());
             if (type == null)               type               = tf.name();
             if (codeIdentification == null) codeIdentification = fonds.getCodeIdentification();
+            System.out.println("⚠️ @PrePersist — date_cloture recalculée : " + dateCloture);
         }
     }
+
+    /* ================================================
+       MÉTHODES MÉTIER
+    ================================================ */
 
     public boolean estActif() {
         return StatutPlacement.ACTIF.equals(statut);
     }
 
+    public boolean estSortieAnticipee() {
+        return dateSortie != null && dateCloture != null && dateSortie.isBefore(dateCloture);
+    }
+
+    /**
+     * Clôture normale à échéance.
+     * Restitue : capital + gain total (valeurEstimee).
+     * Le crédit du compte est géré dans PlacementService.
+     */
     public void cloturer() {
         this.statut     = StatutPlacement.CLOTURE;
         this.dateSortie = LocalDateTime.now();
-        BigDecimal retour = getValeurEstimee();
-        if (this.compteBancaire != null && retour.signum() > 0)
-            this.compteBancaire.crediter(retour);
     }
 
-    public void sortirAvantEcheance(BigDecimal frais) {
+    /**
+     * Sortie anticipée avec frais bancaires dégressifs.
+     * Restitue : capital + intérêts courus - frais.
+     * Le crédit du compte est géré dans PlacementService.
+     */
+    public void sortirAvantEcheance() {
         if (!estActif())
             throw new IllegalStateException("Ce placement n'est plus actif");
 
-        this.fraisSortie = (frais != null && frais.signum() > 0) ? frais : BigDecimal.ZERO;
+        this.fraisSortie = calculerFraisSortie();
         this.dateSortie  = LocalDateTime.now();
         this.statut      = StatutPlacement.CLOTURE;
 
-        BigDecimal retour = this.montant.subtract(this.fraisSortie);
-        if (retour.signum() < 0) retour = BigDecimal.ZERO;
-
-        if (this.compteBancaire != null)
-            this.compteBancaire.crediter(retour);
+        System.out.println("💸 Sortie anticipée — Capital: " + montant
+                + " | Intérêts courus: " + getInteretsCourus()
+                + " | Frais: " + this.fraisSortie);
     }
 
     public void annuler() {
@@ -128,19 +166,119 @@ public class Placement {
         this.dateSortie = LocalDateTime.now();
     }
 
-    public boolean estSortieAnticipee() {
-        return dateSortie != null && dateCloture != null && dateSortie.isBefore(dateCloture);
+    /* ================================================
+       CALCULS FINANCIERS
+    ================================================ */
+
+    /**
+     * Frais de sortie anticipée — logique bancaire dégressive.
+     *
+     * Formule :
+     *   ratio_restant  = joursRestants / joursTotaux
+     *   frais_degressifs = capital × 2% × ratio_restant
+     *   frais_minimum    = capital × 0.25%
+     *   frais_appliques  = max(frais_degressifs, frais_minimum)
+     *
+     * Exemples :
+     *   Sort au jour 1   → ~2.00% du capital
+     *   Sort à mi-chemin → ~1.00% du capital
+     *   Sort à J-1       → 0.25% du capital (minimum garanti)
+     */
+    public BigDecimal calculerFraisSortie() {
+        if (montant == null) return BigDecimal.ZERO;
+
+        BigDecimal fraisMinimum = montant
+                .multiply(BigDecimal.valueOf(0.0025))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        if (datePlacement == null || dateCloture == null) {
+            return montant
+                    .multiply(BigDecimal.valueOf(0.02))
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .max(fraisMinimum);
+        }
+
+        long joursTotaux   = ChronoUnit.DAYS.between(datePlacement, dateCloture);
+        long joursRestants = ChronoUnit.DAYS.between(LocalDateTime.now(), dateCloture);
+
+        if (joursTotaux <= 0) return fraisMinimum;
+
+        double ratioRestant = Math.max(0.0, Math.min(1.0,
+                (double) joursRestants / joursTotaux));
+
+        BigDecimal fraisDegressifs = montant
+                .multiply(BigDecimal.valueOf(0.02))
+                .multiply(BigDecimal.valueOf(ratioRestant))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal fraisFinaux = fraisDegressifs.max(fraisMinimum);
+
+        System.out.println("📊 Frais — Capital: " + montant
+                + " | Jours totaux: " + joursTotaux
+                + " | Jours restants: " + joursRestants
+                + " | Ratio: " + String.format("%.1f%%", ratioRestant * 100)
+                + " | Dégressifs: " + fraisDegressifs
+                + " | Minimum: " + fraisMinimum
+                + " | Appliqués: " + fraisFinaux);
+
+        return fraisFinaux;
     }
 
+    /**
+     * Intérêts courus jusqu'à aujourd'hui (pro-rata temporis).
+     * Formule : montant × (rendement/100) × (joursEcoules / joursTotaux)
+     */
+    public BigDecimal getInteretsCourus() {
+        if (montant == null || rendement == null
+                || datePlacement == null || dateCloture == null)
+            return BigDecimal.ZERO;
+
+        LocalDateTime now           = LocalDateTime.now();
+        LocalDateTime dateSortieEff = now.isBefore(dateCloture) ? now : dateCloture;
+
+        long joursTotaux  = ChronoUnit.DAYS.between(datePlacement, dateCloture);
+        long joursEcoules = ChronoUnit.DAYS.between(datePlacement, dateSortieEff);
+
+        if (joursTotaux <= 0 || joursEcoules <= 0) return BigDecimal.ZERO;
+
+        return montant
+                .multiply(rendement.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP))
+                .multiply(BigDecimal.valueOf(joursEcoules))
+                .divide(BigDecimal.valueOf(joursTotaux), 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Gain total prévu si tenu jusqu'à l'échéance.
+     * Formule : montant × rendement / 100
+     */
     public BigDecimal getGainPrevu() {
         if (montant == null || rendement == null) return BigDecimal.ZERO;
-        return montant.multiply(rendement).divide(BigDecimal.valueOf(100));
+        return montant
+                .multiply(rendement)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Valeur estimée à l'échéance = capital + gain total.
+     */
     public BigDecimal getValeurEstimee() {
         if (montant == null) return BigDecimal.ZERO;
         return montant.add(getGainPrevu());
     }
+
+    /**
+     * Montant récupérable si sortie anticipée aujourd'hui.
+     * = capital + intérêts courus - frais dégressifs
+     */
+    public BigDecimal getMontantRecuperableAnticipe() {
+        return montant
+                .add(getInteretsCourus())
+                .subtract(calculerFraisSortie());
+    }
+
+    /* ================================================
+       GETTERS / SETTERS
+    ================================================ */
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -183,17 +321,16 @@ public class Placement {
 
     @Override
     public String toString() {
-        return "Placement{id=" + id + ", type='" + type + "', code='" + codeIdentification +
-                "', montant=" + montant + ", rendement=" + rendement +
-                ", statut=" + statut + ", datePlacement=" + datePlacement +
-                ", dateCloture=" + dateCloture + '}';
+        return "Placement{id=" + id + ", type='" + type + "', montant=" + montant
+                + ", rendement=" + rendement + ", statut=" + statut
+                + ", datePlacement=" + datePlacement + ", dateCloture=" + dateCloture + '}';
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Placement placement)) return false;
-        return id != null && Objects.equals(id, placement.id);
+        if (!(o instanceof Placement p)) return false;
+        return id != null && Objects.equals(id, p.id);
     }
 
     @Override

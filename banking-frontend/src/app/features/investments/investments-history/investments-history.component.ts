@@ -30,12 +30,12 @@ export class InvestmentsHistoryComponent implements OnInit {
   error        = signal<string>('');
   success      = signal<string>('');
 
-  /* ====== Computed ====== */
+  /* ==================== Computed ==================== */
 
   filteredPlacements = computed(() => {
     const query  = this.search().trim().toLowerCase();
     const statut = this.statusFilter();
-    return this.placements().filter(p => {
+    return this.placements().filter((p) => {
       const matchSearch =
         !query ||
         p.nomFonds?.toLowerCase().includes(query) ||
@@ -48,26 +48,24 @@ export class InvestmentsHistoryComponent implements OnInit {
   totalCapitalInvesti = computed(() =>
     this.placements()
       .filter(p => p.statut === 'ACTIF')
-      .reduce((t, p) => t + Number(p.montant || 0), 0)
+      .reduce((t, p) => t + Number(p.montant ?? 0), 0)
   );
 
   totalGainPrevu = computed(() =>
     this.placements()
       .filter(p => p.statut === 'ACTIF')
-      .reduce((t, p) => t + Number(p.gainPrevu || 0), 0)
+      .reduce((t, p) => t + Number(p.gainPrevu ?? 0), 0)
   );
 
   activePlacementsCount = computed(() =>
     this.placements().filter(p => p.statut === 'ACTIF').length
   );
 
-  /* ====== Lifecycle ====== */
-
   ngOnInit(): void {
     this.loadPlacements();
   }
 
-  /* ====== Chargement ====== */
+  /* ==================== Chargement ==================== */
 
   loadPlacements(): void {
     this.loading.set(true);
@@ -85,47 +83,40 @@ export class InvestmentsHistoryComponent implements OnInit {
     });
   }
 
-  /* ====== Filtres ====== */
+  /* ==================== Filtres ==================== */
 
-  updateSearch(value: string): void {
-    this.search.set(value);
-  }
-
+  updateSearch(value: string): void      { this.search.set(value); }
   updateStatusFilter(value: string): void {
     this.statusFilter.set(value as 'TOUS' | StatutPlacement);
   }
 
-  /* ====== Clôture normale (gain inclus) ====== */
+  /* ==================== Actions ==================== */
 
   cloturerPlacement(placement: Placement): void {
     if (!placement?.id || placement.statut !== 'ACTIF') return;
-
-    const valeur = Number(placement.valeurEstimee ?? 0).toFixed(2);
+    const montant = Number(placement.valeurEstimee ?? 0).toFixed(2);
     if (!confirm(
-      `Clôturer "${placement.nomFonds}" ?\n` +
-      `💰 Montant restitué : ${valeur} € (capital + gain)`
+      `Clôturer "${placement.nomFonds}" ?\n\n` +
+      `Montant restitué : ${montant} €\n` +
+      `Règle : capital + gain total à échéance. Aucun frais.`
     )) return;
 
     this.closingId.set(placement.id);
     this.error.set('');
     this.success.set('');
-
     this.investmentService.cloturerPlacement(placement.id).subscribe({
       next: (updated) => {
         this.placements.update(items =>
           items.map(i => i.id === updated.id ? updated : i)
         );
-
-        // ✅ Enregistrer dans le store d'opérations
         this.operationsStore.addCloturePlacement(
           updated.numeroCompte,
           Number(updated.valeurEstimee ?? 0),
           updated.nomFonds
         );
-
         this.success.set(
-          `✅ Placement "${updated.nomFonds}" clôturé. ` +
-          `${Number(updated.valeurEstimee ?? 0).toFixed(2)} € restitués sur votre compte.`
+          `✅ "${updated.nomFonds}" clôturé. ` +
+          `${Number(updated.valeurEstimee ?? 0).toFixed(2)} € restitués.`
         );
         this.closingId.set(null);
       },
@@ -136,19 +127,23 @@ export class InvestmentsHistoryComponent implements OnInit {
     });
   }
 
-  /* ====== Sortie anticipée (frais 2%, gain perdu) ====== */
-
   sortirAvantEcheance(placement: Placement): void {
     if (!placement?.id || placement.statut !== 'ACTIF') return;
 
-    const fraisEstimes = (Number(placement.montant) * 0.02).toFixed(2);
-    const retourEstime = (Number(placement.montant) - Number(fraisEstimes)).toFixed(2);
+    const capital      = Number(placement.montant ?? 0);
+    const interets     = Number(placement.interetsCourus ?? 0);
+    const frais        = this.calculerFraisSortie(placement);
+    const recuperable  = capital + interets - frais;
+    const explication  = this.getExplicationFrais(placement);
 
     if (!confirm(
-      `Sortie anticipée de "${placement.nomFonds}" ?\n` +
-      `⚠️ Frais de sortie : ${fraisEstimes} € (2%)\n` +
-      `💰 Montant restitué : ${retourEstime} €\n` +
-      `❌ Le gain prévu est perdu.`
+      `Sortie anticipée de "${placement.nomFonds}" ?\n\n` +
+      `Capital investi     : ${capital.toFixed(2)} €\n` +
+      `Intérêts courus     : +${interets.toFixed(2)} €\n` +
+      `Frais de sortie     : −${frais.toFixed(2)} € (${explication})\n` +
+      `─────────────────────────────\n` +
+      `Montant récupérable : ${recuperable.toFixed(2)} €\n\n` +
+      `Les intérêts non courus sont perdus.`
     )) return;
 
     this.sortingId.set(placement.id);
@@ -160,23 +155,20 @@ export class InvestmentsHistoryComponent implements OnInit {
         this.placements.update(items =>
           items.map(i => i.id === updated.id ? updated : i)
         );
+        const fraisReels   = Number(updated.fraisSortie ?? 0);
+        const interetsReel = Number(updated.interetsCourus ?? 0);
+        const restitue     = Number(updated.montant ?? 0) + interetsReel - fraisReels;
 
-        // ✅ Valeurs sécurisées — évite NaN / undefined
-        const frais    = Number(updated.fraisSortie ?? 0);
-        const restitue = Number(updated.montant ?? 0) - frais;
-
-        // ✅ Enregistrer dans le store d'opérations
         this.operationsStore.addSortieAnticipee(
           updated.numeroCompte,
           restitue,
-          frais,
+          fraisReels,
           updated.nomFonds
         );
-
         this.success.set(
-          `✅ Sortie anticipée effectuée. ` +
-          `Frais : ${frais.toFixed(2)} €. ` +
-          `Restitué : ${restitue.toFixed(2)} €`
+          `✅ Sortie effectuée pour "${updated.nomFonds}". ` +
+          `Restitué : ${restitue.toFixed(2)} € ` +
+          `(intérêts : +${interetsReel.toFixed(2)} € | frais : −${fraisReels.toFixed(2)} €)`
         );
         this.sortingId.set(null);
       },
@@ -187,25 +179,86 @@ export class InvestmentsHistoryComponent implements OnInit {
     });
   }
 
-  /* ====== Helpers ====== */
+  /* ==================== Helpers frais dégressifs ==================== */
 
   /**
-   * Calcule le montant récupérable selon le statut :
-   * - ACTIF         → montant + gainPrevu
-   * - Sortie antic. → montant - fraisSortie
-   * - Clôturé/Annulé → valeurEstimee du backend
+   * Logique bancaire dégressive côté frontend (miroir du backend).
+   * frais = max(capital × 0.25%,  capital × 2% × ratioRestant)
    */
+  calculerFraisSortie(placement: Placement): number {
+    const capital = Number(placement.montant ?? 0);
+    const fraisMinimum = capital * 0.0025;
+
+    if (!placement.datePlacement || !placement.dateCloture) {
+      return Math.max(capital * 0.02, fraisMinimum);
+    }
+
+    const debut    = new Date(placement.datePlacement).getTime();
+    const fin      = new Date(placement.dateCloture).getTime();
+    const now      = Date.now();
+    const totaux   = (fin - debut) / 86400000;
+    const restants = Math.max(0, (fin - now) / 86400000);
+
+    if (totaux <= 0) return parseFloat(fraisMinimum.toFixed(2));
+
+    const ratio          = Math.min(1, restants / totaux);
+    const fraisDegressifs = capital * 0.02 * ratio;
+    return parseFloat(Math.max(fraisDegressifs, fraisMinimum).toFixed(2));
+  }
+
+  /**
+   * Explication textuelle du taux de frais appliqué.
+   */
+  getExplicationFrais(placement: Placement): string {
+    const capital = Number(placement.montant ?? 0);
+    if (capital <= 0) return '';
+
+    const frais = this.calculerFraisSortie(placement);
+    const taux  = ((frais / capital) * 100).toFixed(2);
+
+    if (!placement.datePlacement || !placement.dateCloture) {
+      return `2.00% — taux plein (dates manquantes)`;
+    }
+
+    const fin      = new Date(placement.dateCloture).getTime();
+    const now      = Date.now();
+    const restants = Math.max(0, Math.round((fin - now) / 86400000));
+
+    if (frais <= capital * 0.0026) {
+      return `${taux}% — minimum garanti · J-${restants} avant échéance`;
+    }
+    return `${taux}% dégressif · ${restants} jours restants`;
+  }
+
+  calculerMontantRecuperableActif(placement: Placement): number {
+    const capital  = Number(placement.montant ?? 0);
+    const interets = Number(placement.interetsCourus ?? 0);
+    const frais    = this.calculerFraisSortie(placement);
+    return capital + interets - frais;
+  }
+
   getMontantRecuperable(placement: Placement): number {
-    if (placement.fraisSortie != null && Number(placement.fraisSortie) > 0) {
-      return Number(placement.montant) - Number(placement.fraisSortie);
+    if (placement.statut === 'ACTIF') {
+      return this.calculerMontantRecuperableActif(placement);
+    }
+    if ((placement.fraisSortie ?? 0) > 0) {
+      return Number(placement.montant ?? 0)
+        + Number(placement.interetsCourus ?? 0)
+        - Number(placement.fraisSortie ?? 0);
     }
     return Number(placement.valeurEstimee ?? placement.montant ?? 0);
   }
 
-  /**
-   * Calcule le gain en euros directement depuis montant × rendement.
-   * Utilisé en fallback si gainPrevu n'est pas fourni par le backend.
-   */
+  getExplicationMontant(placement: Placement): string {
+    if (placement.statut === 'ACTIF') {
+      return 'Capital + intérêts courus − frais dégressifs';
+    }
+    if ((placement.fraisSortie ?? 0) > 0) {
+      return 'Sortie anticipée — frais déduits';
+    }
+    return 'Clôture normale à échéance';
+  }
+
   calculerGain(placement: Placement): number {
     return Number(placement.gainPrevu ?? 0);
   }

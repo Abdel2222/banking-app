@@ -4,16 +4,15 @@ import { Observable } from 'rxjs';
 
 export type ChatStatut = 'NORMAL' | 'EN_ATTENTE' | 'REPONDU' | 'REJETE';
 
+// ✅ Aligné avec ChatActionType.java du backend
 export type ChatActionType =
   | 'NORMAL'
-  | 'BLOQUER_CARTE'
-  | 'DEBLOQUER_CARTE'
-  | 'PERTE_VOL_CARTE'
-  | 'SUSPENDRE_COMPTE'
-  | 'REACTIVER_COMPTE'
-  | 'SIGNALER_FRAUDE'
-  | 'RECLAMATION'
-  | 'AUTRE_SENSIBLE';
+  | 'BLOCAGE_CARTE'
+  | 'FRAUDE_CVV'
+  | 'DEBLOCAGE_CARTE'
+  | 'REMPLACEMENT_CARTE'
+  | 'PROBLEME_VIREMENT'
+  | 'PROBLEME_COMPTE';
 
 export interface ChatMessage {
   id: number;
@@ -42,9 +41,6 @@ export class ChatService {
   private http = inject(HttpClient);
   private readonly API_BASE = 'http://localhost:8084/api/chats';
 
-  // ===== CLIENT =====
-
-  /** Crée un message côté client (avec auto-détection d'intention côté backend) */
   create(payload: string | CreateChatPayload): Observable<ChatMessage> {
     const body: CreateChatPayload = typeof payload === 'string'
       ? { contenu: payload }
@@ -52,24 +48,22 @@ export class ChatService {
     return this.http.post<ChatMessage>(this.API_BASE, body);
   }
 
-  /** Récupère l'historique d'un client (pour voir les réponses admin) */
   getByClient(clientId: number): Observable<ChatMessage[]> {
     return this.http.get<ChatMessage[]>(`${this.API_BASE}/client/${clientId}`);
   }
 
-  // ===== ADMIN =====
+  getRepondusByClient(clientId: number): Observable<ChatMessage[]> {
+    return this.http.get<ChatMessage[]>(`${this.API_BASE}/client/${clientId}/repondus`);
+  }
 
-  /** Liste des demandes en attente */
   getPending(): Observable<ChatMessage[]> {
     return this.http.get<ChatMessage[]>(`${this.API_BASE}/admin/pending`);
   }
 
-  /** Compteur des demandes en attente */
   countPending(): Observable<{ count: number }> {
     return this.http.get<{ count: number }>(`${this.API_BASE}/admin/pending/count`);
   }
 
-  /** Répondre à une demande */
   respond(id: number, message: string): Observable<ChatMessage> {
     return this.http.post<ChatMessage>(
       `${this.API_BASE}/admin/${id}/respond`,
@@ -77,12 +71,10 @@ export class ChatService {
     );
   }
 
-  /** Marquer traité sans message particulier */
   markTreated(id: number): Observable<ChatMessage> {
     return this.http.post<ChatMessage>(`${this.API_BASE}/admin/${id}/mark-treated`, {});
   }
 
-  /** Refuser la demande avec un motif */
   reject(id: number, motif: string): Observable<ChatMessage> {
     return this.http.post<ChatMessage>(
       `${this.API_BASE}/admin/${id}/reject`,

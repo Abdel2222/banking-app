@@ -1,22 +1,24 @@
 <div class="chatbot-container" [class.expanded]="isExpanded()">
-  <!-- Toggle Button -->
-  <button
-    class="chat-toggle"
-    (click)="toggleChat()"
-    [attr.aria-label]="isExpanded() ? 'Fermer le chat' : 'Ouvrir le chat'">
+
+  <!-- Bouton toggle -->
+  <button class="chat-toggle" (click)="toggleChat()"
+          [attr.aria-label]="isExpanded() ? 'Fermer le chat' : 'Ouvrir le chat'">
     <span class="icon">{{ isExpanded() ? '✕' : '💬' }}</span>
     <span class="badge" *ngIf="!isExpanded() && hasUnreadMessages()">!</span>
   </button>
 
-  <!-- Chat Window -->
   <div class="chat-window" *ngIf="isExpanded()">
+
     <!-- Header -->
     <div class="chat-header">
       <div class="bot-info">
-        <div class="bot-avatar">🤖</div>
+        <div class="bot-avatar">
+          <span style="font-size:18px;">🤖</span>
+          <span class="bot-online-dot"></span>
+        </div>
         <div>
-          <div class="bot-name">Assistant Bancaire</div>
-          <div class="bot-status">En ligne</div>
+          <div class="bot-name">Alex — T€chno-Bank</div>
+          <div class="bot-status">● En ligne · Répond instantanément</div>
         </div>
       </div>
       <button class="close-btn" (click)="toggleChat()">✕</button>
@@ -34,7 +36,7 @@
         </div>
       </div>
 
-      <!-- Typing indicator -->
+      <!-- Indicateur de frappe -->
       <div class="message bot" *ngIf="isTyping()">
         <div class="message-content">
           <div class="typing-indicator">
@@ -44,31 +46,35 @@
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="quick-actions" *ngIf="quickActions().length > 0 && !isTyping()">
-      <button
-        *ngFor="let action of quickActions()"
-        class="quick-action-btn"
-        (click)="handleQuickAction(action)">
-        <span class="icon">{{ action.icon }}</span>
+    <!-- Actions rapides -->
+    <div class="quick-actions" *ngIf="quickActions().length > 0 && !isTyping() && messages().length <= 2">
+      <div class="quick-actions-label">Sujets fréquents :</div>
+      <button *ngFor="let action of quickActions()"
+              class="quick-action-btn"
+              (click)="handleQuickAction(action)">
+        <span>{{ action.icon }}</span>
         {{ action.label }}
       </button>
     </div>
 
     <!-- Input -->
     <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="chat-input">
-      <input
-        type="text"
-        formControlName="message"
-        placeholder="Tapez votre message..."
-        [disabled]="isTyping()"
-        #messageInput>
-      <button
-        type="submit"
-        [disabled]="messageForm.invalid || isTyping()"
-        class="send-btn">
-        📤
+      <input type="text"
+             formControlName="message"
+             placeholder="Écrivez votre message..."
+             [attr.disabled]="isTyping() ? true : null"
+             autocomplete="off">
+      <button type="submit"
+              [disabled]="messageForm.invalid || isTyping()"
+              class="send-btn"
+              title="Envoyer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             style="width:18px;height:18px;">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
       </button>
     </form>
+
   </div>
 </div>

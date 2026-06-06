@@ -4,8 +4,8 @@ import com.banking.dto.request.ChatCreateRequest;
 import com.banking.dto.request.ChatReplyRequest;
 import com.banking.dto.response.ChatResponse;
 import com.banking.entities.Chat;
-import com.banking.entities.ChatActionType;
-import com.banking.entities.ChatStatut;
+import com.banking.entity.enums.ChatActionType;
+import com.banking.entity.enums.ChatStatut;
 import com.banking.repositories.ChatRepository;
 import com.banking.services.IntentDetector;
 import com.banking.services.OllamaService;
@@ -27,35 +27,33 @@ public class ChatServiceImpl implements com.banking.services.ChatService {
     public ChatServiceImpl(ChatRepository chatRepo,
                            OllamaService ollamaService,
                            IntentDetector intentDetector) {
-        this.chatRepo       = chatRepo;
-        this.ollamaService  = ollamaService;
+        this.chatRepo      = chatRepo;
+        this.ollamaService = ollamaService;
         this.intentDetector = intentDetector;
     }
-
-    // ===== CLIENT =====
 
     @Override
     public ChatResponse create(ChatCreateRequest req) {
         Chat chat = new Chat(req.getContenu());
-
-        // Rattachement client (depuis le DTO, sinon laisse vide)
         chat.setClientId(req.getClientId());
         chat.setClientNom(req.getClientNom());
         chat.setNumCompte(req.getNumCompte());
 
-        // 1. Détection d'intention sensible
+        // ✅ Détection d'intention — pas stockée en base, juste utilisée ici
         ChatActionType action = intentDetector.detect(req.getContenu());
-        chat.setActionType(action);
 
         if (intentDetector.requiresAdmin(action)) {
-            // → Demande sensible : on bypass Ollama, on met en attente admin
+            // Demande sensible → bypass Ollama, mise en attente admin
             chat.setStatut(ChatStatut.EN_ATTENTE);
             chat.setReponse(intentDetector.buildAcknowledgement(action));
         } else {
-            // → Conversation normale : Ollama répond
+            // Conversation normale → Ollama répond avec contexte client
             chat.setStatut(ChatStatut.NORMAL);
-
-            String reponseIA = ollamaService.repondre(req.getContenu());
+            String reponseIA = ollamaService.repondre(
+                    req.getContenu(),
+                    req.getNumCompte(),
+                    req.getClientNom()
+            );
             chat.setReponse(reponseIA != null
                     ? reponseIA
                     : "Service IA temporairement indisponible. Un conseiller vous répondra.");
@@ -94,8 +92,6 @@ public class ChatServiceImpl implements com.banking.services.ChatService {
                 .stream().map(ChatResponse::fromEntity).toList();
     }
 
-    // ===== ADMIN =====
-
     @Override
     @Transactional(readOnly = true)
     public List<ChatResponse> getPendingForAdmin() {
@@ -113,12 +109,10 @@ public class ChatServiceImpl implements com.banking.services.ChatService {
     public ChatResponse respondAsAdmin(Long chatId, String adminMessage, Long adminId) {
         Chat chat = chatRepo.findById(chatId)
                 .orElseThrow(() -> new EntityNotFoundException("Demande introuvable"));
-
         chat.setReponseAdmin(adminMessage);
         chat.setAdminId(adminId);
         chat.setDateReponse(LocalDateTime.now());
         chat.setStatut(ChatStatut.REPONDU);
-
         return ChatResponse.fromEntity(chatRepo.save(chat));
     }
 
@@ -126,15 +120,12 @@ public class ChatServiceImpl implements com.banking.services.ChatService {
     public ChatResponse markTreated(Long chatId, Long adminId) {
         Chat chat = chatRepo.findById(chatId)
                 .orElseThrow(() -> new EntityNotFoundException("Demande introuvable"));
-
         chat.setAdminId(adminId);
         chat.setDateReponse(LocalDateTime.now());
         chat.setStatut(ChatStatut.REPONDU);
-
         if (chat.getReponseAdmin() == null || chat.getReponseAdmin().isBlank()) {
             chat.setReponseAdmin("Votre demande a été traitée par un conseiller.");
         }
-
         return ChatResponse.fromEntity(chatRepo.save(chat));
     }
 
@@ -142,13 +133,11 @@ public class ChatServiceImpl implements com.banking.services.ChatService {
     public ChatResponse rejectAsAdmin(Long chatId, String motif, Long adminId) {
         Chat chat = chatRepo.findById(chatId)
                 .orElseThrow(() -> new EntityNotFoundException("Demande introuvable"));
-
         chat.setReponseAdmin("❌ Demande refusée. Motif : "
                 + (motif != null && !motif.isBlank() ? motif : "non précisé"));
         chat.setAdminId(adminId);
         chat.setDateReponse(LocalDateTime.now());
         chat.setStatut(ChatStatut.REJETE);
-
         return ChatResponse.fromEntity(chatRepo.save(chat));
     }
 }

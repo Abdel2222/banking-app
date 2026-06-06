@@ -193,6 +193,14 @@ export class VirementComponent implements OnInit {
     }
   }
 
+  // ✅ Libellé propre : Courant / Épargne
+  getCompteLabel(compte: Compte): string {
+    if (compte.savingsAccount === true) {
+      return 'Compte Épargne';
+    }
+    return compte.intitule || 'Compte Courant';
+  }
+
   confirmerVirement() {
     if (this.virementForm.invalid || !this.selectedCompteSource() || !this.selectedCompteDestinataire()) {
       this.error.set('Veuillez remplir tous les champs');
@@ -256,24 +264,24 @@ export class VirementComponent implements OnInit {
     });
   }
 
-  // ✅ CORRIGÉ — utilise le compte destinataire (épargne) dans l'URL
+  // ✅ Utilise bien le compte destinataire (épargne) dans l'URL
   alimenterEpargne(montant: number, communication: string) {
     this.loading.set(true);
     this.error.set(null);
 
     const token = localStorage.getItem('auth_token');
-    const numCompteEpargne = this.selectedCompteDestinataire()!.numCompte; // ✅ compte épargne
-    const numCompteSource  = this.selectedCompteSource()!.numCompte;       // ✅ compte courant
+    const numCompteEpargne = this.selectedCompteDestinataire()!.numCompte; // compte épargne
+    const numCompteSource  = this.selectedCompteSource()!.numCompte;       // compte courant
 
     console.log('💎 Épargne destinataire:', numCompteEpargne);
     console.log('💳 Source:', numCompteSource);
 
     this.http.post<any>(
-      `/api/savings/${numCompteEpargne}/alimenter`,  // ✅ numéro épargne dans l'URL
+      `/api/savings/${numCompteEpargne}/alimenter`,
       { montant, numCompteSource },
       { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
     ).subscribe({
-      next: (response) => {
+      next: () => {
         this.operationsStore.addVirement(
           numCompteSource,
           numCompteEpargne,

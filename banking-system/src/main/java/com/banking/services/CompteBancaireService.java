@@ -29,8 +29,6 @@ public interface CompteBancaireService {
     Operation withdraw(String numCompte, BigDecimal montant, String description);
     Operation transfer(String numCompteSource, String numCompteDestinataire, BigDecimal montant, String communication);
 
-
-    // ✅ Ajout de la méthode pour le controller
     void effectuerVirement(String sourceAccount, String destinationAccount, BigDecimal montant, String description);
 
     // Gestion du statut
@@ -43,17 +41,19 @@ public interface CompteBancaireService {
     CarteBancaire blockCard(String numCompte, String raison);
     CarteBancaire unblockCard(String numCompte);
     Optional<CarteBancaire> getCard(String numCompte);
-     CompteEpargne convertToSavingsAccountInternal(String numCompte, BigDecimal tauxInteret);
 
+    /** Persister une carte modifiée (ex : nouveau CVV hashé) */
+    CarteBancaire saveCard(CarteBancaire carte);
+
+    CompteEpargne convertToSavingsAccountInternal(String numCompte, BigDecimal tauxInteret);
 
     // Compte épargne
     CompteEpargne convertToSavingsAccount(String numCompte, BigDecimal tauxInteret);
     CompteEpargne updateSavingsRate(String numCompte, BigDecimal nouveauTaux);
     void capitalizeInterests(String numCompte);
     BigDecimal calculateInterests(String numCompte);
-    void savingsDeposit(String numCompte, BigDecimal montant);   // courant -> épargne
-    void savingsWithdraw(String numCompte, BigDecimal montant);  // épargne -> courant
-
+    void savingsDeposit(String numCompte, BigDecimal montant);
+    void savingsWithdraw(String numCompte, BigDecimal montant);
 
     // Consultation
     BigDecimal getBalance(String numCompte);
@@ -67,7 +67,6 @@ public interface CompteBancaireService {
     List<CompteBancaire> findAccountsWithLowBalance(BigDecimal threshold);
     List<CompteBancaire> findInactiveAccounts(int daysSinceLastActivity);
     List<CompteBancaire> findAccountsNeedingAttention();
-
 
     // Validation et vérification
     boolean accountExists(String numCompte);

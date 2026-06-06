@@ -539,6 +539,7 @@ Email : imane.swiry@bank.local
 Mot de passe : Imane#2025!
 Email : admin@bank.local
 Mot de passe : Admin#2025!
+email: kiwi@ban.be
 
 
 Email :nini.kex@bank.local

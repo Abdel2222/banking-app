@@ -18,35 +18,36 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
   private destroy$ = new Subject<void>();
 
-  // === Données ===
   allMessages = signal<ChatMessage[]>([]);
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
 
-  // === Filtres ===
   statusFilter = signal<StatusFilter>('EN_ATTENTE');
   actionFilter = signal<ChatActionType | 'ALL'>('ALL');
   searchQuery = signal<string>('');
 
-  // === Sélection / réponse ===
   selected = signal<ChatMessage | null>(null);
   responseText = signal<string>('');
   rejectMotif = signal<string>('');
   showRejectDialog = signal<boolean>(false);
   busy = signal<boolean>(false);
 
-  // === Stats calculées ===
   stats = computed(() => {
     const all = this.allMessages();
     return {
-      total:      all.length,
-      enAttente:  all.filter(m => m.statut === 'EN_ATTENTE').length,
-      repondu:    all.filter(m => m.statut === 'REPONDU').length,
-      rejete:     all.filter(m => m.statut === 'REJETE').length,
+      total:             all.length,
+      enAttente:         all.filter(m => m.statut === 'EN_ATTENTE').length,
+      repondu:           all.filter(m => m.statut === 'REPONDU').length,
+      rejete:            all.filter(m => m.statut === 'REJETE').length,
+      blocageCarte:      all.filter(m => m.actionType === 'BLOCAGE_CARTE').length,
+      fraude:            all.filter(m => m.actionType === 'FRAUDE_CVV').length,
+      deblocageCarte:    all.filter(m => m.actionType === 'DEBLOCAGE_CARTE').length,
+      remplacementCarte: all.filter(m => m.actionType === 'REMPLACEMENT_CARTE').length,
+      pbVirement:        all.filter(m => m.actionType === 'PROBLEME_VIREMENT').length,
+      pbCompte:          all.filter(m => m.actionType === 'PROBLEME_COMPTE').length,
     };
   });
 
-  // === Liste filtrée ===
   filteredMessages = computed(() => {
     let list = this.allMessages();
 
@@ -69,21 +70,25 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
       );
     }
 
-    // Tri : EN_ATTENTE en premier, puis par date desc
     return [...list].sort((a, b) => {
-      if (a.statut === 'EN_ATTENTE' && b.statut !== 'EN_ATTENTE') return -1;
-      if (a.statut !== 'EN_ATTENTE' && b.statut === 'EN_ATTENTE') return 1;
+      const priorityA = this.getPriority(a);
+      const priorityB = this.getPriority(b);
+      if (priorityA !== priorityB) return priorityA - priorityB;
       return new Date(b.dateHeure).getTime() - new Date(a.dateHeure).getTime();
     });
   });
 
+  private getPriority(msg: ChatMessage): number {
+    if (msg.actionType === 'FRAUDE_CVV') return 0;
+    if (msg.actionType === 'BLOCAGE_CARTE') return 1;
+    if (msg.actionType === 'REMPLACEMENT_CARTE') return 2;
+    if (msg.statut === 'EN_ATTENTE') return 3;
+    return 4;
+  }
+
   ngOnInit() {
     this.loadMessages();
-
-    // Polling toutes les 15s pour voir les nouvelles demandes
-    interval(15000).pipe(
-      takeUntil(this.destroy$)
-    ).subscribe(() => this.loadMessages(true));
+    interval(15000).pipe(takeUntil(this.destroy$)).subscribe(() => this.loadMessages(true));
   }
 
   ngOnDestroy() {
@@ -95,19 +100,14 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
     if (!silent) this.loading.set(true);
     this.error.set(null);
 
-    // On charge à la fois pending et l'historique récent
-    this.chatService.getPending().pipe(
-      takeUntil(this.destroy$)
-    ).subscribe({
+    this.chatService.getPending().pipe(takeUntil(this.destroy$)).subscribe({
       next: (pending) => {
-        // On garde aussi les messages déjà traités qu'on a en mémoire
         const existingTreated = this.allMessages().filter(m => m.statut !== 'EN_ATTENTE');
         const pendingIds = new Set(pending.map(p => p.id));
         const merged = [
           ...pending,
           ...existingTreated.filter(m => !pendingIds.has(m.id))
         ];
-
         this.allMessages.set(merged);
         this.loading.set(false);
       },
@@ -120,9 +120,47 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
 
   selectMessage(msg: ChatMessage) {
     this.selected.set(msg);
-    this.responseText.set(msg.reponseAdmin || '');
+    this.responseText.set(this.getSuggestedResponse(msg));
     this.rejectMotif.set('');
     this.showRejectDialog.set(false);
+  }
+
+  getSuggestedResponse(msg: ChatMessage): string {
+    const nom = msg.clientNom ? msg.clientNom.split(' ')[0] : 'Client';
+    switch (msg.actionType) {
+      case 'BLOCAGE_CARTE':
+        return `Bonjour ${nom}, votre carte bancaire a bien été bloquée temporairement. ` +
+               `Contactez-nous pour la débloquer si nécessaire. ` +
+               `Cordialement, T€chno-Bank.`;
+
+      case 'REMPLACEMENT_CARTE':
+        return `Bonjour ${nom}, votre ancienne carte a été bloquée et une nouvelle carte a été émise. ` +
+               `Elle est disponible immédiatement dans votre espace client. ` +
+               `Cordialement, T€chno-Bank.`;
+
+      case 'FRAUDE_CVV':
+        return `Bonjour ${nom}, votre signalement de fraude a été pris en charge. ` +
+               `Votre carte a été sécurisée. Nous vous contacterons rapidement. ` +
+               `Cordialement, T€chno-Bank.`;
+
+      case 'DEBLOCAGE_CARTE':
+        return `Bonjour ${nom}, votre carte bancaire a bien été débloquée. ` +
+               `Elle est à nouveau active. ` +
+               `Cordialement, T€chno-Bank.`;
+
+      case 'PROBLEME_VIREMENT':
+        return `Bonjour ${nom}, nous avons vérifié votre virement. ` +
+               `Pouvez-vous nous préciser la date et le montant concerné ? ` +
+               `Cordialement, T€chno-Bank.`;
+
+      case 'PROBLEME_COMPTE':
+        return `Bonjour ${nom}, nous avons examiné votre compte. ` +
+               `N'hésitez pas à nous préciser la nature exacte du problème. ` +
+               `Cordialement, T€chno-Bank.`;
+
+      default:
+        return msg.reponseAdmin || '';
+    }
   }
 
   closeDetails() {
@@ -134,11 +172,7 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
   respond() {
     const msg = this.selected();
     const text = this.responseText().trim();
-    if (!msg || !text) {
-      alert('Veuillez écrire une réponse avant de l\'envoyer.');
-      return;
-    }
-
+    if (!msg || !text) { alert('Veuillez écrire une réponse.'); return; }
     this.busy.set(true);
     this.chatService.respond(msg.id, text).subscribe({
       next: (updated) => {
@@ -149,7 +183,7 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.busy.set(false);
-        alert('Erreur : ' + (e?.error?.message || e?.message || 'envoi impossible'));
+        alert('Erreur : ' + (e?.error?.message || e?.message || ''));
       }
     });
   }
@@ -157,52 +191,26 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
   markTreated() {
     const msg = this.selected();
     if (!msg) return;
-
-    if (!confirm('Marquer cette demande comme traitée (sans réponse personnalisée) ?')) return;
-
+    if (!confirm('Marquer comme traitée ?')) return;
     this.busy.set(true);
     this.chatService.markTreated(msg.id).subscribe({
-      next: (updated) => {
-        this.busy.set(false);
-        this.applyUpdate(updated);
-        this.closeDetails();
-      },
-      error: (e) => {
-        this.busy.set(false);
-        alert('Erreur : ' + (e?.error?.message || e?.message || ''));
-      }
+      next: (updated) => { this.busy.set(false); this.applyUpdate(updated); this.closeDetails(); },
+      error: (e) => { this.busy.set(false); alert('Erreur : ' + (e?.error?.message || '')); }
     });
   }
 
-  openRejectDialog() {
-    this.showRejectDialog.set(true);
-  }
-
-  cancelReject() {
-    this.showRejectDialog.set(false);
-    this.rejectMotif.set('');
-  }
+  openRejectDialog() { this.showRejectDialog.set(true); }
+  cancelReject() { this.showRejectDialog.set(false); this.rejectMotif.set(''); }
 
   confirmReject() {
     const msg = this.selected();
     const motif = this.rejectMotif().trim();
     if (!msg) return;
-    if (!motif) {
-      alert('Veuillez préciser un motif de refus.');
-      return;
-    }
-
+    if (!motif) { alert('Veuillez préciser un motif.'); return; }
     this.busy.set(true);
     this.chatService.reject(msg.id, motif).subscribe({
-      next: (updated) => {
-        this.busy.set(false);
-        this.applyUpdate(updated);
-        this.closeDetails();
-      },
-      error: (e) => {
-        this.busy.set(false);
-        alert('Erreur : ' + (e?.error?.message || e?.message || ''));
-      }
+      next: (updated) => { this.busy.set(false); this.applyUpdate(updated); this.closeDetails(); },
+      error: (e) => { this.busy.set(false); alert('Erreur : ' + (e?.error?.message || '')); }
     });
   }
 
@@ -216,53 +224,61 @@ export class AdminChatbotComponent implements OnInit, OnDestroy {
     });
   }
 
-  setStatusFilter(value: StatusFilter) {
-    this.statusFilter.set(value);
-  }
+  setStatusFilter(value: StatusFilter) { this.statusFilter.set(value); }
 
   onActionFilterChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as ChatActionType | 'ALL';
-    this.actionFilter.set(value);
+    this.actionFilter.set((event.target as HTMLSelectElement).value as ChatActionType | 'ALL');
   }
 
   onSearchChange(event: Event) {
     this.searchQuery.set((event.target as HTMLInputElement).value);
   }
 
-  refresh() {
-    this.loadMessages();
-  }
-
-  // === Helpers d'affichage ===
+  refresh() { this.loadMessages(); }
 
   actionLabel(action: ChatActionType): string {
     const labels: Record<ChatActionType, string> = {
-      NORMAL:           'Message normal',
-      BLOQUER_CARTE:    '🔒 Bloquer carte',
-      DEBLOQUER_CARTE:  '🔓 Débloquer carte',
-      PERTE_VOL_CARTE:  '🚨 Perte / Vol carte',
-      SUSPENDRE_COMPTE: '⏸️ Suspendre compte',
-      REACTIVER_COMPTE: '▶️ Réactiver compte',
-      SIGNALER_FRAUDE:  '⚠️ Fraude signalée',
-      RECLAMATION:      '📋 Réclamation',
-      AUTRE_SENSIBLE:   '❓ Demande sensible',
+      NORMAL:              '💬 Message normal',
+      BLOCAGE_CARTE:       '🔒 Bloquer carte',
+      FRAUDE_CVV:          '🚨 Fraude / CVV',
+      DEBLOCAGE_CARTE:     '🔓 Débloquer carte',
+      REMPLACEMENT_CARTE:  '💳 Remplacer carte',
+      PROBLEME_VIREMENT:   '💸 Problème virement',
+      PROBLEME_COMPTE:     '🏦 Problème compte',
     };
     return labels[action] || action;
   }
 
   actionClass(action: ChatActionType): string {
     const map: Record<ChatActionType, string> = {
-      NORMAL:           'action-normal',
-      BLOQUER_CARTE:    'action-card-block',
-      DEBLOQUER_CARTE:  'action-card-unblock',
-      PERTE_VOL_CARTE:  'action-card-lost',
-      SUSPENDRE_COMPTE: 'action-account-suspend',
-      REACTIVER_COMPTE: 'action-account-reactivate',
-      SIGNALER_FRAUDE:  'action-fraud',
-      RECLAMATION:      'action-complaint',
-      AUTRE_SENSIBLE:   'action-other',
+      NORMAL:              'action-normal',
+      BLOCAGE_CARTE:       'action-card-block',
+      FRAUDE_CVV:          'action-fraud',
+      DEBLOCAGE_CARTE:     'action-card-unblock',
+      REMPLACEMENT_CARTE:  'action-card-replace',
+      PROBLEME_VIREMENT:   'action-virement',
+      PROBLEME_COMPTE:     'action-compte',
     };
     return map[action] || '';
+  }
+
+  actionInstruction(action: ChatActionType): string {
+    switch (action) {
+      case 'BLOCAGE_CARTE':
+        return '👉 Aller dans Gestion Carte → Cliquer BLOQUER la carte du client';
+      case 'REMPLACEMENT_CARTE':
+        return '👉 Aller dans Gestion Carte → Cliquer BLOQUER puis Émettre une nouvelle carte';
+      case 'FRAUDE_CVV':
+        return '👉 Aller dans Gestion Carte → BLOQUER + régénérer CVV';
+      case 'DEBLOCAGE_CARTE':
+        return '👉 Aller dans Gestion Carte → Débloquer la carte du client';
+      case 'PROBLEME_VIREMENT':
+        return '👉 Vérifier les opérations du compte concerné';
+      case 'PROBLEME_COMPTE':
+        return '👉 Vérifier le statut du compte dans Gestion Comptes';
+      default:
+        return '';
+    }
   }
 
   statusLabel(statut: ChatStatut): string {

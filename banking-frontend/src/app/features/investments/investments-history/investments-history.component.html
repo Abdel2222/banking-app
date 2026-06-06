@@ -2,10 +2,12 @@
 
   <header class="history-header">
     <button class="back-btn" type="button" (click)="retour()">← Retour</button>
-    <div>
-      <p class="eyebrow">BankInvest Manager</p>
+    <div class="header-text">
       <h1>Historique des placements</h1>
-      <p class="subtitle">Consultez, filtrez et clôturez les placements du client.</p>
+      <p class="subtitle">
+        Capital investi, intérêts courus, frais de sortie et montant récupérable
+        calculés en temps réel selon la règle bancaire dégressive.
+      </p>
     </div>
   </header>
 
@@ -15,7 +17,7 @@
       <strong>{{ totalCapitalInvesti() | number:'1.2-2' }} €</strong>
     </article>
     <article class="summary-card">
-      <span class="summary-label">Gain prévu actif</span>
+      <span class="summary-label">Gain prévu à échéance</span>
       <strong class="positive">+{{ totalGainPrevu() | number:'1.2-2' }} €</strong>
     </article>
     <article class="summary-card">
@@ -31,7 +33,7 @@
         type="text"
         [ngModel]="search()"
         (ngModelChange)="updateSearch($event)"
-        placeholder="Fonds, compte ou statut"
+        placeholder="Fonds, compte ou client"
       />
     </label>
     <label class="filter-box">
@@ -44,7 +46,7 @@
       </select>
     </label>
     <button class="refresh-btn" type="button" (click)="loadPlacements()" [disabled]="loading()">
-      {{ loading() ? 'Chargement...' : 'Actualiser' }}
+      {{ loading() ? 'Chargement...' : '↺ Actualiser' }}
     </button>
   </section>
 
@@ -53,14 +55,15 @@
 
   <section class="table-card">
     <div class="table-header">
-      <h2>Placements</h2>
-      <span>{{ filteredPlacements().length }} résultat(s)</span>
+      <h2>Placements <span class="count-badge">{{ filteredPlacements().length }}</span></h2>
     </div>
 
-    <div class="loading-state" *ngIf="loading()">⏳ Chargement de l'historique...</div>
+    <div class="loading-state" *ngIf="loading()">
+      <span class="spinner"></span> Chargement de l'historique...
+    </div>
 
     <div class="empty-state" *ngIf="!loading() && filteredPlacements().length === 0">
-      Aucun placement trouvé.
+      <p>Aucun placement trouvé.</p>
     </div>
 
     <div class="table-wrapper" *ngIf="!loading() && filteredPlacements().length > 0">
@@ -68,78 +71,166 @@
         <thead>
           <tr>
             <th>Fonds</th>
-            <th>Montant investi</th>
-            <th>Rendement</th>
-            <th>Gain prévu</th>
-            <th>Montant récupérable</th>
+            <th class="num-col">Capital investi</th>
+            <th class="num-col">Rendement</th>
+            <th class="num-col">Gain prévu</th>
+            <th class="num-col">Intérêts courus</th>
+            <th>
+              Frais de sortie
+              <small>max 2% · dégressif · min 0.25%</small>
+            </th>
+            <th>
+              Montant récupérable
+              <small>capital + intérêts − frais</small>
+            </th>
             <th>Date placement</th>
             <th>Date clôture</th>
             <th>Date sortie</th>
-            <th>Frais sortie</th>
             <th>Statut</th>
             <th class="actions-col">Action</th>
           </tr>
         </thead>
-        <tbody>
-          <tr *ngFor="let placement of filteredPlacements()">
 
+        <tbody>
+          <tr *ngFor="let placement of filteredPlacements()"
+              [class.row-actif]="placement.statut === 'ACTIF'"
+              [class.row-cloture]="placement.statut === 'CLOTURE'"
+              [class.row-annule]="placement.statut === 'ANNULE'">
+
+            <!-- Fonds -->
             <td>
               <div class="fund-cell">
                 <strong>{{ placement.nomFonds }}</strong>
-                <span>{{ placement.numeroCompte }}</span>
+                <span class="account-num">{{ placement.numeroCompte }}</span>
+                <span class="client-name">{{ placement.clientNomComplet }}</span>
               </div>
             </td>
 
-            <td>{{ placement.montant | number:'1.2-2' }} €</td>
-
-            <td>{{ placement.rendement | number:'1.2-2' }} %</td>
-
-            <td class="positive">
-              +{{ placement.gainPrevu | number:'1.2-2' }} €
+            <!-- Capital -->
+            <td class="num-col">
+              <span class="amount">{{ placement.montant | number:'1.2-2' }} €</span>
             </td>
 
-            <td [ngClass]="(placement.fraisSortie ?? 0) > 0 ? 'negative' : 'positive'">
-              {{ getMontantRecuperable(placement) | number:'1.2-2' }} €
+            <!-- Rendement -->
+            <td class="num-col">
+              <span class="rendement-badge">{{ placement.rendement | number:'1.2-2' }} %</span>
             </td>
 
-            <td>{{ placement.datePlacement | date:'dd/MM/yyyy HH:mm' }}</td>
+            <!-- Gain prévu -->
+            <td class="num-col">
+              <span class="positive">+{{ placement.gainPrevu | number:'1.2-2' }} €</span>
+            </td>
 
+            <!-- Intérêts courus -->
+            <td class="num-col">
+              <ng-container *ngIf="placement.statut === 'ACTIF'; else interetsTermine">
+                <span class="positive" *ngIf="(placement.interetsCourus ?? 0) > 0">
+                  +{{ (placement.interetsCourus ?? 0) | number:'1.2-2' }} €
+                </span>
+                <span class="muted" *ngIf="!(placement.interetsCourus ?? 0)">
+                  0.00 € <small class="hint">J+0</small>
+                </span>
+              </ng-container>
+              <ng-template #interetsTermine>
+                <span class="muted">—</span>
+              </ng-template>
+            </td>
+
+            <!-- Frais de sortie -->
             <td>
-              {{ placement.dateCloture ? (placement.dateCloture | date:'dd/MM/yyyy HH:mm') : '—' }}
+              <ng-container *ngIf="placement.statut === 'ACTIF'; else fraisTermine">
+                <div class="frais-cell">
+                  <span class="negative frais-amount">
+                    −{{ calculerFraisSortie(placement) | number:'1.2-2' }} €
+                  </span>
+                  <small class="frais-rule">
+                    {{ getExplicationFrais(placement) }}
+                  </small>
+                </div>
+              </ng-container>
+              <ng-template #fraisTermine>
+                <ng-container *ngIf="(placement.fraisSortie ?? 0) > 0; else pasDefrais">
+                  <div class="frais-cell">
+                    <span class="negative frais-amount">
+                      −{{ placement.fraisSortie | number:'1.2-2' }} €
+                    </span>
+                    <small class="frais-rule">Frais appliqués lors de la sortie</small>
+                  </div>
+                </ng-container>
+                <ng-template #pasDefrais>
+                  <span class="muted">0.00 €</span>
+                  <small class="frais-rule">Clôture normale</small>
+                </ng-template>
+              </ng-template>
             </td>
 
+            <!-- Montant récupérable -->
             <td>
-              <span *ngIf="placement.dateSortie" class="badge-sortie">
-                {{ placement.dateSortie | date:'dd/MM/yyyy HH:mm' }}
-              </span>
-              <span *ngIf="!placement.dateSortie" class="muted">—</span>
+              <ng-container *ngIf="placement.statut === 'ACTIF'; else montantTermine">
+                <div class="recuperable-cell">
+                  <span class="recuperable-amount">
+                    {{ getMontantRecuperable(placement) | number:'1.2-2' }} €
+                  </span>
+                  <small class="recuperable-rule">
+                    {{ placement.montant | number:'1.2-2' }}
+                    + {{ (placement.interetsCourus ?? 0) | number:'1.2-2' }}
+                    − {{ calculerFraisSortie(placement) | number:'1.2-2' }}
+                  </small>
+                </div>
+              </ng-container>
+              <ng-template #montantTermine>
+                <div class="recuperable-cell">
+                  <span class="recuperable-amount versé">
+                    {{ getMontantRecuperable(placement) | number:'1.2-2' }} €
+                  </span>
+                  <small class="recuperable-rule">
+                    {{ getExplicationMontant(placement) }}
+                  </small>
+                </div>
+              </ng-template>
             </td>
 
-            <td>
-              <span *ngIf="(placement.fraisSortie ?? 0) > 0" class="negative">
-                -{{ placement.fraisSortie | number:'1.2-2' }} €
-              </span>
-              <span *ngIf="(placement.fraisSortie ?? 0) === 0" class="muted">—</span>
+            <!-- Dates -->
+            <td class="date-col">
+              {{ placement.datePlacement | date:'dd/MM/yyyy' }}<br/>
+              <small>{{ placement.datePlacement | date:'HH:mm' }}</small>
             </td>
 
+            <td class="date-col">
+              <ng-container *ngIf="placement.dateCloture; else noCloture">
+                {{ placement.dateCloture | date:'dd/MM/yyyy' }}<br/>
+                <small>{{ placement.dateCloture | date:'HH:mm' }}</small>
+              </ng-container>
+              <ng-template #noCloture><span class="muted">—</span></ng-template>
+            </td>
+
+            <td class="date-col">
+              <ng-container *ngIf="placement.dateSortie; else noSortie">
+                <span class="badge-sortie">
+                  {{ placement.dateSortie | date:'dd/MM/yyyy' }}<br/>
+                  <small>{{ placement.dateSortie | date:'HH:mm' }}</small>
+                </span>
+              </ng-container>
+              <ng-template #noSortie><span class="muted">—</span></ng-template>
+            </td>
+
+            <!-- Statut -->
             <td>
               <span class="status-badge" [ngClass]="placement.statut.toLowerCase()">
                 {{ statusLabel(placement.statut) }}
               </span>
             </td>
 
+            <!-- Action -->
             <td class="actions-col">
-
               <button
                 *ngIf="placement.statut === 'ACTIF'"
                 class="sortie-btn"
                 type="button"
                 [disabled]="closingId() === placement.id || sortingId() === placement.id"
-                (click)="sortirAvantEcheance(placement)"
-              >
-                {{ sortingId() === placement.id ? 'Sortie...' : 'Sortie anticipée' }}
+                (click)="sortirAvantEcheance(placement)">
+                {{ sortingId() === placement.id ? '⏳ Sortie...' : 'Sortie anticipée' }}
               </button>
-
               <span class="muted-action" *ngIf="placement.statut !== 'ACTIF'">—</span>
             </td>
 
@@ -148,4 +239,40 @@
       </table>
     </div>
   </section>
+
+  <!-- Légende règle bancaire -->
+  <section class="legend-card">
+    <h3>📐 Règle de calcul bancaire appliquée</h3>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <span class="legend-dot positive"></span>
+        <div>
+          <strong>Clôture normale</strong>
+          <p>Capital + gain total prévu à l'échéance. Aucun frais.</p>
+        </div>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot negative"></span>
+        <div>
+          <strong>Sortie anticipée</strong>
+          <p>Capital + intérêts courus (pro-rata) − frais dégressifs.</p>
+        </div>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot warning"></span>
+        <div>
+          <strong>Frais dégressifs</strong>
+          <p>Max 2% au départ → min 0.25% à l'approche de l'échéance.</p>
+        </div>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot muted"></span>
+        <div>
+          <strong>Intérêts courus</strong>
+          <p>Gain × (jours écoulés / jours totaux). 0 € le jour du dépôt.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>

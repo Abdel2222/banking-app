@@ -1,4 +1,5 @@
 <div class="operations-container">
+
   <!-- Header -->
   <div class="operations-header">
     <button class="back-btn" (click)="retourDashboard()">
@@ -10,7 +11,7 @@
   <!-- Sélecteur de compte + Export PDF -->
   <div class="compte-selector">
     <label for="compte-select">Compte :</label>
-    <select 
+    <select
       id="compte-select"
       [value]="compteSelectionne()"
       (change)="onCompteChange($any($event.target).value)">
@@ -23,6 +24,89 @@
     <button class="export-btn" (click)="exportPDF()">
       📄 Télécharger Extrait PDF
     </button>
+  </div>
+
+  <!-- ✅ Filtres par période -->
+  <div class="date-filters">
+    <div class="filter-header">
+      <span class="filter-icon">📅</span>
+      <span class="filter-title">Filtrer par période</span>
+    </div>
+
+    <div class="preset-buttons">
+      <button type="button"
+              class="preset-btn"
+              [class.active]="periodeActive() === 'all'"
+              (click)="setPeriode('all')">
+        Tout
+      </button>
+      <button type="button"
+              class="preset-btn"
+              [class.active]="periodeActive() === 'month'"
+              (click)="setPeriode('month')">
+        Ce mois-ci
+      </button>
+      <button type="button"
+              class="preset-btn"
+              [class.active]="periodeActive() === '3months'"
+              (click)="setPeriode('3months')">
+        3 derniers mois
+      </button>
+      <button type="button"
+              class="preset-btn"
+              [class.active]="periodeActive() === 'year'"
+              (click)="setPeriode('year')">
+        Cette année
+      </button>
+    </div>
+
+    <div class="custom-dates">
+      <div class="date-field">
+        <label for="date-debut">Du</label>
+        <input id="date-debut"
+               type="date"
+               [value]="dateDebut()"
+               (change)="onDateDebutChange($any($event.target).value)">
+      </div>
+      <div class="date-field">
+        <label for="date-fin">Au</label>
+        <input id="date-fin"
+               type="date"
+               [value]="dateFin()"
+               (change)="onDateFinChange($any($event.target).value)">
+      </div>
+      @if (dateDebut() || dateFin()) {
+        <button type="button" class="reset-dates-btn" (click)="resetDates()">
+          ✕ Réinitialiser
+        </button>
+      }
+    </div>
+
+    <!-- Résumé période -->
+    @if (operationsFiltrees().length > 0) {
+      <div class="periode-summary">
+        <div class="summary-item">
+          <span class="summary-label">Opérations</span>
+          <span class="summary-value">{{ operationsFiltrees().length }}</span>
+        </div>
+        <div class="summary-item summary-in">
+          <span class="summary-label">Entrées</span>
+          <span class="summary-value">+{{ formatCurrency(totalEntrees()) }}</span>
+        </div>
+        <div class="summary-item summary-out">
+          <span class="summary-label">Sorties</span>
+          <span class="summary-value">-{{ formatCurrency(totalSorties()) }}</span>
+        </div>
+        <div class="summary-item summary-net"
+             [class.net-positive]="totalEntrees() - totalSorties() >= 0"
+             [class.net-negative]="totalEntrees() - totalSorties() < 0">
+          <span class="summary-label">Net</span>
+          <span class="summary-value">
+            {{ (totalEntrees() - totalSorties()) >= 0 ? '+' : '' }}{{ formatCurrency(totalEntrees() - totalSorties()) }}
+          </span>
+        </div>
+      </div>
+    }
   </div>
 
   <!-- Loading -->
@@ -40,66 +124,68 @@
     </div>
   }
 
-  <!-- Table des opérations -->
-  @if (!loading() && !error() && operations().length > 0) {
-    <div class="operations-table">
-      <!-- En-tête du tableau -->
-      <div class="table-header">
-        <div>Date</div>
-        <div>Type</div>
-        <div>Description</div>
-        <div>Montant</div>
-        <div>Statut</div>
-      </div>
+  <!-- ✅ Liste style appli bancaire -->
+  @if (!loading() && !error() && operationsFiltrees().length > 0) {
+    <div class="operations-list-bank">
 
-      <!-- Lignes des opérations -->
-      @for (op of operations(); track op.id) {
-        <div class="operation-row">
-          <!-- Date -->
-          <div class="col-date">
-            {{ formatDate(op.dateOperation) }}
+      @for (op of operationsFiltrees(); track op.id) {
+        <div class="bank-op-row" [class.bank-op-frais]="op.type === 'FRAIS'">
+
+          <!-- Icône -->
+          <div class="bank-op-icon"
+               [class.icon-positive]="op.montant > 0"
+               [class.icon-negative]="op.montant < 0">
+            {{ getTypeIcon(op.type) }}
           </div>
 
-          <!-- Type -->
-          <div class="col-type">
-            <span class="type-badge" [attr.data-type]="op.type">
-              <span class="type-icon">{{ getTypeIcon(op.type) }}</span>
-              <span class="type-text">{{ op.type }}</span>
-            </span>
-          </div>
+          <!-- Détails -->
+          <div class="bank-op-details">
+            <div class="bank-op-libelle">{{ getLibelleAffichage(op) }}</div>
 
-          <!-- Description -->
-          <div class="col-description">
-            <div class="description-main">
-              {{ op.description || op.communication || 'Sans description' }}
+            <div class="bank-op-meta">
+              <span class="meta-type">{{ op.type }}</span>
+              @if (getContrepartie(op)) {
+                <span class="meta-sep">•</span>
+                <span class="meta-contrepartie">{{ getContrepartie(op) }}</span>
+              }
+              @if (getStatutDisplay(op) === 'PLANIFIÉ') {
+                <span class="meta-sep">•</span>
+                <span class="meta-planifie">⏰ Planifié</span>
+              }
             </div>
-            @if (op.numCompteDestinataire) {
-              <div class="description-sub">
-                → {{ op.numCompteDestinataire }}
+
+            @if (isCommunicationStructuree(op.communication)) {
+              <div class="bank-op-ogm">
+                <span class="ogm-badge">📋 Communication structurée</span>
+                <code class="ogm-value">{{ op.communication }}</code>
               </div>
             }
+
+            <div class="bank-op-date">{{ formatDate(op.dateOperation) }}</div>
           </div>
 
           <!-- Montant -->
-          <div class="col-montant" [class.positive]="op.montant > 0" [class.negative]="op.montant < 0">
-            {{ op.montant > 0 ? '+' : '' }}{{ formatCurrency(Math.abs(op.montant)) }}
+          <div class="bank-op-montant"
+               [class.montant-positive]="op.montant > 0"
+               [class.montant-negative]="op.montant < 0">
+            {{ op.montant > 0 ? '+' : '' }}{{ formatCurrency(op.montant) }}
           </div>
 
-          <!-- Statut -->
-          <div class="col-statut">
-            <span class="status-badge" [attr.data-status]="getStatutDisplay(op)">
-              {{ getStatutDisplay(op) }}
-            </span>
-          </div>
         </div>
       }
     </div>
   }
 
   <!-- Aucune opération -->
-  @if (!loading() && !error() && operations().length === 0) {
+  @if (!loading() && !error() && operationsFiltrees().length === 0) {
     <div class="no-operations">
-      <p>📭 Aucune opération disponible pour ce compte.</p>
+      @if (operations().length > 0) {
+        <p>📭 Aucune opération sur la période sélectionnée.</p>
+        <button type="button" class="reset-link" (click)="resetDates()">Voir toutes les opérations</button>
+      } @else {
+        <p>📭 Aucune opération disponible pour ce compte.</p>
+      }
     </div>
   }
+
 </div>

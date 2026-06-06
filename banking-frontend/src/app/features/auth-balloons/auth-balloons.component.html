@@ -1,6 +1,6 @@
 <div class="container" [class.active]="isSignup()">
 
-  <!-- LOGIN (gauche par défaut) -->
+  <!-- LOGIN -->
   <div class="form-card sign-in">
     <div class="success-banner" *ngIf="showInscriptionSuccess()">
       <div class="success-content">
@@ -31,11 +31,10 @@
         <i class="icon">&#x2709;</i>
         <input type="email" placeholder="Email" formControlName="email" required />
       </div>
-      <!-- AVANT — pas de message d'erreur -->
-<div class="input-group">
-  <i class="icon">&#x1F512;</i>
-  <input type="password" placeholder="Mot de passe" formControlName="motDePasse" required />
-</div>
+      <div class="input-group">
+        <i class="icon">&#x1F512;</i>
+        <input type="password" placeholder="Mot de passe" formControlName="motDePasse" required />
+      </div>
       <div class="options">
         <label>
           <input type="checkbox" formControlName="remember" />
@@ -58,7 +57,7 @@
     </form>
   </div>
 
-  <!-- SIGNUP (caché par défaut) -->
+  <!-- SIGNUP -->
   <div class="form-card sign-up">
     <div class="balloon-container">
       <div class="balloon"></div><div class="balloon"></div><div class="balloon"></div>
@@ -84,13 +83,22 @@
         <i class="icon">&#x1F512;</i>
         <input type="password" placeholder="Mot de passe" formControlName="motDePasse" required />
       </div>
-      <div class="options">
-        <label>
-          <input type="checkbox" formControlName="remember" />
-          J'accepte les conditions
+
+      <!-- ✅ RGPD — consentement obligatoire -->
+      <div class="options rgpd-options">
+        <label class="rgpd-label">
+          <input type="checkbox" formControlName="rgpd" />
+          <span>
+            J'accepte la
+            <a href="#" (click)="openRgpd($event)">politique de confidentialité</a>
+            et le traitement de mes données personnelles conformément au RGPD.
+          </span>
         </label>
-        <a href="#">Conditions d'utilisation</a>
       </div>
+      <div class="error" *ngIf="signupForm.get('rgpd')?.invalid && signupForm.get('rgpd')?.touched">
+        Vous devez accepter la politique de confidentialité.
+      </div>
+
       <button type="submit" [disabled]="loading()">
         {{ loading() ? 'Inscription...' : "S'INSCRIRE" }}
       </button>
@@ -105,8 +113,6 @@
   <!-- PANNEAU GLISSANT -->
   <div class="toggle-container">
     <div class="toggle">
-
-      <!-- Gauche : visible quand signup actif → branding Techno-Bank -->
       <div class="toggle-panel toggle-left">
         <div class="wave"></div>
         <div class="balloon-container">
@@ -118,7 +124,6 @@
         <button class="panel-btn" (click)="goToLogin()">SE CONNECTER</button>
       </div>
 
-      <!-- Droite : visible par défaut → invite à s'inscrire -->
       <div class="toggle-panel toggle-right">
         <div class="wave"></div>
         <div class="balloon-container">
@@ -129,8 +134,96 @@
         <p>Nouveau client ?<br/>Créez votre compte en quelques secondes.</p>
         <button class="panel-btn" (click)="goToSignup()">S'INSCRIRE</button>
       </div>
-
     </div>
   </div>
 
+</div>
+
+<!-- ✅ RGPD — Modal politique de confidentialité -->
+<div class="rgpd-overlay" *ngIf="showRgpd()" (click)="closeRgpd()">
+  <div class="rgpd-modal" (click)="$event.stopPropagation()">
+
+    <div class="rgpd-header">
+      <h2>🔒 Politique de confidentialité — T€chno-Bank</h2>
+      <button class="rgpd-close" (click)="closeRgpd()">✕</button>
+    </div>
+
+    <div class="rgpd-body">
+
+      <section>
+        <h3>1. Responsable du traitement</h3>
+        <p>T€chno-Bank, établissement bancaire fictif développé dans le cadre d'un projet académique (TFE — EAFC Uccle, 2025-2026). Contact : technobank&#64;eafc.be</p>
+      </section>
+
+      <section>
+        <h3>2. Données collectées</h3>
+        <p>Dans le cadre de votre inscription et de l'utilisation de nos services, nous collectons les données suivantes :</p>
+        <ul>
+          <li>Nom, prénom, adresse email</li>
+          <li>Données bancaires : numéros de compte, soldes, opérations</li>
+          <li>Données de carte bancaire : numéro masqué, date d'expiration</li>
+          <li>Historique des virements et placements</li>
+          <li>Messages échangés via le chatbot de support</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>3. Finalités du traitement</h3>
+        <p>Vos données sont utilisées pour :</p>
+        <ul>
+          <li>La gestion de votre compte bancaire</li>
+          <li>L'exécution des virements et opérations financières</li>
+          <li>La sécurisation de votre accès (authentification JWT)</li>
+          <li>Le support client via le chatbot Alex</li>
+          <li>La génération de relevés de compte</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>4. Base légale</h3>
+        <p>Le traitement est fondé sur votre consentement explicite (Art. 6.1.a RGPD) ainsi que sur l'exécution du contrat bancaire (Art. 6.1.b RGPD).</p>
+      </section>
+
+      <section>
+        <h3>5. Durée de conservation</h3>
+        <p>Vos données sont conservées pendant toute la durée de votre relation bancaire, puis archivées conformément aux obligations légales (10 ans pour les données comptables).</p>
+      </section>
+
+      <section>
+        <h3>6. Sécurité des données</h3>
+        <p>T€chno-Bank met en œuvre les mesures suivantes pour protéger vos données :</p>
+        <ul>
+          <li>Chiffrement des mots de passe (BCrypt)</li>
+          <li>Authentification par token JWT avec expiration</li>
+          <li>Protection CORS limitée au domaine autorisé</li>
+          <li>Accès restreint par rôles (CLIENT / ADMIN)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>7. Vos droits</h3>
+        <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+        <ul>
+          <li><strong>Droit d'accès</strong> — consulter vos données personnelles</li>
+          <li><strong>Droit de rectification</strong> — corriger vos informations</li>
+          <li><strong>Droit à l'effacement</strong> — demander la suppression de votre compte</li>
+          <li><strong>Droit à la portabilité</strong> — recevoir vos données dans un format structuré</li>
+          <li><strong>Droit d'opposition</strong> — vous opposer à certains traitements</li>
+        </ul>
+        <p>Pour exercer ces droits, contactez-nous via le chatbot ou à l'adresse technobank&#64;eafc.be</p>
+      </section>
+
+      <section>
+        <h3>8. Cookies</h3>
+        <p>T€chno-Bank utilise uniquement le stockage local (localStorage) pour maintenir votre session de connexion. Aucun cookie de tracking ou publicitaire n'est utilisé.</p>
+      </section>
+
+    </div>
+
+    <div class="rgpd-footer">
+      <button class="btn-rgpd-decline" (click)="closeRgpd()">Fermer</button>
+      <button class="btn-rgpd-accept" (click)="acceptRgpd()">✅ J'accepte et je ferme</button>
+    </div>
+
+  </div>
 </div>

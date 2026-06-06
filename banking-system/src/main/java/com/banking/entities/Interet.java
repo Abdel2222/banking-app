@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 @Entity
@@ -49,29 +48,49 @@ public class Interet {
 
     /* ===================== Méthodes métier ===================== */
 
+    /**
+     * Calcul mensuel fixe — logique bancaire standard pour un livret d'épargne.
+     *
+     * Formule : solde × taux_annuel / 12
+     *
+     * Le montant est FIXE pour toute la période mensuelle.
+     * Il ne change pas chaque jour — il est calculé une fois à l'ouverture
+     * et crédité en totalité à la capitalisation mensuelle.
+     *
+     * Ex : 300 € × 3 % / 12 = 0,75 € par mois (constant)
+     */
     public BigDecimal calculer(BigDecimal solde) {
         if (solde == null || tauxInteret == null) return BigDecimal.ZERO;
-        long jours = ChronoUnit.DAYS.between(
-                dateDebut,
-                dateFin != null ? dateFin : LocalDate.now());
-        if (jours <= 0) return BigDecimal.ZERO;
-        BigDecimal ratio = BigDecimal.valueOf(jours)
-                .divide(BigDecimal.valueOf(365), 10, RoundingMode.HALF_UP);
-        this.montantInteret = solde.multiply(tauxInteret)
-                .multiply(ratio)
-                .setScale(4, RoundingMode.HALF_UP);
+        if (solde.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
+
+        // ✅ Intérêt mensuel fixe = solde × taux_annuel / 12
+        this.montantInteret = solde
+                .multiply(tauxInteret)
+                .divide(BigDecimal.valueOf(12), 4, RoundingMode.HALF_UP);
+
         return this.montantInteret;
     }
 
+    /**
+     * Capitalisation : crédite le solde et clôture la période.
+     * Appelée une fois par mois par le scheduler ou manuellement par l'admin.
+     */
     public void capitaliser(CompteEpargne epargne) {
-        if (this.montantInteret == null || this.montantInteret.signum() <= 0)
+        // Recalculer si montant pas encore calculé
+        if (this.montantInteret == null || this.montantInteret.signum() <= 0) {
             calculer(epargne.getBalance());
-        if (this.montantInteret.signum() > 0)
+        }
+        // Créditer le solde si montant positif
+        if (this.montantInteret != null && this.montantInteret.signum() > 0) {
             epargne.crediter(this.montantInteret);
+        }
         this.dateCapitalisation = LocalDate.now();
         this.dateFin            = LocalDate.now();
     }
 
+    /**
+     * Retourne vrai si la période d'un mois est écoulée depuis la dernière capitalisation.
+     */
     public boolean doitCapitaliser() {
         if (dateCapitalisation == null) return true;
         return LocalDate.now().isAfter(dateCapitalisation.plusMonths(1));

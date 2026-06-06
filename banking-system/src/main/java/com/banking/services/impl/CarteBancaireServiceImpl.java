@@ -12,8 +12,8 @@ import com.banking.repositories.CarteBancaireRepository;
 import com.banking.repositories.CompteBancaireRepository;
 import com.banking.repositories.DemandeCarteBancaireRepository;
 import com.banking.services.CarteBancaireService;
+import com.banking.services.EncryptionService;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -23,14 +23,25 @@ import java.util.Optional;
 
 @Service
 @Transactional
-@RequiredArgsConstructor
 public class CarteBancaireServiceImpl implements CarteBancaireService {
 
     private final CarteBancaireRepository carteRepo;
     private final CompteBancaireRepository compteRepo;
     private final DemandeCarteBancaireRepository demandeRepo;
+    private final EncryptionService encryptionService;
+
+    public CarteBancaireServiceImpl(CarteBancaireRepository carteRepo,
+                                    CompteBancaireRepository compteRepo,
+                                    DemandeCarteBancaireRepository demandeRepo,
+                                    EncryptionService encryptionService) {
+        this.carteRepo         = carteRepo;
+        this.compteRepo        = compteRepo;
+        this.demandeRepo       = demandeRepo;
+        this.encryptionService = encryptionService;
+    }
 
     // ===== Consultation =====
+
     @Override
     public Optional<CarteBancaire> findById(Long id) {
         return carteRepo.findById(id);
@@ -52,6 +63,7 @@ public class CarteBancaireServiceImpl implements CarteBancaireService {
     }
 
     // ===== État =====
+
     @Override
     public CarteBancaire activer(Long carteId) {
         CarteBancaire c = carteRepo.findById(carteId)
@@ -67,18 +79,15 @@ public class CarteBancaireServiceImpl implements CarteBancaireService {
         c.setEstActive(false);
         return carteRepo.save(c);
     }
+
     @Override
-    @jakarta.transaction.Transactional
+    @Transactional
     public CarteBancaireResponse activateCard(Long cardId) {
         var card = carteRepo.findById(cardId)
-                .orElseThrow(() -> new com.banking.exceptions.ResourceNotFoundException("Carte introuvable: " + cardId));
-
-        // Si tu as un enum de statut, mets-le à ACTIVE ici si besoin.
-        // Sinon on active par le booléen estActive :
+                .orElseThrow(() -> new ResourceNotFoundException("Carte introuvable: " + cardId));
         card.setEstActive(true);
-
         var saved = carteRepo.save(card);
-        return com.banking.dto.response.CarteBancaireResponse.fromEntity(saved);
+        return CarteBancaireResponse.fromEntity(saved);
     }
 
     @Override
@@ -89,57 +98,62 @@ public class CarteBancaireServiceImpl implements CarteBancaireService {
     }
 
     // ===== Paramètres =====
+
     @Override
     public CarteBancaire mettreAJourPlafonds(Long carteId, Double plafondJournalier, Double plafondMensuel) {
         CarteBancaire c = carteRepo.findById(carteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Carte introuvable"));
         if (plafondJournalier != null) c.setPlafondJournalier(plafondJournalier);
-        if (plafondMensuel != null)   c.setPlafondMensuel(plafondMensuel);
+        if (plafondMensuel    != null) c.setPlafondMensuel(plafondMensuel);
         return carteRepo.save(c);
     }
 
     // ===== Émission (ADMIN) =====
+
     @Override
-    public CarteBancaire emettrePourCompte(Long compteId, boolean estActive, Double plafondJournalier, Double plafondMensuel) {
+    public CarteBancaire emettrePourCompte(Long compteId,
+                                           boolean estActive,
+                                           Double plafondJournalier,
+                                           Double plafondMensuel) {
         CompteBancaire compte = compteRepo.findById(compteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Compte introuvable"));
 
         String status = (compte.getStatus() == null) ? null : compte.getStatus().toString();
-        if (!"ACTIVATED".equals(status)) {
+        if (!"ACTIVATED".equals(status))
             throw new AccountNotActiveException("Le compte n'est pas ACTIVATED");
-        }
 
-        if (carteRepo.findByCompteBancaire_Id(compteId).isPresent() || compte.getCarteBancaire() != null) {
+        if (carteRepo.findByCompteBancaire_Id(compteId).isPresent()
+                || compte.getCarteBancaire() != null)
             throw new DuplicateResourceException("Une carte existe déjà pour ce compte");
-        }
 
         boolean hasApproved = demandeRepo.existsByCompte_IdAndStatus(compteId, CardRequestStatus.APPROVED);
-        if (!hasApproved) {
+        if (!hasApproved)
             throw new InvalidOperationException("Aucune demande APPROVED pour ce compte");
-        }
 
-        String numero = generateCardNumber16();
-        String cvv    = generateCVV3();
-        LocalDate exp = LocalDate.now().plusYears(3);
+        String cvvClair = generateCVV3();
 
         double pj = (plafondJournalier == null) ? 500d  : plafondJournalier;
-        double pm = (plafondMensuel   == null) ? 2000d : plafondMensuel;
+        double pm = (plafondMensuel    == null) ? 2000d : plafondMensuel;
 
         CarteBancaire carte = new CarteBancaire();
-        carte.setNumeroCarte(numero);
-        carte.setCvv(cvv);
-        carte.setDateExpiration(exp);
+        carte.setNumeroCarte(generateCardNumber16());
+        carte.setCvv(encryptionService.encrypt(cvvClair)); // ✅ AES — réversible
+        carte.setDateExpiration(LocalDate.now().plusYears(3));
         carte.setEstActive(estActive);
         carte.setPlafondJournalier(pj);
         carte.setPlafondMensuel(pm);
         carte.setCompteBancaire(compte);
 
         CarteBancaire saved = carteRepo.save(carte);
-        compte.setCarteBancaire(saved); // relation bidirectionnelle
+        compte.setCarteBancaire(saved);
+
+        // ✅ CVV clair en @Transient pour l'afficher une seule fois à l'admin
+        saved.setCvvClair(cvvClair);
         return saved;
     }
 
     // ===== Helpers =====
+
     private static final SecureRandom RNG = new SecureRandom();
 
     private String generateCardNumber16() {
@@ -149,7 +163,6 @@ public class CarteBancaireServiceImpl implements CarteBancaireService {
     }
 
     private String generateCVV3() {
-        int n = RNG.nextInt(1000);
-        return String.format("%03d", n);
+        return String.format("%03d", RNG.nextInt(1000));
     }
 }

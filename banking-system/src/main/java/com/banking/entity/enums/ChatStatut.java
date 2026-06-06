@@ -1,4 +1,4 @@
-package com.banking.entities;
+package com.banking.entity.enums;
 
 public enum ChatStatut {
     /** Message normal (Ollama a répondu, pas d'intervention humaine requise) */

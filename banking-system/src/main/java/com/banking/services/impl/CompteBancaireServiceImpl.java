@@ -552,6 +552,10 @@ public class CompteBancaireServiceImpl implements CompteBancaireService {
             return Collections.emptyList();
         return compteBancaireRepository.findByClientEmail(authentication.getName());
     }
+    @Override
+    public CarteBancaire saveCard(CarteBancaire carte) {
+        return carteBancaireRepository.save(carte);
+    }
 
     /* ===================== Générateurs ===================== */
 

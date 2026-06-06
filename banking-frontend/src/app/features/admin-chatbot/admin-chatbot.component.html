@@ -54,16 +54,15 @@
              placeholder="🔍 Rechercher (nom, compte, message)..."
              (input)="onSearchChange($event)">
 
+      <!-- ✅ Select aligné avec ChatActionType backend -->
       <select class="action-filter" (change)="onActionFilterChange($event)">
         <option value="ALL">Toutes les actions</option>
-        <option value="BLOQUER_CARTE">🔒 Bloquer carte</option>
-        <option value="DEBLOQUER_CARTE">🔓 Débloquer carte</option>
-        <option value="PERTE_VOL_CARTE">🚨 Perte / Vol carte</option>
-        <option value="SUSPENDRE_COMPTE">⏸️ Suspendre compte</option>
-        <option value="REACTIVER_COMPTE">▶️ Réactiver compte</option>
-        <option value="SIGNALER_FRAUDE">⚠️ Fraude</option>
-        <option value="RECLAMATION">📋 Réclamation</option>
-        <option value="AUTRE_SENSIBLE">❓ Autre</option>
+        <option value="BLOCAGE_CARTE">🔒 Bloquer carte</option>
+        <option value="DEBLOCAGE_CARTE">🔓 Débloquer carte</option>
+        <option value="REMPLACEMENT_CARTE">💳 Remplacer carte</option>
+        <option value="FRAUDE_CVV">🚨 Fraude / CVV</option>
+        <option value="PROBLEME_VIREMENT">💸 Problème virement</option>
+        <option value="PROBLEME_COMPTE">🏦 Problème compte</option>
       </select>
     </div>
   </div>
@@ -138,6 +137,11 @@
             <span *ngIf="selected()?.numCompte"> · Compte {{ selected()?.numCompte }}</span>
           </p>
           <p class="details-date">{{ selected()?.dateHeure | date:'EEEE dd MMMM yyyy à HH:mm' }}</p>
+
+          <!-- ✅ Instruction admin selon le type d'action -->
+          <p class="details-instruction" *ngIf="actionInstruction(selected()!.actionType)">
+            {{ actionInstruction(selected()!.actionType) }}
+          </p>
         </div>
 
         <button class="btn-close" (click)="closeDetails()">✕</button>
@@ -173,7 +177,7 @@
             rows="5"
             [ngModel]="responseText()"
             (ngModelChange)="responseText.set($event)"
-            placeholder="Ex: Bonjour, votre carte vient d'être bloquée. Une nouvelle carte sera envoyée à votre adresse sous 5 jours ouvrés..."
+            placeholder="Ex: Bonjour, votre carte vient d'être remplacée. Vous la recevrez sous 5 à 7 jours ouvrables..."
             [disabled]="busy()">
           </textarea>
 

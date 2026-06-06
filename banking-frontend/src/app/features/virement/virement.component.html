@@ -9,7 +9,7 @@
     {{ success() }}
   </div>
 
-  <!-- NOUVEAU : Switch Virement Interne/Externe -->
+  <!-- Switch Virement Interne/Externe -->
   <div class="card mb-3">
     <div class="card-body">
       <div class="form-check form-switch">
@@ -42,7 +42,7 @@
           <option
             *ngFor="let compte of mesComptes()"
             [value]="compte.numCompte">
-            {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
+            {{ getCompteLabel(compte) }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
           </option>
         </select>
       </div>
@@ -50,7 +50,7 @@
       <!-- Affichage du compte sélectionné -->
       <div *ngIf="selectedCompteSource()" class="mt-3 p-3 bg-light rounded">
         <strong>Compte sélectionné</strong><br>
-        {{ selectedCompteSource()!.intitule || 'Compte' }} - {{ selectedCompteSource()!.numCompte }}<br>
+        {{ getCompteLabel(selectedCompteSource()!) }} - {{ selectedCompteSource()!.numCompte }}<br>
         Solde : {{ formatCurrency(selectedCompteSource()!.balance) }}
       </div>
     </div>
@@ -82,14 +82,14 @@
               *ngFor="let compte of mesComptes()"
               [value]="compte.numCompte"
               [disabled]="compte.numCompte === selectedCompteSource()?.numCompte">
-              {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
+              {{ getCompteLabel(compte) }} - {{ compte.numCompte }} ({{ formatCurrency(compte.balance) }})
             </option>
           </select>
         </div>
 
         <div *ngIf="selectedCompteDestinataire()" class="mt-3 p-3 bg-light rounded">
           <strong>Compte destinataire</strong><br>
-          {{ selectedCompteDestinataire()!.intitule || 'Compte' }} - {{ selectedCompteDestinataire()!.numCompte }}
+          {{ getCompteLabel(selectedCompteDestinataire()!) }} - {{ selectedCompteDestinataire()!.numCompte }}
         </div>
       </div>
 
@@ -141,7 +141,7 @@
             <option
               *ngFor="let compte of comptesDestinataire()"
               [value]="compte.numCompte">
-              {{ compte.intitule || 'Compte principal' }} - {{ compte.numCompte }}
+              {{ getCompteLabel(compte) }} - {{ compte.numCompte }}
             </option>
           </select>
         </div>
@@ -150,7 +150,7 @@
         <div *ngIf="selectedCompteDestinataire()" class="mt-3 p-3 bg-light rounded">
           <strong>Destinataire</strong><br>
           Client : {{ selectedClientDestinataire()?.prenom }} {{ selectedClientDestinataire()?.nom }}<br>
-          Compte : {{ selectedCompteDestinataire()!.numCompte }}
+          Compte : {{ getCompteLabel(selectedCompteDestinataire()!) }} - {{ selectedCompteDestinataire()!.numCompte }}
         </div>
       </div>
     </div>
@@ -176,7 +176,7 @@
           <small *ngIf="montantError" class="text-danger">{{ montantError }}</small>
         </div>
 
-        <!-- NOUVEAU : Switch Communication Structurée/Libre -->
+        <!-- Switch Communication Structurée/Libre -->
         <div class="form-check form-switch mb-3">
           <input
             class="form-check-input"
