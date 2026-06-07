@@ -26,7 +26,7 @@
     </button>
   </div>
 
-  <!-- ✅ Filtres par période -->
+  <!-- Filtres par période -->
   <div class="date-filters">
     <div class="filter-header">
       <span class="filter-icon">📅</span>
@@ -124,7 +124,7 @@
     </div>
   }
 
-  <!-- ✅ Liste style appli bancaire -->
+  <!-- Liste style appli bancaire -->
   @if (!loading() && !error() && operationsFiltrees().length > 0) {
     <div class="operations-list-bank">
 
@@ -154,10 +154,15 @@
               }
             </div>
 
+            <!-- ✅ Communication structurée + contrepartie toujours visible -->
             @if (isCommunicationStructuree(op.communication)) {
               <div class="bank-op-ogm">
                 <span class="ogm-badge">📋 Communication structurée</span>
                 <code class="ogm-value">{{ op.communication }}</code>
+                <!-- ✅ Contrepartie affichée sous la communication pour distinguer les virements -->
+                @if (getContrepartie(op)) {
+                  <span class="ogm-contrepartie">{{ getContrepartie(op) }}</span>
+                }
               </div>
             }
 

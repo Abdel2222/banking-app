@@ -35,13 +35,11 @@ public class PlacementService {
             FondsRepository fondsRepository,
             OperationRepository operationRepository
     ) {
-        this.placementRepository    = placementRepository;
+        this.placementRepository      = placementRepository;
         this.compteBancaireRepository = compteBancaireRepository;
-        this.fondsRepository        = fondsRepository;
-        this.operationRepository    = operationRepository;
+        this.fondsRepository          = fondsRepository;
+        this.operationRepository      = operationRepository;
     }
-
-    /* ==================== Création ==================== */
 
     @Transactional
     public PlacementResponse creerPlacement(CreatePlacementRequest request) {
@@ -81,8 +79,6 @@ public class PlacementService {
         return new PlacementResponse(saved);
     }
 
-    /* ==================== Lecture ==================== */
-
     @Transactional(readOnly = true)
     public List<PlacementResponse> getTousLesPlacements() {
         return placementRepository.findAll()
@@ -117,14 +113,11 @@ public class PlacementService {
                 .toList();
     }
 
-    /* ==================== Clôture normale ==================== */
-
     @Transactional
     public PlacementResponse cloturerPlacement(Long placementId) {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
-        // capital + gain total prévu
         BigDecimal retour = placement.getValeurEstimee();
         compte.setBalance(compte.getBalance().add(retour));
 
@@ -146,19 +139,11 @@ public class PlacementService {
         return new PlacementResponse(saved);
     }
 
-    /* ==================== Sortie anticipée ==================== */
-
-    /**
-     * Sortie anticipée avec frais bancaires dégressifs calculés automatiquement.
-     * Règle : frais = max(capital × 0.25%, capital × 2% × ratioRestant)
-     * Restitué : capital + intérêts courus - frais
-     */
     @Transactional
     public PlacementResponse sortirAvantEcheance(Long placementId) {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
-        // ✅ Frais bancaires dégressifs (calculés dans l'entité)
         BigDecimal frais    = placement.calculerFraisSortie();
         BigDecimal interets = placement.getInteretsCourus();
         BigDecimal retour   = placement.getMontant()
@@ -167,16 +152,12 @@ public class PlacementService {
 
         if (retour.signum() < 0) retour = BigDecimal.ZERO;
 
-        // ✅ Créditer le compte
         compte.setBalance(compte.getBalance().add(retour));
-
-        // ✅ Mettre à jour le placement (fraisSortie, dateSortie, statut)
         placement.sortirAvantEcheance();
 
         compteBancaireRepository.save(compte);
         Placement saved = placementRepository.save(placement);
 
-        // Opération principale — restitution
         Operation opRetour = new Operation(
                 compte,
                 retour,
@@ -190,7 +171,6 @@ public class PlacementService {
         opRetour.setCommunication("SORTIE_ANTICIPEE");
         operationRepository.save(opRetour);
 
-        // Opération séparée pour les frais (traçabilité)
         if (frais.signum() > 0) {
             Operation opFrais = new Operation(
                     compte,
@@ -205,14 +185,11 @@ public class PlacementService {
         return new PlacementResponse(saved);
     }
 
-    /* ==================== Annulation ==================== */
-
     @Transactional
     public PlacementResponse annulerPlacement(Long placementId) {
         Placement placement = getActifOrThrow(placementId);
         CompteBancaire compte = placement.getCompteBancaire();
 
-        // Annulation = remboursement du capital uniquement, sans intérêts ni frais
         BigDecimal montant = placement.getMontant();
         compte.setBalance(compte.getBalance().add(montant));
 
@@ -234,8 +211,6 @@ public class PlacementService {
         return new PlacementResponse(saved);
     }
 
-    /* ==================== Helpers ==================== */
-
     private Placement getActifOrThrow(Long id) {
         Placement placement = placementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -255,10 +230,9 @@ public class PlacementService {
         if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0)
             throw new BusinessException("Le montant du placement doit être supérieur à 0");
 
-        if (!fonds.montantRespecteMinimum(montant))
-            throw new BusinessException(
-                    "Le montant est inférieur au minimum du fonds (" + fonds.getMontant() + " €)"
-            );
+        // ✅ Supprimé — plus de montant minimum requis par fonds
+        // if (!fonds.montantRespecteMinimum(montant))
+        //     throw new BusinessException(...);
 
         if (compte.getClient() == null
                 || compte.getClient().getId() == null

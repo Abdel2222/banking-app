@@ -45,6 +45,7 @@ export class InvestmentsComponent implements OnInit {
         this.numCompte.set(numCompteParam);
         this.selectedAccount.set(id, numCompteParam);
       } else {
+        // ✅ Fallback sur le service si pas de query params
         this.compteId.set(this.selectedAccount.compteId());
         this.numCompte.set(this.selectedAccount.numCompte());
       }
@@ -76,7 +77,8 @@ export class InvestmentsComponent implements OnInit {
     this.selectedFonds.set(fonds);
     this.success.set('');
     this.error.set('');
-    this.montant.set(Number(fonds.montant || 0));
+    // ✅ Montant initialisé à 1 — plus de montant minimum
+    this.montant.set(1);
   }
 
   updateMontant(event: Event): void {
@@ -101,10 +103,7 @@ export class InvestmentsComponent implements OnInit {
       this.error.set('Veuillez saisir un montant valide.');
       return;
     }
-    if (montant < Number(fonds.montant || 0)) {
-      this.error.set(`Le montant minimum pour ce fonds est ${fonds.montant} €.`);
-      return;
-    }
+    // ✅ Plus de validation montant minimum
 
     this.investing.set(true);
     this.error.set('');
@@ -117,7 +116,7 @@ export class InvestmentsComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.investing.set(false);
-        this.success.set('Placement créé avec succès.');
+        this.success.set('✅ Placement créé avec succès !');
         this.montant.set(null);
         this.selectedFonds.set(null);
       },
@@ -144,35 +143,15 @@ export class InvestmentsComponent implements OnInit {
     return fonds?.codeIdentification || fonds?.codeFonds || 'N/A';
   }
 
-  /**
-   * Retourne un message personnalisé selon le profil du fonds.
-   * Basé sur le préfixe du code d'identification (FDS-SEC, FDS-CRY, etc.).
-   */
   getStartingHint(fonds: any): string {
     const code = (fonds?.codeIdentification || '').toUpperCase();
-
-    if (code.startsWith('FDS-SEC')) {
-      return '🛡️ Idéal pour débuter en toute sérénité';
-    }
-    if (code.startsWith('FDS-EQ')) {
-      return '⚖️ Le bon équilibre entre prudence et rendement';
-    }
-    if (code.startsWith('FDS-CRY')) {
-      return '🚀 Plongez dans l\'univers crypto avec ce ticket d\'entrée';
-    }
-    if (code.startsWith('FDS-TEC')) {
-      return '💡 Investissez dans l\'innovation et la tech de demain';
-    }
-    if (code.startsWith('FDS-IMM')) {
-      return '🏠 Démarrez votre patrimoine immobilier';
-    }
-    if (code.startsWith('FDS-TER')) {
-      return '🌾 Placement long terme avec belle plus-value à la clé';
-    }
-    if (code.startsWith('FDS-ENE')) {
-      return '🌱 Soutenez la transition écologique';
-    }
-
+    if (code.startsWith('FDS-SEC')) return '🛡️ Idéal pour débuter en toute sérénité';
+    if (code.startsWith('FDS-EQ'))  return '⚖️ Le bon équilibre entre prudence et rendement';
+    if (code.startsWith('FDS-CRY')) return '🚀 Plongez dans l\'univers crypto avec ce ticket d\'entrée';
+    if (code.startsWith('FDS-TEC')) return '💡 Investissez dans l\'innovation et la tech de demain';
+    if (code.startsWith('FDS-IMM')) return '🏠 Démarrez votre patrimoine immobilier';
+    if (code.startsWith('FDS-TER')) return '🌾 Placement long terme avec belle plus-value à la clé';
+    if (code.startsWith('FDS-ENE')) return '🌱 Soutenez la transition écologique';
     return '✨ Un montant de départ accessible pour démarrer';
   }
 }

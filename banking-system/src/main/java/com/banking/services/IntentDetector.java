@@ -11,6 +11,16 @@ public class IntentDetector {
 
         String m = message.toLowerCase().trim();
 
+        // ✅ REMPLACEMENT CARTE — avant BLOCAGE
+        if (containsAny(m,
+                "changer cvv", "nouveau cvv", "cvv oublié", "cvv perdu",
+                "renouveler ma carte", "remplacer ma carte", "nouvelle carte",
+                "carte abîmée", "carte endommagée", "carte expirée",
+                "ma carte est abîmée", "je veux une nouvelle carte",
+                "demander une nouvelle carte")) {
+            return ChatActionType.REMPLACEMENT_CARTE;
+        }
+
         // ===== BLOCAGE CARTE =====
         if (containsAny(m,
                 "bloquer ma carte", "bloquer carte", "bloquer ma cb",
@@ -18,15 +28,6 @@ public class IntentDetector {
                 "désactiver ma carte", "ma carte est perdue", "carte perdue",
                 "carte volée", "ma carte a été volée", "j'ai perdu ma carte")) {
             return ChatActionType.BLOCAGE_CARTE;
-        }
-
-        // ===== REMPLACEMENT CARTE =====
-        if (containsAny(m,
-                "changer cvv", "nouveau cvv", "cvv oublié", "cvv perdu",
-                "renouveler ma carte", "remplacer ma carte", "nouvelle carte",
-                "carte abîmée", "carte endommagée", "carte expirée",
-                "ma carte est abîmée", "je veux une nouvelle carte")) {
-            return ChatActionType.REMPLACEMENT_CARTE;
         }
 
         // ===== FRAUDE / CVV COMPROMIS =====
@@ -78,6 +79,11 @@ public class IntentDetector {
 
     public String buildAcknowledgement(ChatActionType action) {
         return switch (action) {
+            case REMPLACEMENT_CARTE ->
+                    "💳 Votre demande de remplacement de carte a été reçue. " +
+                            "Un conseiller va émettre une nouvelle carte. " +
+                            "Elle sera disponible dans votre espace client sous quelques minutes.";
+
             case BLOCAGE_CARTE ->
                     "🔒 Votre carte a été bloquée temporairement. " +
                             "Un conseiller va traiter votre demande.";
@@ -90,11 +96,6 @@ public class IntentDetector {
                     "⚠️ Votre signalement de fraude a bien été reçu. " +
                             "Un conseiller va traiter votre dossier en priorité et " +
                             "sécuriser votre carte. Nous vous contacterons rapidement.";
-
-            case REMPLACEMENT_CARTE ->
-                    "💳 Votre demande de remplacement de carte a été reçue. " +
-                            "Un conseiller va bloquer votre ancienne carte et en émettre une nouvelle. " +
-                            "Elle sera disponible dans votre espace client sous quelques minutes.";
 
             case PROBLEME_VIREMENT ->
                     "💸 Votre signalement concernant un virement a bien été reçu. " +

@@ -15,6 +15,7 @@ interface Operation {
   communication?: string;
   description?: string;
   statut?: string;
+  nomTitulaireDestinataire?: string;
 }
 
 interface Compte {
@@ -39,23 +40,18 @@ export class OperationsComponent implements OnInit {
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
 
-  // ✅ NOUVEAU : filtres par dates
   dateDebut = signal<string>('');
   dateFin = signal<string>('');
   periodeActive = signal<PeriodePreset>('all');
 
-  // ✅ Liste filtrée par dates (computed → recalcul auto)
   operationsFiltrees = computed(() => {
     const all = this.operations();
     const debut = this.dateDebut();
     const fin = this.dateFin();
-
     if (!debut && !fin) return all;
-
     return all.filter(op => {
       const opDate = new Date(op.dateOperation);
       opDate.setHours(0, 0, 0, 0);
-
       if (debut) {
         const d = new Date(debut);
         d.setHours(0, 0, 0, 0);
@@ -70,17 +66,12 @@ export class OperationsComponent implements OnInit {
     });
   });
 
-  // ✅ Statistiques sur la période filtrée
   totalEntrees = computed(() =>
-    this.operationsFiltrees()
-      .filter(op => op.montant > 0)
-      .reduce((sum, op) => sum + op.montant, 0)
+    this.operationsFiltrees().filter(op => op.montant > 0).reduce((sum, op) => sum + op.montant, 0)
   );
 
   totalSorties = computed(() =>
-    this.operationsFiltrees()
-      .filter(op => op.montant < 0)
-      .reduce((sum, op) => sum + Math.abs(op.montant), 0)
+    this.operationsFiltrees().filter(op => op.montant < 0).reduce((sum, op) => sum + Math.abs(op.montant), 0)
   );
 
   Math = Math;
@@ -97,26 +88,21 @@ export class OperationsComponent implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
       const numCompteFromUrl = params['numCompte'];
-
       if (numCompteFromUrl) {
-        console.log('NumCompte reçu depuis URL:', numCompteFromUrl);
         this.compteSelectionne.set(numCompteFromUrl);
       }
-
       this.loadComptes();
     });
   }
 
   loadComptes() {
     const token = localStorage.getItem('auth_token');
-
     this.http.get<any>(`${this.API_BASE}/comptes`, {
       headers: { 'Authorization': `Bearer ${token}` }
     }).subscribe({
       next: (response) => {
         const comptes = Array.isArray(response) ? response : (response?.data ?? [response]);
         this.comptes.set(comptes);
-
         if (this.compteSelectionne()) {
           this.loadOperations(this.compteSelectionne());
         } else if (comptes.length > 0) {
@@ -124,55 +110,42 @@ export class OperationsComponent implements OnInit {
           this.loadOperations(comptes[0].numCompte);
         }
       },
-      error: (err) => {
-        console.error('Erreur chargement comptes:', err);
-        this.error.set('Impossible de charger les comptes');
-      }
+      error: () => this.error.set('Impossible de charger les comptes')
     });
   }
 
   loadOperations(numCompte: string) {
     this.loading.set(true);
     this.error.set(null);
-
-    console.log('📊 [OPERATIONS] Chargement opérations pour:', numCompte);
-
     const token = localStorage.getItem('auth_token');
-    const params = new HttpParams()
-      .set('numCompte', numCompte)
-      .set('limit', '500');
-
+    const params = new HttpParams().set('numCompte', numCompte).set('limit', '500');
     this.http.get<any>(`${this.API_BASE}/operations/recent`, {
       headers: { 'Authorization': `Bearer ${token}` },
-      params: params
+      params
     }).subscribe({
       next: (response) => {
         const backendOps = Array.isArray(response) ? response : (response?.data ?? []);
-        console.log('✅ [OPERATIONS] Backend retourne', backendOps.length, 'opérations');
+        const normalizedBackend = backendOps.map((op: any) => this.normalizeOperation(op, numCompte));
 
-        const normalizedBackend = backendOps.map((op: any) => this.normalizeOperation(op));
-
-        const localOps = this.operationsStore.getOperationsByCompte(numCompte);
-        console.log('📦 [OPERATIONS] Store local:', localOps.length, 'opérations');
-
-        const allOps = [...normalizedBackend];
-        for (const localOp of localOps) {
-          if (!allOps.find(o => o.id === localOp.id)) {
-            allOps.push(localOp);
-          }
-        }
-
-        allOps.sort((a, b) => {
-          const dateA = new Date(a.dateOperation).getTime();
-          const dateB = new Date(b.dateOperation).getTime();
-          return dateB - dateA;
+        // ✅ Dédoublonnage par date + montant + type (gère les doublons en base)
+        const seen = new Set<string>();
+        const deduped = normalizedBackend.filter((op: Operation) => {
+          const key = `${op.type}_${Math.abs(op.montant)}_${op.dateOperation?.toString().substring(0, 16)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
         });
 
+        const localOps = this.operationsStore.getOperationsByCompte(numCompte);
+        const allOps = [...deduped];
+        for (const localOp of localOps) {
+          if (!allOps.find(o => o.id === localOp.id)) allOps.push(localOp);
+        }
+        allOps.sort((a, b) => new Date(b.dateOperation).getTime() - new Date(a.dateOperation).getTime());
         this.operations.set(allOps);
         this.loading.set(false);
       },
-      error: (err) => {
-        console.error('❌ [OPERATIONS] Erreur backend:', err);
+      error: () => {
         const localOps = this.operationsStore.getOperationsByCompte(numCompte);
         this.operations.set(localOps);
         this.loading.set(false);
@@ -180,33 +153,39 @@ export class OperationsComponent implements OnInit {
     });
   }
 
-  /**
-   * Normalise une opération du backend.
-   * Détecte les frais et extrait correctement la communication.
-   */
-  private normalizeOperation(op: any): Operation {
+  private normalizeOperation(op: any, numCompteActuel?: string): Operation {
     let montant = Number(op?.montant ?? 0);
     const description = op?.description ?? op?.libelle ?? op?.type ?? 'Opération';
     const commentaire = op?.commentaire ?? '';
     const rawType = (op?.type ?? '').toString().toUpperCase();
 
-    // ✅ Extraction prioritaire de la communication (libre OU structurée)
-    const communication =
+    const communication = (
       op?.communication ??
       op?.communicationStructuree ??
       op?.communicationOGM ??
       op?.libelleCommunication ??
       commentaire ??
-      '';
+      ''
+    ).trim();
 
+    // ✅ Frais → toujours négatif
     const isFrais =
       description.toLowerCase().includes('frais') ||
       commentaire.toUpperCase().includes('FRAIS_GESTION') ||
       rawType === 'FRAIS' ||
-      rawType === 'FRAIS_GESTION';
+      rawType === 'FRAIS_GESTION' ||
+      rawType === 'BLOCAGE_CARTE';
+    if (isFrais && montant > 0) montant = -montant;
 
-    if (isFrais && montant > 0) {
-      montant = -montant;
+    // ✅ Virement sortant → négatif
+    if ((rawType === 'VIREMENT' || rawType === 'VIREMENT_INTERNE') && montant > 0) {
+      const numCompteDest = op?.numeroCompteDestinataire ?? op?.numCompteDestinataire ?? '';
+      const descLower = description.toLowerCase();
+      if (descLower.includes('réception') || descLower.includes('reception')) {
+        montant = Math.abs(montant);
+      } else if (numCompteDest && numCompteDest !== numCompteActuel) {
+        montant = -Math.abs(montant);
+      }
     }
 
     let displayType = rawType || 'OPERATION';
@@ -215,13 +194,14 @@ export class OperationsComponent implements OnInit {
     return {
       id: op?.id ?? 0,
       type: displayType,
-      montant: montant,
+      montant,
       dateOperation: op?.dateOperation ?? op?.date ?? op?.createdAt ?? new Date().toISOString(),
-      numCompteSource: op?.numCompteSource,
-      numCompteDestinataire: op?.numCompteDestinataire,
-      communication: String(communication || '').trim(),
-      description: description,
-      statut: op?.statut ?? 'COMPLETED'
+      numCompteSource: op?.numCompteSource ?? op?.numeroCompte,
+      numCompteDestinataire: op?.numCompteDestinataire ?? op?.numeroCompteDestinataire,
+      communication,
+      description,
+      statut: op?.statut ?? 'COMPLETED',
+      nomTitulaireDestinataire: op?.nomTitulaireDestinataire ?? ''
     };
   }
 
@@ -230,95 +210,52 @@ export class OperationsComponent implements OnInit {
     this.loadOperations(numCompte);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // ✅ FILTRES PAR DATES
-  // ═══════════════════════════════════════════════════════════════════════
-
   setPeriode(periode: PeriodePreset) {
     this.periodeActive.set(periode);
     const now = new Date();
-
     switch (periode) {
-      case 'all':
-        this.dateDebut.set('');
-        this.dateFin.set('');
-        break;
-
+      case 'all': this.dateDebut.set(''); this.dateFin.set(''); break;
       case 'month': {
         const debut = new Date(now.getFullYear(), now.getMonth(), 1);
         this.dateDebut.set(this.toInputDate(debut));
         this.dateFin.set(this.toInputDate(now));
         break;
       }
-
       case '3months': {
         const debut = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         this.dateDebut.set(this.toInputDate(debut));
         this.dateFin.set(this.toInputDate(now));
         break;
       }
-
       case 'year': {
         const debut = new Date(now.getFullYear(), 0, 1);
         this.dateDebut.set(this.toInputDate(debut));
         this.dateFin.set(this.toInputDate(now));
         break;
       }
-
-      case 'custom':
-        // L'utilisateur saisit lui-même
-        break;
+      case 'custom': break;
     }
   }
 
-  onDateDebutChange(value: string) {
-    this.dateDebut.set(value);
-    this.periodeActive.set('custom');
-  }
-
-  onDateFinChange(value: string) {
-    this.dateFin.set(value);
-    this.periodeActive.set('custom');
-  }
-
-  resetDates() {
-    this.dateDebut.set('');
-    this.dateFin.set('');
-    this.periodeActive.set('all');
-  }
+  onDateDebutChange(value: string) { this.dateDebut.set(value); this.periodeActive.set('custom'); }
+  onDateFinChange(value: string) { this.dateFin.set(value); this.periodeActive.set('custom'); }
+  resetDates() { this.dateDebut.set(''); this.dateFin.set(''); this.periodeActive.set('all'); }
 
   private toInputDate(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // ✅ HELPERS D'AFFICHAGE STYLE APPLI BANCAIRE
-  // ═══════════════════════════════════════════════════════════════════════
-
-  /**
-   * Détecte le format OGM belge : +++123/4567/89012+++
-   */
   isCommunicationStructuree(communication: string | undefined): boolean {
     if (!communication) return false;
     return /^\+{3}\d{3}\/\d{4}\/\d{5}\+{3}$/.test(communication.trim());
   }
 
-  /**
-   * Libellé principal affiché : la communication a la priorité.
-   */
   getLibelleAffichage(op: Operation): string {
-    if (op.communication && op.communication.trim()) {
-      return op.communication.trim();
-    }
+    if (op.communication && op.communication.trim()) return op.communication.trim();
     return op.description || op.type || 'Opération';
   }
 
-  /**
-   * Affiche "Vers •••1234" ou "De •••5678" selon le sens du virement.
-   */
+  // ✅ Numéro masqué uniquement — pas de nom
   getContrepartie(op: Operation): string {
     const monCompte = this.compteSelectionne();
     if (op.type === 'VIREMENT' || op.type === 'VIREMENT_INTERNE') {
@@ -328,7 +265,6 @@ export class OperationsComponent implements OnInit {
       if (op.numCompteDestinataire === monCompte && op.numCompteSource) {
         return `De ${this.formatIban(op.numCompteSource)}`;
       }
-      // Cas où le sens n'est pas clair → on déduit par le signe
       if (op.montant < 0 && op.numCompteDestinataire) {
         return `Vers ${this.formatIban(op.numCompteDestinataire)}`;
       }
@@ -344,25 +280,16 @@ export class OperationsComponent implements OnInit {
     return '••• ' + num.slice(-4);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // PDF
-  // ═══════════════════════════════════════════════════════════════════════
-
   exportPDF() {
     try {
-      console.log('🚀 [PDF] Début génération PDF');
-
       import('jspdf').then(({ jsPDF }) => {
         try {
           const doc = new jsPDF();
           const numCompte = this.compteSelectionne();
           const compteInfo = this.comptes().find(c => c.numCompte === numCompte);
           const dateExtrait = new Date().toLocaleDateString('fr-FR');
-          const operations = this.operationsFiltrees(); // ✅ utilise les opérations filtrées
+          const operations = this.operationsFiltrees();
 
-          console.log('📊 [PDF] Nombre d\'opérations:', operations.length);
-
-          // Bandeau header
           doc.setFillColor(10, 14, 39);
           doc.rect(0, 0, 210, 40, 'F');
           doc.setTextColor(0, 255, 157);
@@ -374,7 +301,6 @@ export class OperationsComponent implements OnInit {
           doc.setFont('helvetica', 'normal');
           doc.text('Extrait de compte', 14, 30);
 
-          // Infos compte
           doc.setTextColor(0, 0, 0);
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
@@ -386,7 +312,6 @@ export class OperationsComponent implements OnInit {
           doc.text('Solde : ' + this.formatCurrency(compteInfo?.balance || 0), 14, 70);
           doc.text('Date d\'edition : ' + dateExtrait, 14, 76);
 
-          // ✅ Période filtrée
           let periodeText = 'Periode : Toutes les operations';
           if (this.dateDebut() || this.dateFin()) {
             const debut = this.dateDebut() ? this.formatDateShort(this.dateDebut()) : '...';
@@ -423,11 +348,8 @@ export class OperationsComponent implements OnInit {
               doc.setTextColor(0, 0, 0);
               doc.text(this.formatDateShort(op.dateOperation), 16, y);
               doc.text(op.type || 'N/A', 46, y);
-
-              // ✅ Libellé = communication en priorité (comme dans une vraie banque)
               const libelle = this.getLibelleAffichage(op).substring(0, 45);
               doc.text(libelle, 76, y);
-
               const montantValue = Math.abs(op.montant);
               const montantText = (op.montant > 0 ? '+' : '-') + montantValue.toFixed(2) + ' EUR';
               if (op.montant > 0) doc.setTextColor(0, 200, 0);
@@ -439,11 +361,9 @@ export class OperationsComponent implements OnInit {
               if (y > 270) { doc.addPage(); y = 20; }
             });
 
-            // Résumé
             y += 10;
             const totalDepots = operations.filter(op => op.montant > 0).reduce((sum, op) => sum + op.montant, 0);
             const totalRetraits = operations.filter(op => op.montant < 0).reduce((sum, op) => sum + Math.abs(op.montant), 0);
-
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(11);
             doc.setTextColor(0, 0, 0);
@@ -470,29 +390,22 @@ export class OperationsComponent implements OnInit {
             doc.text(footerText, (210 - footerWidth) / 2, doc.internal.pageSize.height - 10);
           }
 
-          // ✅ Nom de fichier avec période
           let suffixe = new Date().toISOString().split('T')[0];
           if (this.dateDebut() && this.dateFin()) {
             suffixe = `${this.dateDebut()}_au_${this.dateFin()}`;
           }
-          const fileName = 'extrait_' + numCompte + '_' + suffixe + '.pdf';
-          doc.save(fileName);
+          doc.save('extrait_' + numCompte + '_' + suffixe + '.pdf');
         } catch (error: any) {
-          console.error('❌ [PDF] Erreur:', error);
           alert('Erreur lors de la génération du PDF: ' + error.message);
         }
-      }).catch(importError => {
-        console.error('❌ [PDF] Erreur import jsPDF:', importError);
-        alert('Impossible de charger la bibliothèque jsPDF');
-      });
+      }).catch(() => alert('Impossible de charger la bibliothèque jsPDF'));
     } catch (outerError: any) {
-      console.error('❌ [PDF] Erreur générale:', outerError);
       alert('Erreur générale: ' + outerError.message);
     }
   }
 
   getTypeIcon(type: string): string {
-    switch(type?.toUpperCase()) {
+    switch (type?.toUpperCase()) {
       case 'VIREMENT':
       case 'VIREMENT_INTERNE': return '💸';
       case 'DEPOT': return '💰';
@@ -506,40 +419,26 @@ export class OperationsComponent implements OnInit {
   getStatutDisplay(operation: Operation): string {
     const opDate = new Date(operation.dateOperation);
     const now = new Date();
-
-    if (opDate > now) {
-      return 'PLANIFIÉ';
-    }
-
+    if (opDate > now) return 'PLANIFIÉ';
     return operation.statut || 'COMPLETED';
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   }
 
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   }
 
   formatDateShort(date: string): string {
     return new Date(date).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit'
+      day: '2-digit', month: '2-digit', year: '2-digit'
     });
   }
 
-  retourDashboard() {
-    this.router.navigate(['/dashboard']);
-  }
+  retourDashboard() { this.router.navigate(['/dashboard']); }
 }

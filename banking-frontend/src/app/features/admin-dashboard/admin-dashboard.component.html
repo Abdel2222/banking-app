@@ -136,8 +136,6 @@
   <main class="grid" *ngIf="activeTab()==='accounts'">
     <section class="panel-3d">
       <h3 class="panel-title"><span class="panel-title-icon">🏦</span><span class="panel-title-text">Comptes des clients</span></h3>
-
-      <!-- ✅ BARRE DE RECHERCHE GESTION COMPTES -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
         <div style="flex:1;min-width:220px;position:relative;">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -151,13 +149,11 @@
           💸 Facturer tous les comptes
         </button>
       </div>
-
       <div *ngIf="loading()" class="muted">Chargement des comptes clients...</div>
       <div class="accounts-table-wrapper">
         <table class="admin-table" *ngIf="filteredAccounts().length; else noacc">
           <thead><tr><th>Client</th><th>Compte</th><th>Type</th><th>Catégorie</th><th>Solde</th><th>Carte</th><th>Statut</th><th>Action</th></tr></thead>
           <tbody>
-            <!-- ✅ filteredAccounts() au lieu de accounts() -->
             <tr *ngFor="let a of filteredAccounts()" [class.active]="a.clientId===selectedClientId()">
               <td>{{ a.clientName || 'Client inconnu' }}</td>
               <td class="mono">{{ a.numCompte }}</td>
@@ -211,67 +207,39 @@
           </button>
         </div>
 
-        <!-- ====== BLOC ÉPARGNE — logique bancaire ====== -->
+        <!-- BLOC ÉPARGNE -->
         <div *ngIf="section.account.savingsAccount"
              style="margin-bottom:18px;padding:16px;border-radius:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
-
-          <!-- En-tête avec statut -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
             <h5 style="margin:0;font-size:1.05rem;color:#f59e0b;">📈 Livret d'épargne</h5>
             <span class="status-badge active-status" *ngIf="section.interetCourant">✓ Intérêt actif</span>
             <span class="status-badge pending-status" *ngIf="!section.interetCourant">⚠️ Aucun intérêt configuré</span>
           </div>
-
-          <!-- 4 indicateurs clés — logique bancaire -->
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
-
-            <!-- Taux annuel -->
             <div style="padding:14px;border-radius:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);">
               <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Taux annuel brut</div>
-              <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;">
-                {{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100) | number:'1.2-2' }} %
-              </div>
-              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">
-                soit {{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100 / 12) | number:'1.3-3' }} % / mois
-              </div>
+              <div style="font-size:1.4rem;font-weight:800;color:#f59e0b;">{{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100) | number:'1.2-2' }} %</div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">soit {{ ((section.tauxAnnuel || getTauxParDefaut(section.account.numCompte)) * 100 / 12) | number:'1.3-3' }} % / mois</div>
             </div>
-
-            <!-- Intérêt du mois en cours -->
             <div style="padding:14px;border-radius:12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);">
               <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Intérêt du mois en cours</div>
-              <div style="font-size:1.4rem;font-weight:800;color:#10b981;">
-                {{ (section.interetsEnCours || 0) | money }}
-              </div>
+              <div style="font-size:1.4rem;font-weight:800;color:#10b981;">{{ (section.interetsEnCours || 0) | money }}</div>
               <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">Fixe jusqu'au {{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}</div>
             </div>
-
-            <!-- Total capitalisé depuis ouverture -->
             <div style="padding:14px;border-radius:12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);">
               <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Total capitalisé (historique)</div>
-              <div style="font-size:1.4rem;font-weight:800;color:#818cf8;">
-                {{ (section.totalInteretsCumules || 0) | money }}
-              </div>
+              <div style="font-size:1.4rem;font-weight:800;color:#818cf8;">{{ (section.totalInteretsCumules || 0) | money }}</div>
               <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">Crédités sur le solde</div>
             </div>
-
-            <!-- Prochaine capitalisation -->
             <div style="padding:14px;border-radius:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);">
               <div style="font-size:0.8rem;opacity:0.7;margin-bottom:4px;">Prochaine capitalisation</div>
-              <div style="font-size:1.2rem;font-weight:800;color:#60a5fa;">
-                {{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}
-              </div>
-              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">
-                dans {{ section.joursAvantCapi ?? 0 }} jour(s)
-              </div>
+              <div style="font-size:1.2rem;font-weight:800;color:#60a5fa;">{{ section.prochaineCapi ? (section.prochaineCapi | date:'dd/MM/yyyy') : '—' }}</div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-top:2px;">dans {{ section.joursAvantCapi ?? 0 }} jour(s)</div>
             </div>
           </div>
-
-          <!-- Pas d'intérêt → formulaire création -->
           <div *ngIf="!section.interetCourant"
                style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(245,158,11,0.4);margin-bottom:14px;">
-            <p style="margin:0 0 12px 0;font-size:0.9rem;color:#94a3b8;">
-              Aucun taux configuré pour ce compte. Définissez un taux annuel pour activer la capitalisation mensuelle.
-            </p>
+            <p style="margin:0 0 12px 0;font-size:0.9rem;color:#94a3b8;">Aucun taux configuré pour ce compte.</p>
             <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
               <div style="min-width:200px;">
                 <label style="display:block;font-size:0.85rem;margin-bottom:6px;opacity:0.85;">Taux annuel (ex: 0.03 = 3%)</label>
@@ -280,17 +248,11 @@
                        (ngModelChange)="setTauxPourCompte(section.account.numCompte,$event)"
                        placeholder="0.03"/>
               </div>
-              <button class="btn-action btn-activate" type="button" [disabled]="busy()"
-                      (click)="creerInteretCompte(section.account.numCompte)">
-                ➕ Activer le taux
-              </button>
+              <button class="btn-action btn-activate" type="button" [disabled]="busy()" (click)="creerInteretCompte(section.account.numCompte)">➕ Activer le taux</button>
             </div>
           </div>
-
-          <!-- Intérêt actif → bouton capitalisation -->
           <div *ngIf="section.interetCourant" style="margin-bottom:16px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-                        padding:12px 16px;border-radius:10px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:12px 16px;border-radius:10px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
               <div style="font-size:0.88rem;color:#94a3b8;">
                 Période en cours :
                 <strong style="color:#e5e7eb;">{{ section.interetCourant.dateDebut | date:'dd/MM/yyyy' }}</strong>
@@ -300,9 +262,7 @@
               <button class="btn-action" type="button"
                       [disabled]="busy() || !peutCapitaliser(section)"
                       (click)="capitaliserCompte(section.account.numCompte)"
-                      [style.background]="peutCapitaliser(section)
-                        ? 'linear-gradient(135deg,#10b981 0%,#059669 100%)'
-                        : 'linear-gradient(135deg,#374151 0%,#4b5563 100%)'"
+                      [style.background]="peutCapitaliser(section) ? 'linear-gradient(135deg,#10b981 0%,#059669 100%)' : 'linear-gradient(135deg,#374151 0%,#4b5563 100%)'"
                       [style.cursor]="peutCapitaliser(section) ? 'pointer' : 'not-allowed'"
                       [style.opacity]="peutCapitaliser(section) ? '1' : '0.75'"
                       style="color:white;transition:all 0.3s;border:none;white-space:nowrap;">
@@ -310,23 +270,11 @@
               </button>
             </div>
           </div>
-
-          <!-- Historique des capitalisations (seulement les capitalisées) -->
           <div *ngIf="section.historiqueInterets?.length">
-            <h6 style="margin:0 0 10px 0;font-size:0.9rem;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">
-              Historique des capitalisations
-            </h6>
+            <h6 style="margin:0 0 10px 0;font-size:0.9rem;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Historique des capitalisations</h6>
             <div style="overflow-x:auto;">
               <table class="admin-table" style="font-size:0.88rem;">
-                <thead>
-                  <tr>
-                    <th>Période</th>
-                    <th>Taux</th>
-                    <th class="right">Montant crédité</th>
-                    <th>Date capitalisation</th>
-                    <th>Statut</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Période</th><th>Taux</th><th class="right">Montant crédité</th><th>Date capitalisation</th><th>Statut</th></tr></thead>
                 <tbody>
                   <tr *ngFor="let interet of section.historiqueInterets">
                     <td>
@@ -335,9 +283,7 @@
                       <span *ngIf="!interet.dateFin" style="color:#10b981;"> → en cours</span>
                     </td>
                     <td>{{ (interet.tauxInteret * 100) | number:'1.2-2' }} %</td>
-                    <td class="right" [style.color]="interet.dateCapitalisation ? '#10b981' : '#f59e0b'">
-                      {{ (interet.montantInteret || 0) | money }}
-                    </td>
+                    <td class="right" [style.color]="interet.dateCapitalisation ? '#10b981' : '#f59e0b'">{{ (interet.montantInteret || 0) | money }}</td>
                     <td>{{ interet.dateCapitalisation ? (interet.dateCapitalisation | date:'dd/MM/yyyy') : '—' }}</td>
                     <td>
                       <span class="status-badge active-status" *ngIf="interet.dateCapitalisation">✓ Capitalisé</span>
@@ -348,10 +294,9 @@
               </table>
             </div>
           </div>
-
         </div>
 
-        <!-- BLOCS COMPTE COURANT UNIQUEMENT -->
+        <!-- BLOCS COMPTE COURANT -->
         <ng-container *ngIf="!section.account.savingsAccount">
           <div style="margin-bottom:18px;padding:14px;border-radius:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
             <h5 style="margin:0 0 10px 0;">💳 Carte bancaire</h5>
@@ -370,7 +315,6 @@
               <strong style="color:#60a5fa;cursor:pointer;text-decoration:underline;" (click)="switchTab('cards')">Gestion Carte</strong>.
             </small>
           </div>
-
           <div style="margin-bottom:18px;">
             <h5 style="margin-bottom:10px;">📜 Dernières opérations</h5>
             <div *ngIf="section.ops?.length; else noOpsBlock" style="overflow-x:auto;">
@@ -387,7 +331,6 @@
             </div>
             <ng-template #noOpsBlock><p class="muted">Aucune opération récente.</p></ng-template>
           </div>
-
           <div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
               <h5 style="margin:0;">💸 Frais de gestion</h5>
@@ -424,8 +367,6 @@
   <main class="grid" *ngIf="activeTab()==='cards'">
     <section class="panel-3d">
       <h3 class="panel-title"><span class="panel-title-icon">💳</span><span class="panel-title-text">Cartes par client</span></h3>
-
-      <!-- ✅ BARRE DE RECHERCHE GESTION CARTE -->
       <div style="margin-bottom:12px;position:relative;">
         <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" placeholder="Rechercher client, numéro de compte..."
@@ -433,10 +374,8 @@
                (input)="onCardsSearchChange($any($event.target).value)"
                style="width:100%;padding:8px 8px 8px 34px;background:rgba(15,23,42,0.6);border:1.5px solid #334155;border-radius:8px;color:#e5e7eb;font-size:0.88rem;box-sizing:border-box;">
       </div>
-
       <div *ngIf="loading()" class="muted">Chargement des cartes...</div>
       <div class="accounts-table-wrapper">
-        <!-- ✅ filteredComptesCourants() au lieu de getComptesCourants() -->
         <table class="admin-table" *ngIf="filteredComptesCourants().length; else noaccCards">
           <thead><tr><th>Client</th><th>Compte courant</th><th>Carte</th><th>Statut compte</th><th>Action</th></tr></thead>
           <tbody>
@@ -457,7 +396,6 @@
     </section>
 
     <section class="panel-3d span2" *ngIf="selectedCourant()">
-      <!-- Info compte courant -->
       <div style="padding:14px;border-radius:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="font-size:1.2rem;">🏦</span><strong>Compte courant associé à la carte</strong></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
@@ -473,7 +411,6 @@
         </div>
       </div>
 
-      <!-- ✅ ALERTE COMPTE SUSPENDU dans Gestion Carte -->
       <div *ngIf="isAccountSuspended(selectedCourant())"
            style="padding:12px 16px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);margin-bottom:16px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:1.4rem;">⛔</span>
@@ -496,14 +433,19 @@
             <div class="info-row"><span class="label">Expire :</span>{{ courantCard()?.dateExpiration || '—' }}</div>
             <div class="info-row">
               <span class="label">État :</span>
-              <span class="status-pill" [class.ok]="courantCard()?.estActive" [class.ko]="!courantCard()?.estActive">{{ courantCard()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}</span>
+              <span class="status-pill" [class.ok]="courantCard()?.estActive" [class.ko]="!courantCard()?.estActive">
+                {{ courantCard()?.estActive ? '✓ Active' : '🔒 BLOQUÉE' }}
+              </span>
             </div>
             <div class="limits-grid">
               <div class="limit-box"><span class="limit-label">Plafond Jour</span><span class="limit-value">{{ courantCard()?.plafondJournalier ?? '—' }} €</span></div>
               <div class="limit-box"><span class="limit-label">Plafond Mois</span><span class="limit-value">{{ courantCard()?.plafondMensuel ?? '—' }} €</span></div>
             </div>
           </div>
+
+          <!-- ✅ Deux boutons côte à côte -->
           <div class="actions-buttons">
+            <!-- Bloquer / Débloquer — sans CVV -->
             <button class="btn-action"
                     [class.btn-block]="courantCard()?.estActive"
                     [class.btn-unblock]="!courantCard()?.estActive"
@@ -511,8 +453,17 @@
                     [disabled]="loading()">
               {{ courantCard()?.estActive ? '🔒 BLOQUER' : '🔓 Débloquer la carte' }}
             </button>
+
+            <!-- ✅ Nouvelle carte + CVV — visible seulement si carte active -->
+            <button class="btn-action btn-replace-card"
+                    *ngIf="courantCard()?.estActive"
+                    (click)="remplacerCarteForCourant()"
+                    [disabled]="loading()">
+              💳 Nouvelle carte + CVV
+            </button>
           </div>
         </div>
+
         <ng-template #nocardAdmin>
           <div class="info-card info-card-empty">
             <div class="info-card-header"><span class="info-icon">💳</span><span class="info-title">Aucune carte liée</span></div>

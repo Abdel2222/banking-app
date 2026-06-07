@@ -72,8 +72,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    // ✅ FIX : reset complet avant tout chargement pour éviter
-    // qu'un nouveau client voie les données du client précédent
     this.accounts.set([]);
     this.selected.set(null);
     this.card.set(null);
@@ -84,19 +82,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.loadData();
 
-    interval(8000)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.loadChatbotResponses();
-      });
+    interval(8000).pipe(takeUntil(this.destroy$)).subscribe(() => this.loadChatbotResponses());
+    interval(15000).pipe(takeUntil(this.destroy$)).subscribe(() => {
+      const sel = this.selected();
+      if (sel) this.loadCard(sel.numCompte);
+    });
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
-  /* ==================== Chargement ==================== */
 
   private loadData() {
     const user = this.auth.currentUser();
@@ -108,14 +104,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private loadChatbotResponses() {
     const clientId = this.getClientId();
     if (!clientId) return;
-
-    this.http
-      .get<any[]>(`${this.API_BASE}/chats/client/${clientId}/repondus`)
+    this.http.get<any[]>(`${this.API_BASE}/chats/client/${clientId}/repondus`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (chats) => {
           if (!Array.isArray(chats)) return;
-
           for (const chat of chats) {
             this.notificationService.addChatbotResponseNotification(
               chat.id,
@@ -131,7 +124,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private loadAccounts() {
     this.loading.set(true);
     this.error.set(null);
-
     this.virementService.getCurrentUserComptes()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -148,9 +140,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             savingsAccount: c.hasSavingsAccount === true || c.savingsAccount === true,
             createdAt: undefined
           }));
-
           this.accounts.set(accounts);
-
           if (accounts.length > 0) {
             const current = this.selected();
             const same = current ? accounts.find(a => a.numCompte === current.numCompte) : null;
@@ -160,17 +150,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.card.set(null);
             this.ops.set([]);
           }
-
           this.loading.set(false);
         },
-        error: (e) => {
-          this.loading.set(false);
-          this.handleApiError(e, 'Erreur chargement comptes');
-        }
+        error: (e) => { this.loading.set(false); this.handleApiError(e, 'Erreur chargement comptes'); }
       });
   }
-
-  /* ==================== Selection compte ==================== */
 
   select(account: BankAccount) {
     this.selected.set(account);
@@ -181,8 +165,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSavings(account.numCompte);
   }
 
-  /* ==================== Carte ==================== */
-
   private loadCard(numCompte: string) {
     this.cards.getByAccount(numCompte)
       .pipe(takeUntil(this.destroy$))
@@ -192,42 +174,61 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /* ==================== Operations ==================== */
-
   private loadOps(numCompte: string) {
     if (this.operationsServiceDown()) this.operationsServiceDown.set(false);
-
     this.opsApi.recent(numCompte, 5)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (rows) => this.ops.set(Array.isArray(rows) ? rows.map(r => this.normalizeOp(r)) : []),
-        error: (e) => {
-          this.ops.set([]);
-          if (e.status === 500) this.operationsServiceDown.set(true);
-        }
+        next: (rows) => this.ops.set(Array.isArray(rows) ? rows.map(r => this.normalizeOp(r, numCompte)) : []),
+        error: (e) => { this.ops.set([]); if (e.status === 500) this.operationsServiceDown.set(true); }
       });
   }
 
-  private normalizeOp(o: any): Operation {
+  // ✅ Fix signe virement + affichage communication
+  private normalizeOp(o: any, numCompteActuel?: string): Operation {
+    let montant = Number(o?.montant ?? 0);
+    const typeOp = (o?.type ?? o?.typeOperation ?? '').toString().toUpperCase();
+    const description = o?.description ?? o?.libelle ?? typeOp ?? 'Opération';
+
+    // ✅ Virement sortant → montant négatif
+    if (typeOp === 'VIREMENT' && montant > 0) {
+      const numCompteOp = o?.numeroCompte ?? o?.numCompte ?? '';
+      const numCompteDest = o?.numeroCompteDestinataire ?? '';
+      // Si le numéro de compte de l'opération = compte actuel ET destinataire différent → débit
+      if (numCompteOp === numCompteActuel && numCompteDest && numCompteDest !== numCompteActuel) {
+        montant = -montant;
+      }
+      // Si la description contient "Réception" → crédit, sinon débit
+      if (description.toLowerCase().includes('réception') || description.toLowerCase().includes('reception')) {
+        montant = Math.abs(montant); // crédit
+      } else if (!description.toLowerCase().includes('réception') && numCompteDest && numCompteDest !== numCompteActuel) {
+        montant = -Math.abs(montant); // débit
+      }
+    }
+
+    // ✅ Frais → toujours négatif
+    const isFrais = description.toLowerCase().includes('frais') ||
+      typeOp === 'FRAIS' || typeOp === 'FRAIS_GESTION' || typeOp === 'BLOCAGE_CARTE';
+    if (isFrais && montant > 0) montant = -montant;
+
+    // ✅ Communication = nom destinataire ou communication
+    const contrepartie = o?.nomTitulaireDestinataire || o?.communication || null;
+    const descFinale = contrepartie && !description.toLowerCase().includes(contrepartie.toLowerCase())
+      ? `${description} — ${contrepartie}`
+      : description;
+
     return {
       id: o?.id ?? 0,
-      montant: Number(o?.montant ?? 0),
+      montant,
       date: o?.date ?? o?.dateOperation ?? o?.createdAt ?? null,
-      description: o?.description ?? o?.libelle ?? o?.type ?? 'Operation'
+      description: descFinale
     };
   }
 
-  /* ==================== Frais ==================== */
-
   private loadFrais() {
     const clientId = this.getClientId();
-    if (!clientId) {
-      this.frais.set([]);
-      return;
-    }
-
-    this.http
-      .get<any>(`${this.API_BASE}/frais/client/${clientId}`)
+    if (!clientId) { this.frais.set([]); return; }
+    this.http.get<any>(`${this.API_BASE}/frais/client/${clientId}`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (d) => this.frais.set(Array.isArray(d) ? d : (d?.data ?? [])),
@@ -235,76 +236,39 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  openFraisModal() {
-    this.showFraisModal.set(true);
-  }
-
-  closeFraisModal() {
-    this.showFraisModal.set(false);
-  }
+  openFraisModal() { this.showFraisModal.set(true); }
+  closeFraisModal() { this.showFraisModal.set(false); }
 
   submitFrais() {
     const clientId = this.getClientId();
-    if (!clientId || this.fraisForm.invalid) {
-      this.error.set('Formulaire invalide');
-      return;
-    }
-
+    if (!clientId || this.fraisForm.invalid) { this.error.set('Formulaire invalide'); return; }
     const today = new Date();
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const fmt = (d: Date) => d.toISOString().split('T')[0];
-
-    const body = {
-      ...this.fraisForm.value,
-      dateDebut: fmt(today),
-      dateFin: fmt(lastDay),
-      estActif: true
-    };
-
+    const body = { ...this.fraisForm.value, dateDebut: fmt(today), dateFin: fmt(lastDay), estActif: true };
     this.busy.set(true);
-
     this.http.post(`${this.API_BASE}/frais/client/${clientId}`, body)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.busy.set(false);
-          this.closeFraisModal();
-          this.loadFrais();
-          alert('Frais ajoute');
-        },
-        error: (e) => {
-          this.busy.set(false);
-          this.error.set('Erreur frais: ' + (e?.error?.message || ''));
-        }
+        next: () => { this.busy.set(false); this.closeFraisModal(); this.loadFrais(); alert('Frais ajoute'); },
+        error: (e) => { this.busy.set(false); this.error.set('Erreur frais: ' + (e?.error?.message || '')); }
       });
   }
 
   deleteFrais(fraisId: number) {
     if (!confirm('Supprimer ce frais ?')) return;
-
     this.busy.set(true);
-
     this.http.delete(`${this.API_BASE}/frais/${fraisId}`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.busy.set(false);
-          alert('Frais supprime');
-          this.loadFrais();
-        },
-        error: (e) => {
-          this.busy.set(false);
-          this.error.set('Erreur: ' + (e?.error?.message || ''));
-        }
+        next: () => { this.busy.set(false); alert('Frais supprime'); this.loadFrais(); },
+        error: (e) => { this.busy.set(false); this.error.set('Erreur: ' + (e?.error?.message || '')); }
       });
   }
-
-  /* ==================== Epargne ==================== */
 
   private loadSavings(numCompte: string) {
     const sel = this.selected();
     const isEpargne = sel?.savingsAccount === true;
-
     if (!isEpargne) {
       const compteEpargne = this.accounts().find(a => a.savingsAccount === true);
       compteEpargne
@@ -312,13 +276,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         : this.savingsInfo.set(null);
       return;
     }
-
     this.fetchSavingsData(numCompte, sel?.balance ?? 0);
   }
 
   private fetchSavingsData(numCompte: string, solde: number) {
-    this.http
-      .get<any>(`${this.API_BASE}/savings/${numCompte}/taxation`)
+    this.http.get<any>(`${this.API_BASE}/savings/${numCompte}/taxation`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (d) => this.applySavingsLogic(d, solde),
@@ -333,74 +295,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const interetsAnnuels = soldeEpargne * tauxInteret;
     const interetsApi = apiData?.taxationVirtuelle;
     const interetsCumules = interetsApi && interetsApi > 0 ? interetsApi : interetsAnnuels / 12;
-
-    this.savingsInfo.set({
-      soldeEpargne,
-      tauxInteret,
-      taxationVirtuelle: interetsCumules,
-      interetsAnnuelsEstimes: interetsAnnuels
-    });
+    this.savingsInfo.set({ soldeEpargne, tauxInteret, taxationVirtuelle: interetsCumules, interetsAnnuelsEstimes: interetsAnnuels });
   }
 
   capitaliserInterets() {
     const num = this.selected()?.numCompte;
     if (!num) return;
-
     this.busy.set(true);
-
-    this.http
-      .post(`${this.API_BASE}/savings/${num}/capitaliser`, {})
+    this.http.post(`${this.API_BASE}/savings/${num}/capitaliser`, {})
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.busy.set(false);
-          alert('Interets capitalises !');
-          this.loadSavings(num);
-          this.refreshAccount();
-        },
-        error: (e) => {
-          this.busy.set(false);
-          this.error.set('Erreur capitalisation: ' + (e?.error?.message || ''));
-        }
+        next: () => { this.busy.set(false); alert('Interets capitalises !'); this.loadSavings(num); this.refreshAccount(); },
+        error: (e) => { this.busy.set(false); this.error.set('Erreur capitalisation: ' + (e?.error?.message || '')); }
       });
   }
-
-  /* ==================== Admin ==================== */
 
   toggleSuspendCompte() {
     const sel = this.selected();
     if (!sel) return;
-
     const isSuspended = this.isAccountSuspended(sel);
     if (!confirm(isSuspended ? 'Reactiver ce compte ?' : 'Suspendre ce compte ?')) return;
-
     this.busy.set(true);
     this.error.set(null);
-
     const req = isSuspended ? this.acc.activate(sel.numCompte) : this.acc.suspend(sel.numCompte);
-
-    req.pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.busy.set(false);
-          alert(isSuspended ? 'Compte reactive' : 'Compte suspendu');
-          this.refreshAccount();
-        },
-        error: (e) => {
-          this.busy.set(false);
-          this.error.set(e?.error?.message || `HTTP ${e?.status}`);
-        }
-      });
+    req.pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => { this.busy.set(false); alert(isSuspended ? 'Compte reactive' : 'Compte suspendu'); this.refreshAccount(); },
+      error: (e) => { this.busy.set(false); this.error.set(e?.error?.message || `HTTP ${e?.status}`); }
+    });
   }
 
   telechargerReleve() {
     const num = this.selected()?.numCompte;
     if (!num) return;
-
     this.busy.set(true);
-
-    this.http
-      .get(`${this.API_BASE}/comptes/${num}/releve`, { responseType: 'blob' })
+    this.http.get(`${this.API_BASE}/comptes/${num}/releve`, { responseType: 'blob' })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob: Blob) => {
@@ -414,91 +342,48 @@ export class DashboardComponent implements OnInit, OnDestroy {
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
         },
-        error: (e) => {
-          this.busy.set(false);
-          this.error.set('Erreur PDF: ' + (e?.error?.message || ''));
-        }
+        error: (e) => { this.busy.set(false); this.error.set('Erreur PDF: ' + (e?.error?.message || '')); }
       });
   }
 
   toggleCard() {
-    if (!this.isAdmin()) {
-      alert('Action reservee a l\'administrateur.');
-      return;
-    }
-
+    if (!this.isAdmin()) { alert('Action reservee a l\'administrateur.'); return; }
     const sel = this.selected();
     const card = this.card();
-    if (!sel || !card) {
-      this.error.set('Aucune carte');
-      return;
-    }
-
+    if (!sel || !card) { this.error.set('Aucune carte'); return; }
     if (!confirm(card.estActive ? 'BLOQUER cette carte ?' : 'Debloquer cette carte ?')) return;
-
     this.busy.set(true);
     this.error.set(null);
-
     const req = card.estActive
       ? this.cards.bloquer(sel.numCompte, 'Blocage interface')
       : this.cards.debloquer(sel.numCompte);
-
-    req.pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.busy.set(false);
-          alert(card.estActive ? 'Carte bloquee' : 'Carte debloquee');
-          setTimeout(() => this.loadCard(sel.numCompte), 500);
-        },
-        error: (e) => {
-          this.busy.set(false);
-          this.handleApiError(e, 'Erreur carte');
-        }
-      });
+    req.pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => { this.busy.set(false); alert(card.estActive ? 'Carte bloquee' : 'Carte debloquee'); setTimeout(() => this.loadCard(sel.numCompte), 500); },
+      error: (e) => { this.busy.set(false); this.handleApiError(e, 'Erreur carte'); }
+    });
   }
-  requestCardReplacement() {
-  // ✅ Ouvre le chatbot avec message pré-rempli
-  window.dispatchEvent(new CustomEvent('open-chatbot-with-message', {
-    detail: { message: 'Remplacer ma carte' }
-  }));
-}
 
-  /* ==================== Navigation ==================== */
+  requestCardReplacement() {
+    window.dispatchEvent(new CustomEvent('open-chatbot-with-message', {
+      detail: { message: 'Remplacer ma carte' }
+    }));
+  }
 
   goToInvestments() {
     const sel = this.selected();
-    if (!sel) {
-      this.error.set('Selectionnez un compte');
-      return;
-    }
-    if (this.isSelectedPending()) {
-      alert('⏳ Compte en attente d\'activation. Investissement bloqué.');
-      return;
-    }
-    if (this.isSelectedSuspended()) {
-      alert('Compte SUSPENDU. Investissement bloque.');
-      return;
-    }
-    this.router.navigate(['/investissements'], {
-      queryParams: { compteId: sel.id, numCompte: sel.numCompte }
-    });
+    if (!sel) { this.error.set('Selectionnez un compte'); return; }
+    if (this.isSelectedPending()) { alert('⏳ Compte en attente d\'activation. Investissement bloqué.'); return; }
+    if (this.isSelectedSuspended()) { alert('Compte SUSPENDU. Investissement bloque.'); return; }
+    this.router.navigate(['/investissements'], { queryParams: { compteId: sel.id, numCompte: sel.numCompte } });
   }
 
-  goToInvestmentsHistory() {
-    this.router.navigate(['/investissements/historique']);
-  }
+  goToInvestmentsHistory() { this.router.navigate(['/investissements/historique']); }
 
   goToVirement() {
     const sel = this.selected();
-    if (!sel) {
-      this.error.set('Selectionnez un compte');
-      return;
-    }
+    if (!sel) { this.error.set('Selectionnez un compte'); return; }
     if (this.blockIfNotReady('virement')) return;
-
-    this.router.navigate(['/virement'], {
-      queryParams: { numCompte: sel.numCompte }
-    });
+    this.router.navigate(['/virement'], { queryParams: { numCompte: sel.numCompte } });
   }
 
   goToOperations() {
@@ -511,72 +396,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
   goToCardDetails() {
     const sel = this.selected();
     if (sel && this.card()) {
-      this.router.navigate(['/card-details'], {
-        queryParams: { numCompte: sel.numCompte }
-      });
+      this.router.navigate(['/card-details'], { queryParams: { numCompte: sel.numCompte } });
     }
   }
 
   goToRDVDepot() {
     const sel = this.selected();
-    if (!sel) {
-      this.error.set('Selectionnez un compte');
-      return;
-    }
+    if (!sel) { this.error.set('Selectionnez un compte'); return; }
     if (this.blockIfNotReady('depot')) return;
-
-    this.router.navigate(['/rendez-vous'], {
-      queryParams: { type: 'DEPOT', numCompte: sel.numCompte }
-    });
+    this.router.navigate(['/rendez-vous'], { queryParams: { type: 'DEPOT', numCompte: sel.numCompte } });
   }
 
   goToRDVRetrait() {
     const sel = this.selected();
-    if (!sel) {
-      this.error.set('Selectionnez un compte');
-      return;
-    }
+    if (!sel) { this.error.set('Selectionnez un compte'); return; }
     if (this.blockIfNotReady('retrait')) return;
-
-    this.router.navigate(['/rendez-vous'], {
-      queryParams: { type: 'RETRAIT', numCompte: sel.numCompte, minMontant: 3000 }
-    });
+    this.router.navigate(['/rendez-vous'], { queryParams: { type: 'RETRAIT', numCompte: sel.numCompte, minMontant: 3000 } });
   }
 
   goToSavings() {
     const clientId = this.getClientId();
-    if (!clientId) {
-      this.error.set('Impossible de recuperer l\'identifiant client');
-      return;
-    }
-
-    this.http
-      .get<any>(`${this.API_BASE}/comptes/client/${clientId}`)
+    if (!clientId) { this.error.set('Impossible de recuperer l\'identifiant client'); return; }
+    this.http.get<any>(`${this.API_BASE}/comptes/client/${clientId}`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           const comptes = Array.isArray(response) ? response : [response];
-
           const epargne =
             comptes.find((c: any) => c?.hasSavingsAccount === true || c?.savingsAccount === true) ||
             this.accounts().find(a => a.savingsAccount === true);
-
           if (!epargne) {
             if (!confirm('Pas de compte epargne. En creer un ?')) return;
             const base = this.selected() || this.accounts()[0];
-            if (!base) {
-              alert('Aucun compte');
-              return;
-            }
-            this.router.navigate(['/epargne'], {
-              queryParams: { mode: 'create', from: base.numCompte }
-            });
+            if (!base) { alert('Aucun compte'); return; }
+            this.router.navigate(['/epargne'], { queryParams: { mode: 'create', from: base.numCompte } });
             return;
           }
-
-          this.router.navigate(['/epargne'], {
-            queryParams: { numCompte: epargne.numCompte }
-          });
+          this.router.navigate(['/epargne'], { queryParams: { numCompte: epargne.numCompte } });
         },
         error: () => {
           const epargne = this.accounts().find(a => a.savingsAccount === true);
@@ -587,65 +443,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /* ==================== Notifications ==================== */
-
   toggleNotifications() {
     this.showNotifications.update(v => !v);
     if (this.showNotifications()) this.loadChatbotResponses();
   }
 
-  markAsRead(id: number) {
-    this.notificationService.markAsRead(id);
-  }
+  markAsRead(id: number) { this.notificationService.markAsRead(id); }
+  clearAllNotifications() { this.notificationService.clearAll(); this.showNotifications.set(false); }
+  deleteNotification(id: number) { this.notificationService.deleteNotification(id); }
+  toggleFraisPanel() { this.showFraisPanel.update(v => !v); if (this.showFraisPanel()) this.showNotifications.set(false); }
 
-  clearAllNotifications() {
-    this.notificationService.clearAll();
-    this.showNotifications.set(false);
-  }
-
-  deleteNotification(id: number) {
-    this.notificationService.deleteNotification(id);
-  }
-
-  toggleFraisPanel() {
-    this.showFraisPanel.update(v => !v);
-    if (this.showFraisPanel()) this.showNotifications.set(false);
-  }
-
-  /* ==================== Helpers ==================== */
-
-  isAdmin(): boolean {
-    return this.auth.isAdmin();
-  }
-
-  isSelectedSuspended(): boolean {
-    return this.isAccountSuspended(this.selected());
-  }
-
-  isAccountSuspended(a: BankAccount | null | undefined): boolean {
-    return a?.status === 'SUSPENDED' || a?.status === 'BLOCKED';
-  }
-
-  isSelectedPending(): boolean {
-    const s = this.selected()?.status;
-    return s === 'CREATED' || s === 'PENDING' || s === 'INACTIVE';
-  }
-
-  isCardBlocked(): boolean {
-    return !!this.card() && !this.card()?.estActive;
-  }
-
-  get canToggleCard(): boolean {
-    return !!this.selected() && !!this.card() && !this.busy();
-  }
-
-  hasVisibleNotifications(): boolean {
-    return this.visibleNotifications().length > 0;
-  }
-
-  hasUnreadVisibleNotifications(): boolean {
-    return this.unreadVisibleNotificationsCount() > 0;
-  }
+  isAdmin(): boolean { return this.auth.isAdmin(); }
+  isSelectedSuspended(): boolean { return this.isAccountSuspended(this.selected()); }
+  isAccountSuspended(a: BankAccount | null | undefined): boolean { return a?.status === 'SUSPENDED' || a?.status === 'BLOCKED'; }
+  isSelectedPending(): boolean { const s = this.selected()?.status; return s === 'CREATED' || s === 'PENDING' || s === 'INACTIVE'; }
+  isCardBlocked(): boolean { return !!this.card() && !this.card()?.estActive; }
+  get canToggleCard(): boolean { return !!this.selected() && !!this.card() && !this.busy(); }
+  hasVisibleNotifications(): boolean { return this.visibleNotifications().length > 0; }
+  hasUnreadVisibleNotifications(): boolean { return this.unreadVisibleNotificationsCount() > 0; }
 
   private blockIfNotReady(action: 'virement' | 'depot' | 'retrait'): boolean {
     if (this.isSelectedPending()) {
@@ -653,46 +468,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return true;
     }
     if (!this.isSelectedSuspended()) return false;
-    const msgs = {
-      virement: 'Compte SUSPENDU. Virement bloque.',
-      depot: 'Depot bloque.',
-      retrait: 'Retrait bloque.'
-    };
+    const msgs = { virement: 'Compte SUSPENDU. Virement bloque.', depot: 'Depot bloque.', retrait: 'Retrait bloque.' };
     alert(msgs[action]);
     return true;
-  }
-
-  private blockIfSuspended(action: 'virement' | 'depot' | 'retrait'): boolean {
-    return this.blockIfNotReady(action);
   }
 
   private getClientId(): number | string | null {
     const id = this.auth.clientIdFromToken;
     if (id) return id;
-
     const user: any = this.auth.currentUser();
     const sub = user?.sub;
-    if (sub) {
-      const n = Number(sub);
-      return isNaN(n) ? sub : n;
-    }
+    if (sub) { const n = Number(sub); return isNaN(n) ? sub : n; }
     return null;
   }
 
   private handleApiError(error: any, msg: string) {
-    if (error.status === 401) {
-      this.auth.logout();
-      this.router.navigate(['/auth']);
-    } else if (error.status === 404) {
-      this.error.set('Aucune donnee trouvee');
-    } else if (error.status === 500) {
-      this.error.set('Service indisponible');
-      if (msg.includes('operation')) this.operationsServiceDown.set(true);
-    } else if (error.status === 0) {
-      this.error.set('Serveur non accessible.');
-    } else {
-      this.error.set(error?.error?.message || error?.message || msg);
-    }
+    if (error.status === 401) { this.auth.logout(); this.router.navigate(['/auth']); }
+    else if (error.status === 404) { this.error.set('Aucune donnee trouvee'); }
+    else if (error.status === 500) { this.error.set('Service indisponible'); if (msg.includes('operation')) this.operationsServiceDown.set(true); }
+    else if (error.status === 0) { this.error.set('Serveur non accessible.'); }
+    else { this.error.set(error?.error?.message || error?.message || msg); }
   }
 
   private refreshAccount() {
@@ -705,24 +500,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadSavings(sel.numCompte);
   }
 
-  retryOperations() {
-    this.operationsServiceDown.set(false);
-    const sel = this.selected();
-    if (sel) this.loadOps(sel.numCompte);
-  }
+  retryOperations() { this.operationsServiceDown.set(false); const sel = this.selected(); if (sel) this.loadOps(sel.numCompte); }
+  refreshData() { this.error.set(null); this.loadAccounts(); }
 
-  refreshData() {
-    this.error.set(null);
-    this.loadAccounts();
-  }
-
-  // ✅ FIX : reload complet pour garantir qu'aucune donnée
-  // du client précédent ne persiste pour le client suivant
   logout() {
     this.auth.logout();
-    this.router.navigate(['/auth']).then(() => {
-      window.location.reload();
-    });
+    this.router.navigate(['/auth']).then(() => { window.location.reload(); });
   }
 
   formatCardExpiry(date: string | undefined): string {
@@ -730,32 +513,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     try {
       const d = new Date(date);
       return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
-    } catch {
-      return 'MM/AA';
-    }
+    } catch { return 'MM/AA'; }
   }
 
   formatBalance(balance: number | undefined): string {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(balance || 0);
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(balance || 0);
   }
 
   displayName(): string {
     const u: any = this.auth.currentUser();
     if (!u) return 'Client';
-
     const nom =
-      u.nomComplet ||
-      u.fullName ||
-      u.name ||
+      u.nomComplet || u.fullName || u.name ||
       [u.prenom, u.nom].filter(Boolean).join(' ') ||
       [u.firstName, u.lastName].filter(Boolean).join(' ') ||
-      u.sub ||
-      u.email ||
-      'Client';
-
+      u.sub || u.email || 'Client';
     return (typeof nom === 'string' && nom.trim()) ? nom.trim() : 'Client';
   }
 }

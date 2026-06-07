@@ -4,17 +4,14 @@
       <button class="btn-back" type="button" (click)="retourDashboard()">
         ← Retour dashboard
       </button>
-
       <h1>Fonds & Placements</h1>
       <p>Sélectionnez un fonds disponible et investissez depuis votre compte bancaire.</p>
     </div>
-
     <button class="btn-history" type="button" (click)="goToHistory()">
       📊 Voir mes placements
     </button>
   </header>
 
-  <!-- Encart pédagogique : comment lire le rendement -->
   <section class="info-banner">
     <div class="info-icon">💡</div>
     <div class="info-content">
@@ -33,7 +30,6 @@
       <span class="label">Compte sélectionné</span>
       <strong>{{ numCompte() || 'Aucun compte sélectionné' }}</strong>
     </div>
-
     <div>
       <span class="label">ID compte</span>
       <strong>{{ compteId() || 'N/A' }}</strong>
@@ -72,7 +68,6 @@
               <span class="code">{{ getCodeFonds(f) }}</span>
             </div>
           </div>
-
           <span class="rendement-badge"
                 [title]="'Pour 100 € placés, gain estimé de ' + ((f.rendement || 0) | number:'1.2-2') + ' € par an'">
             +{{ f.rendement | number:'1.2-2' }} %
@@ -87,14 +82,10 @@
               ≈ +{{ f.rendement | number:'1.2-2' }} € par an pour 100 € placés
             </small>
           </div>
-
           <div class="stat-divider"></div>
-
           <div class="stat-item">
-            <span class="stat-label">Montant minimum</span>
-            <strong class="stat-value">
-              {{ (f.montant || 0) | currency:'EUR':'symbol':'1.2-2':'fr' }}
-            </strong>
+            <span class="stat-label">Type de fonds</span>
+            <strong class="stat-value">{{ getCodeFonds(f) }}</strong>
             <small class="stat-hint">{{ getStartingHint(f) }}</small>
           </div>
         </div>
@@ -136,20 +127,22 @@
               placeholder="Ex: 100">
             <span class="currency-suffix">€</span>
           </div>
-          <small class="hint">
-            Minimum : {{ (selectedFonds()?.montant || 0) | currency:'EUR':'symbol':'1.2-2':'fr' }}
-          </small>
+          <!-- ✅ Plus de montant minimum affiché -->
         </label>
-
-        <!-- Simulation retirée -->
 
         <button
           type="button"
           class="btn-invest"
-          [disabled]="investing() || !compteId()"
+          [disabled]="investing() || !compteId() || !montant() || montant()! <= 0"
           (click)="investir()">
           {{ investing() ? '⏳ Placement en cours...' : '🚀 Investir maintenant' }}
         </button>
+
+        <!-- ✅ Message si compteId manquant -->
+        <p *ngIf="!compteId()" style="color:#ef4444;font-size:0.85rem;margin-top:8px;text-align:center;">
+          ⚠️ Retournez au dashboard et sélectionnez un compte avant d'investir.
+        </p>
+
       </ng-container>
 
       <ng-template #noFondsSelected>
@@ -161,7 +154,6 @@
     </aside>
   </section>
 
-  <!-- Mention légale -->
   <footer class="legal-mention">
     ⚠️ Les performances passées et les rendements indiqués sont des estimations et
     ne préjugent pas des performances futures. Tout investissement comporte un risque

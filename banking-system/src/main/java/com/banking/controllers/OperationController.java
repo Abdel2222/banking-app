@@ -37,14 +37,6 @@ public class OperationController {
     private final OperationRepository operationRepository;
     private final CompteBancaireRepository compteRepository;
 
-    // ============================================================
-    // GET - Liste des opérations (NOUVEAU)
-    // ============================================================
-
-    /**
-     * Récupère les opérations récentes d'un compte.
-     * GET /api/operations/recent?numCompte=4034...&limit=20
-     */
     @GetMapping("/recent")
     public ResponseEntity<?> recent(
             @RequestParam String numCompte,
@@ -59,7 +51,6 @@ public class OperationController {
                 return ResponseEntity.ok(new ArrayList<>());
             }
 
-            // Récupérer toutes les opérations et filtrer par compte
             List<Operation> allOps = operationRepository.findAll();
             List<Operation> filtered = new ArrayList<>();
             for (Operation op : allOps) {
@@ -69,11 +60,9 @@ public class OperationController {
                             && op.getCompteBancaire().getId().equals(compte.getId())) {
                         filtered.add(op);
                     }
-                } catch (Exception ignore) {
-                }
+                } catch (Exception ignore) {}
             }
 
-            // Trier par date décroissante
             filtered.sort(Comparator.comparing(
                     (Operation o) -> {
                         Object d = getOpDate(o);
@@ -82,12 +71,10 @@ public class OperationController {
                     Comparator.reverseOrder()
             ));
 
-            // Limiter
             if (filtered.size() > limit) {
                 filtered = filtered.subList(0, limit);
             }
 
-            // Convertir en DTO simple
             List<Map<String, Object>> result = new ArrayList<>();
             for (Operation op : filtered) {
                 Map<String, Object> dto = new LinkedHashMap<>();
@@ -99,6 +86,13 @@ public class OperationController {
                 dto.put("dateOperation", getOpDate(op));
                 dto.put("type", getType(op));
                 dto.put("statut", "COMPLETED");
+
+                // ✅ Champs virement — contrepartie et communication
+                dto.put("numeroCompte", safeGet(() -> op.getCompteBancaire().getNumCompte()));
+                dto.put("numeroCompteDestinataire", safeGet(() -> op.getNumeroCompteDestinataire()));
+                dto.put("communication", safeGet(() -> op.getCommunication()));
+                dto.put("nomTitulaireDestinataire", safeGet(() -> op.getNomTitulaireDestinataire()));
+
                 result.add(dto);
             }
 
@@ -113,19 +107,12 @@ public class OperationController {
         }
     }
 
-    /**
-     * Alias /api/operations/compte/{numCompte}
-     */
     @GetMapping("/compte/{numCompte}")
     public ResponseEntity<?> byCompte(
             @PathVariable String numCompte,
             @RequestParam(defaultValue = "100") int limit) {
         return recent(numCompte, limit);
     }
-
-    // ============================================================
-    // POST - Existants (déjà dans ton code)
-    // ============================================================
 
     @PostMapping(value = {"/deposit", "/depot"}, consumes = "application/json")
     public ResponseEntity<OperationResponse> deposit(@Valid @RequestBody DepositRequest req) {
@@ -151,7 +138,7 @@ public class OperationController {
     }
 
     // ============================================================
-    // Helpers tolérants (compat tous types d'Operation)
+    // Helpers
     // ============================================================
 
     private Object getOpDate(Operation op) {

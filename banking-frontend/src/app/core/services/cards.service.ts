@@ -24,19 +24,20 @@ export class CardsService {
     );
   }
 
-  issue(numCompte: string) {
-    return this.http.post(`${this.base}/${numCompte}/issue`, {});
+  // ✅ Typé en Observable<any> pour éviter les erreurs de chaînage
+  issue(numCompte: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/${numCompte}/issue`, {});
   }
 
-  bloquer(numCompte: string, raison = 'dashboard') {
-    return this.http.post(`${this.base}/${numCompte}/bloquer`, null, { params: { raison } as any });
+  bloquer(numCompte: string, raison = 'dashboard'): Observable<any> {
+    return this.http.post<any>(`${this.base}/${numCompte}/bloquer`, null, { params: { raison } as any });
   }
 
-  debloquer(numCompte: string) {
-    return this.http.post(`${this.base}/${numCompte}/debloquer`, {});
+  debloquer(numCompte: string): Observable<any> {
+    return this.http.post<any>(`${this.base}/${numCompte}/debloquer`, {});
   }
 
-  setPlafonds(numCompte: string, plafondJournalier: number, plafondMensuel: number) {
-    return this.http.patch(`${this.base}/${numCompte}/plafonds`, { plafondJournalier, plafondMensuel });
+  setPlafonds(numCompte: string, plafondJournalier: number, plafondMensuel: number): Observable<any> {
+    return this.http.patch<any>(`${this.base}/${numCompte}/plafonds`, { plafondJournalier, plafondMensuel });
   }
 }

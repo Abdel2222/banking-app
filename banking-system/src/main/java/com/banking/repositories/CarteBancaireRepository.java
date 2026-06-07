@@ -3,6 +3,7 @@ package com.banking.repositories;
 import com.banking.entities.CarteBancaire;
 import com.banking.entities.CompteBancaire;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -37,6 +38,9 @@ public interface CarteBancaireRepository extends JpaRepository<CarteBancaire, Lo
     @Query("SELECT c FROM CarteBancaire c WHERE c.dateExpiration BETWEEN :now AND :future")
     List<CarteBancaire> findCardsExpiringSoon(@Param("now") LocalDate now,
                                               @Param("future") LocalDate future);
+    @Modifying
+    @Query("DELETE FROM CarteBancaire c WHERE c.compteBancaire = :compte")
+    void deleteByCompteBancaire(@Param("compte") CompteBancaire compte);
 
     // (optionnel) Lister par client
     List<CarteBancaire> findByCompteBancaire_Client_Id(Long clientId);

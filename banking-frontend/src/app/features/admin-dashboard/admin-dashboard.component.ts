@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, Observable } from 'rxjs';
 import { switchMap, catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 
@@ -134,9 +134,7 @@ export class AdminDashboardComponent implements OnInit {
   selectedCourant = signal<AdminAccount | null>(null);
   courantCard = signal<CardInfo | null>(null);
 
-  // ✅ Barre de recherche pour Gestion Comptes
   accountsSearch = signal<string>('');
-  // ✅ Barre de recherche pour Gestion Carte
   cardsSearch = signal<string>('');
 
   fraisForm = this.fb.group({
@@ -183,7 +181,6 @@ export class AdminDashboardComponent implements OnInit {
 
   tauxInteretParCompte: Record<string, number> = {};
 
-  // ✅ Comptes filtrés par recherche (Gestion Comptes)
   readonly filteredAccounts = computed(() => {
     const q = this.accountsSearch().toLowerCase().trim();
     if (!q) return this.accounts();
@@ -194,7 +191,6 @@ export class AdminDashboardComponent implements OnInit {
     );
   });
 
-  // ✅ Comptes courants filtrés par recherche (Gestion Carte)
   readonly filteredComptesCourants = computed(() => {
     const q = this.cardsSearch().toLowerCase().trim();
     const courants = this.accounts().filter(a => !this.isEpargne(a));
@@ -416,42 +412,64 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
+  // ✅ BLOQUER — bloque temporairement, sans nouveau CVV
   toggleCardForCourant() {
     const account = this.selectedCourant();
     const card = this.courantCard();
     if (!account || !card) return;
     const msg = card.estActive
-      ? 'BLOQUER cette carte ?\n\n⚠️ Un nouveau CVV sera généré automatiquement.'
+      ? 'BLOQUER cette carte temporairement ?'
       : 'Débloquer cette carte ?';
     if (!confirm(msg)) return;
     this.loading.set(true);
     this.error.set(null);
-    const bloc$ = card.estActive ? this.cards.bloquer(account.numCompte, 'admin') : this.cards.debloquer(account.numCompte);
-    bloc$.pipe(
-      switchMap(() => {
-        if (card.estActive) {
-          return this.http.post<any>(`${this.API_BASE}/cartes/${account.numCompte}/regenerate-cvv`, {})
-            .pipe(catchError(() => of(null)));
-        }
-        return of(null);
-      })
-    ).subscribe({
-      next: (resp) => {
+
+    const req$ = card.estActive
+      ? this.cards.bloquer(account.numCompte, 'admin')
+      : this.cards.debloquer(account.numCompte);
+
+    req$.subscribe({
+      next: () => {
         this.loading.set(false);
-        if (card.estActive) {
-          const newCvv = resp?.cvv ?? null;
-          alert(newCvv
-            ? `🔒 Carte bloquée\n\n🔑 Nouveau CVV : ${newCvv}\n\nCommuniquez ce code au client de façon sécurisée.`
-            : '🔒 Carte bloquée et nouveau CVV généré.');
-        } else {
-          alert('🔓 Carte débloquée avec succès.');
-        }
+        alert(card.estActive ? '🔒 Carte bloquée.' : '🔓 Carte débloquée avec succès.');
         this.loadCourantCard(account.numCompte);
-        // ✅ Mettre à jour le statut carte dans la liste Gestion Comptes aussi
         const clientId = this.selectedClientId();
         if (clientId) this.loadAccountSectionsForClient(clientId);
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || 'Erreur'); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || 'Erreur'); }
+    });
+  }
+
+  // ✅ NOUVELLE CARTE — émet directement nouvelle carte + CVV sans bloquer l'ancienne
+  remplacerCarteForCourant() {
+    const account = this.selectedCourant();
+    if (!account) return;
+    if (!confirm('Émettre une nouvelle carte ?\n\n• Nouvelle carte émise immédiatement\n• Nouveau CVV généré\n• Ancienne carte remplacée')) return;
+    this.loading.set(true);
+    this.error.set(null);
+
+    (this.cards.issue(account.numCompte) as Observable<any>).pipe(
+      switchMap((resp: any) => {
+        const cvv = resp?.cvv ?? resp?.data?.cvv ?? null;
+        return this.cards.debloquer(account.numCompte).pipe(
+          catchError(() => of(null)),
+          switchMap(() => of(cvv))
+        );
+      })
+    ).subscribe({
+      next: (cvv: any) => {
+        this.loading.set(false);
+        alert(cvv
+          ? `💳 Nouvelle carte émise !\n\n🔑 Nouveau CVV : ${cvv}\n\n✅ Carte active immédiatement.\n⚠️ Communiquez le CVV au client de façon sécurisée.`
+          : '💳 Nouvelle carte émise et active.');
+        this.loadCourantCard(account.numCompte);
+        const clientId = this.selectedClientId();
+        if (clientId) this.loadAccountSectionsForClient(clientId);
+      },
+      error: (e: any) => {
+        this.loading.set(false);
+        this.error.set(e?.error?.message || 'Émission carte KO');
+      }
     });
   }
 
@@ -461,17 +479,29 @@ export class AdminDashboardComponent implements OnInit {
     if (!confirm('Émettre une carte pour ce compte courant ?')) return;
     this.loading.set(true);
     this.error.set(null);
+
     this.cards.issue(account.numCompte).subscribe({
       next: (resp: any) => {
-        this.loading.set(false);
         const cvv = resp?.cvv ?? resp?.data?.cvv ?? null;
-        alert(cvv
-          ? `💳 Carte émise !\n\n🔑 CVV : ${cvv}\n\n⚠️ Ce code ne sera plus jamais affiché. Communiquez-le au client.`
-          : '💳 Carte émise avec succès');
-        this.loadCourantCard(account.numCompte);
-        this.accounts.update(list => list.map(a => a.numCompte === account.numCompte ? { ...a, hasCard: true } : a));
+        this.cards.debloquer(account.numCompte).pipe(
+          catchError(() => of(null))
+        ).subscribe({
+          next: () => {
+            this.loading.set(false);
+            alert(cvv
+              ? `💳 Carte émise et activée !\n\n🔑 CVV : ${cvv}\n\n⚠️ Ce code ne sera plus jamais affiché. Communiquez-le au client.`
+              : '💳 Carte émise et activée avec succès');
+            this.loadCourantCard(account.numCompte);
+            this.accounts.update(list => list.map(a => a.numCompte === account.numCompte ? { ...a, hasCard: true } : a));
+          },
+          error: () => {
+            this.loading.set(false);
+            alert(cvv ? `💳 Carte émise !\n\n🔑 CVV : ${cvv}` : '💳 Carte émise.');
+            this.loadCourantCard(account.numCompte);
+          }
+        });
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || 'Émission carte KO'); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || 'Émission carte KO'); }
     });
   }
 
@@ -485,7 +515,7 @@ export class AdminDashboardComponent implements OnInit {
     this.error.set(null);
     this.cards.setPlafonds(account.numCompte, j, m).subscribe({
       next: () => { this.loading.set(false); alert('✅ Plafonds mis à jour'); this.loadCourantCard(account.numCompte); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || 'Maj plafonds KO'); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || 'Maj plafonds KO'); }
     });
   }
 
@@ -684,7 +714,7 @@ export class AdminDashboardComponent implements OnInit {
         this.loadFraisForSelectedAsync();
         if (clientId) this.loadAccountSectionsForClient(clientId);
       },
-      error: (e) => {
+      error: (e: any) => {
         this.loading.set(false);
         this.error.set('Erreur: ' + (e?.error?.message || e?.message || ''));
       }
@@ -694,27 +724,19 @@ export class AdminDashboardComponent implements OnInit {
   supprimerFrais(fraisId: number) {
     if (!confirm('Supprimer ce frais ?')) return;
     this.loading.set(true);
-
-    // ✅ Suppression locale immédiate dans accountSections
     this.accountSections.update(sections =>
-      sections.map(s => ({
-        ...s,
-        frais: s.frais.filter((f: any) => f.id !== fraisId)
-      }))
+      sections.map(s => ({ ...s, frais: s.frais.filter((f: any) => f.id !== fraisId) }))
     );
-
     this.http.delete(`${this.API_BASE}/frais/${fraisId}`).subscribe({
       next: () => {
         this.loading.set(false);
-        // Recharger pour confirmer
         this.loadFraisForSelectedAsync();
         const clientId = this.selectedClientId();
         if (clientId) this.loadAccountSectionsForClient(clientId);
       },
-      error: (e) => {
+      error: (e: any) => {
         this.loading.set(false);
         this.error.set('Erreur suppression: ' + (e?.error?.message || e?.message || ''));
-        // Restaurer si erreur
         const clientId = this.selectedClientId();
         if (clientId) this.loadAccountSectionsForClient(clientId);
       }
@@ -736,7 +758,7 @@ export class AdminDashboardComponent implements OnInit {
         else alert('⚠️ ' + (resp?.message || 'Échec'));
         this.refreshSelected();
       },
-      error: (e) => { this.loading.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
+      error: (e: any) => { this.loading.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
     });
   }
 
@@ -754,11 +776,10 @@ export class AdminDashboardComponent implements OnInit {
         alert(`✅ Facturation effectuée !\nTotal: ${s?.total||0} | Appliqués: ${s?.appliques||0} | Insuff.: ${s?.soldeInsuffisant||0} | Erreurs: ${s?.erreurs||0}`);
         this.refreshSelected();
       },
-      error: (e) => { this.loading.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
+      error: (e: any) => { this.loading.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
     });
   }
 
-  // ✅ Capitalisation possible 1 mois après le début de la période actuelle
   peutCapitaliser(section: AccountSection): boolean {
     if (!section.interetCourant) return false;
     const dateDebut = new Date(section.interetCourant.dateDebut);
@@ -767,7 +788,6 @@ export class AdminDashboardComponent implements OnInit {
     return new Date() >= unMoisApres;
   }
 
-  // ✅ Message avec date cohérente avec "Prochaine capitalisation"
   getMessageCapitalisation(section: AccountSection): string {
     if (!section.interetCourant) return '✨ Capitaliser maintenant';
     const dateDebut = new Date(section.interetCourant.dateDebut);
@@ -792,7 +812,7 @@ export class AdminDashboardComponent implements OnInit {
         if (clientId) this.loadAccountSectionsForClient(clientId);
         this.loadAll(false);
       },
-      error: (e) => { this.busy.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
+      error: (e: any) => { this.busy.set(false); this.error.set('Erreur: ' + (e?.error?.message || e?.message || '')); }
     });
   }
 
@@ -946,12 +966,13 @@ export class AdminDashboardComponent implements OnInit {
     return 'Courant';
   }
 
+  // ✅ Activation SANS émission de carte
   activateAccountByNum(numCompte: string) {
     const scrollY = window.scrollY;
     const account = this.accounts().find(a => a.numCompte === numCompte);
     if (!account) return;
     if (account.status === 'ACTIVATED') { alert('Ce compte est déjà activé.'); return; }
-    if (!confirm('Activer ce compte ?\n\n• Activer le compte courant\n• Créer compte épargne (1.25%)\n• Créditer 200 € 🎁\n• Émettre carte')) return;
+    if (!confirm('Activer ce compte ?\n\n• Activer le compte courant\n• Créer compte épargne (1.25%)\n• Créditer 200 € 🎁\n\n💳 La carte sera émise via Gestion Carte.')) return;
     this.loading.set(true);
     this.error.set(null);
     this.acc.activate(numCompte).pipe(
@@ -969,14 +990,7 @@ export class AdminDashboardComponent implements OnInit {
         this.http.post<any>(`${this.API_BASE}/operations/deposit`, {
           numCompte, montant: 200, description: '🎁 Bienvenue chez Techno-Bank'
         }).pipe(catchError((e) => { console.warn('Bienvenue:', e?.error?.message); return of(null); }))
-      ),
-      switchMap(() => {
-        if (account.hasCard) return of(null);
-        return this.cards.issue(numCompte).pipe(
-          switchMap(() => this.cards.debloquer(numCompte).pipe(catchError(() => of(null)))),
-          catchError(() => { this.error.set('⚠️ Compte activé mais carte KO'); return of(null); })
-        );
-      })
+      )
     ).subscribe({
       next: () => {
         this.loading.set(false);
@@ -984,9 +998,9 @@ export class AdminDashboardComponent implements OnInit {
         if (clientId) this.loadAccountSectionsForClient(clientId);
         this.loadAll(false);
         setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 100);
-        alert('✅ Activation complète');
+        alert('✅ Activation complète\n\n💳 Allez dans Gestion Carte pour émettre la carte du client.');
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Activation KO'); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Activation KO'); }
     });
   }
 
@@ -1015,13 +1029,12 @@ export class AdminDashboardComponent implements OnInit {
         );
         if (this.selected()?.numCompte === numCompte)
           this.selected.update(s => s ? { ...s, status: newStatus } : s);
-        // ✅ Si compte suspendu, mettre à jour aussi selectedCourant dans Gestion Carte
         if (this.selectedCourant()?.numCompte === numCompte)
           this.selectedCourant.update(s => s ? { ...s, status: newStatus } : s);
         setTimeout(() => window.scrollTo({ top: scrollY, behavior: 'instant' }), 100);
         alert(isSuspended ? '✅ Compte réactivé' : '⏸️ Compte suspendu');
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
     });
   }
 
@@ -1048,7 +1061,7 @@ export class AdminDashboardComponent implements OnInit {
     const req = c.estActive ? this.cards.bloquer(s.numCompte, 'admin') : this.cards.debloquer(s.numCompte);
     req.subscribe({
       next: () => { this.loading.set(false); alert(c.estActive ? '🔒 Carte bloquée' : '🔓 Carte débloquée'); this.refreshSelected(); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
     });
   }
 
@@ -1065,7 +1078,7 @@ export class AdminDashboardComponent implements OnInit {
         const clientId = this.selectedClientId();
         if (clientId) this.loadAccountSectionsForClient(clientId);
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message || e?.message || `Erreur HTTP ${e?.status}`); }
     });
   }
 
@@ -1079,7 +1092,7 @@ export class AdminDashboardComponent implements OnInit {
     this.error.set(null);
     this.cards.setPlafonds(s.numCompte, j, m).subscribe({
       next: () => { this.loading.set(false); alert('✅ Plafonds mis à jour'); this.refreshSelected(); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Maj plafonds KO'); }
+      error: (e: any) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Maj plafonds KO'); }
     });
   }
 

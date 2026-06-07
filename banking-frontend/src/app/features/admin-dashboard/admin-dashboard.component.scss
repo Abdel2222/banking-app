@@ -920,7 +920,21 @@
 
   &:hover { transform: translateY(-3px); border-color: var(--techno-primary); box-shadow: 0 8px 20px rgba(0, 255, 136, 0.2); }
 }
+.btn-replace-card {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;
+  color: white !important;
+  border: none !important;
 
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
 .account-mini-header {
   display: flex;
   align-items: center;
@@ -1034,4 +1048,25 @@
   .admin-tab-btn { font-size: 12px; padding: 0.7rem 0.6rem; gap: 6px; }
   .actions-buttons { flex-direction: column; }
   .btn-action, .btn-view { width: 100% !important; }
+}
+.btn-save {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none !important;
+  padding: 10px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+
+  &:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  }
 }
